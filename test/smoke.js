@@ -321,6 +321,19 @@ async function main() {
     await a.wait('enterMap');
     ok(a.map === 'dragon_palace' && [...a.monsters.values()].some((m) => m.k === 'seaserpent'), 'Long Cung có quái cấp 114-120');
 
+    a.send('chat', { ch: 'map', msg: '/xu 600000' });
+    a.send('chat', { ch: 'map', msg: '/tp v_fire' });
+    await a.wait('enterMap');
+    await a.walkTo(1180);
+    a.send('npcAct', { id: 'v_fire_clan', a: 'create', text: 'NinjaTest' });
+    const cl0 = await a.wait('clan');
+    ok(cl0 && cl0.name === 'NinjaTest' && cl0.level === 1, 'lập gia tộc cấp 1');
+    const mul0 = a.me.s.expMul;
+    a.send('clanDonate', { xu: 500000 });
+    const cl1 = await a.wait('clan');
+    await sleep(150);
+    ok(cl1.level === 2 && cl1.max === 30 && a.me.s.expMul > mul0, 'góp quỹ: gia tộc lên cấp 2, tăng chỗ và % EXP');
+
     console.log('8. Lưu dữ liệu');
     a.ws.close();
     await sleep(300);

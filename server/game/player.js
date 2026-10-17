@@ -146,7 +146,7 @@ class Player {
       hit: Math.round(agi + eq.hit),
       spd: Math.min(60, Math.round(eq.spd + buf.spd)),
       skillDmg: Math.round((int * 0.6 + eq.skillDmg) * 10) / 10,
-      expMul: Math.round(((c.buffs.exp2 || 0) > now ? 2 : 1) * (1 + eq.expPct / 100) * 100) / 100,
+      expMul: Math.round(((c.buffs.exp2 || 0) > now ? 2 : 1) * (1 + (eq.expPct + this.clanBonus()) / 100) * 100) / 100,
       str, agi, int, vit,
     };
     this.s = s;
@@ -154,6 +154,11 @@ class Player {
     if (c.mp > s.maxMp) c.mp = s.maxMp;
     if (c.hp < 0) c.hp = 0;
     this.markMe();
+  }
+
+  clanBonus() {
+    const cl = this.c.clan && this.world.db.clans[this.c.clan];
+    return cl ? cl.level || 1 : 0;
   }
 
   look() {

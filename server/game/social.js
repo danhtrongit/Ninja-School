@@ -6,7 +6,10 @@ const { MONSTERS } = require('../data/monsters');
 const { MAX_LEVEL } = require('./player');
 
 const PARTY_MAX = 6;
-const CLAN_MAX = 30;
+// Cấp gia tộc: góp xu → kinh nghiệm gia tộc (1 điểm / 100 xu). Mỗi cấp +5 chỗ và +1% EXP cho thành viên.
+const CLAN_MAX_LEVEL = 10;
+const clanNeed = (lv) => 2000 * lv * lv;
+const clanCap = (cl) => 20 + (cl.level || 1) * 5;
 const CLAN_COST = 50000;
 const CLAN_LV = 15;
 const int = (v, d = 0) => (Number.isFinite(+v) ? Math.floor(+v) : d);
@@ -23,7 +26,7 @@ class Social {
       tradeOk: this.tradeOk, tradeCancel: (p) => this.cancelTrade(p, 'Đã hủy giao dịch.'),
       duelReq: this.duelReq, duelAccept: this.duelAccept,
       clanInvite: this.clanInvite, clanAccept: this.clanAccept, clanLeave: this.clanLeave, clanKick: this.clanKick,
-      clanInfo: this.clanInfo, clanNotice: this.clanNotice, clanPromote: this.clanPromote,
+      clanInfo: this.clanInfo, clanNotice: this.clanNotice, clanPromote: this.clanPromote, clanDonate: this.clanDonate,
       decline: this.decline,
       friendAdd: this.friendAdd, friendAccept: this.friendAccept, friendDel: this.friendDel, friendList: this.friendList,
     };
@@ -461,7 +464,11 @@ class Social {
       const c = o ? o.c : this.world.db.getChar(key);
       return { name: mm.name, rank: mm.rank, lv: c ? c.level : 0, cls: c ? c.cls : '', online: !!o };
     }).sort((a, b) => b.online - a.online || b.lv - a.lv);
-    p.send('clan', { id: p.c.clan, name: cl.name, leader: cl.leader, notice: cl.notice, members, myRank: cl.members[p.name.toLowerCase()].rank, max: CLAN_MAX });
+    const lv = cl.level || 1;
+    p.send('clan', {
+      id: p.c.clan, name: cl.name, leader: cl.leader, notice: cl.notice, members, myRank: cl.members[p.name.toLowerCase()].rank, max: clanCap(cl),
+      level: lv, exp: cl.exp || 0, need: lv >= CLAN_MAX_LEVEL ? 0 : clanNeed(lv), bonus: lv, fund: cl.fund || 0,
+    });
   }
 
   myClan(p) {
@@ -478,7 +485,7 @@ class Social {
     if (!cl) return;
     const rank = cl.members[p.name.toLowerCase()].rank;
     if (rank === 'member') return p.notice('Chỉ tộc trưởng/trưởng lão mới mời được.');
-    if (Object.keys(cl.members).length >= CLAN_MAX) return p.notice('Gia tộc đã đủ thành viên.');
+    if (Object.keys(cl.members).length >= clanCap(cl)) return p.notice('Gia tộc đã đủ thành viên.');
     const o = this.find(m.name);
     if (!o || o === p) return p.notice('Người chơi không online.');
     if (o.c.clan) return p.notice(`${o.name} đã có gia tộc.`);
@@ -491,7 +498,7 @@ class Social {
     if (!o || !this.takeInvite(p, 'clan', m.from)) return p.notice('Lời mời đã hết hạn.');
     const cl = this.myClan(o);
     if (!cl || p.c.clan) return;
-    if (Object.keys(cl.members).length >= CLAN_MAX) return p.notice('Gia tộc đã đủ thành viên.');
+    if (Object.keys(cl.members).length >= clanCap(cl)) return p.notice('Gia tộc đã đủ thành viên.');
     cl.members[p.name.toLowerCase()] = { name: p.name, rank: 'member', joined: Date.now() };
     p.c.clan = o.c.clan;
     this.world.db.dirty = true;
@@ -575,6 +582,36 @@ class Social {
     }
     this.world.db.dirty = true;
     this.clanBroadcast(p.c.clan, 'chat', { ch: 'clan', from: 'Hệ thống', msg: `${t.name} nay là ${{ leader: 'tộc trưởng', elder: 'trưởng lão', member: 'thành viên' }[t.rank]}.` });
+    this.clanInfo(p);
+  }
+
+  clanDonate(p, m) {
+    const cl = this.myClan(p);
+    if (!cl) return;
+    const xu = Math.floor(+m.xu || 0);
+    if (xu < 1000) return p.notice('Góp tối thiểu 1.000 xu.', 'warn');
+    if (p.c.xu < xu) return p.notice('Không đủ xu.', 'warn');
+    p.c.xu -= xu;
+    p.markMe();
+    cl.fund = (cl.fund || 0) + xu;
+    cl.exp = (cl.exp || 0) + Math.floor(xu / 100);
+    cl.level = cl.level || 1;
+    const id = p.c.clan;
+    let up = false;
+    while (cl.level < CLAN_MAX_LEVEL && cl.exp >= clanNeed(cl.level)) {
+      cl.exp -= clanNeed(cl.level);
+      cl.level++;
+      up = true;
+    }
+    this.world.db.dirty = true;
+    this.clanBroadcast(id, 'chat', { ch: 'clan', from: 'Hệ thống', msg: `${p.name} đã góp ${xu.toLocaleString('vi-VN')} xu vào quỹ gia tộc.` });
+    if (up) {
+      this.world.announce(`Gia tộc ${cl.name} đã đạt cấp ${cl.level}!`, 'world');
+      for (const key of Object.keys(cl.members)) {
+        const o = this.world.byName.get(key);
+        if (o) o.recalc();
+      }
+    }
     this.clanInfo(p);
   }
 
