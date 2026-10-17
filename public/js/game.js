@@ -1,6 +1,6 @@
 // Vòng lặp game phía client: vật lý, đồng bộ mạng, chiến đấu, vẽ
 import { S, skillVal } from './store.js';
-import { drawNinja, ELEMENT_COLORS } from './sprites.js';
+import { drawNinja, ELEMENT_COLORS, NINJA_H } from './sprites.js';
 import { drawMonster, monsterHeight } from './monsterart.js';
 import { iconCanvas } from './icons.js';
 import { MapRenderer } from './maprender.js';
@@ -11,7 +11,7 @@ const GRAV = 1000;
 const JUMP = 378;
 const JUMP2 = 330;
 const SPEED = 110;
-const PH = 22;
+const PH = NINJA_H;
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
 
 export class Game {
@@ -553,7 +553,7 @@ export class Game {
     }
     // Người chơi
     for (const p of this.players.values()) {
-      if (Math.abs(wx - p.x) < 9 && wy > p.y - 26 && wy < p.y + 3) {
+      if (Math.abs(wx - p.x) < 9 && wy > p.y - NINJA_H - 4 && wy < p.y + 3) {
         this.target = { kind: 'p', id: p.id };
         this.ui.playerMenu(p.info, e.clientX, e.clientY);
         return;
@@ -837,7 +837,7 @@ export class Game {
       const nt = S.G.npcTypes[n.type];
       if (n.x < camX - 30 || n.x > camX + W + 30) continue;
       drawNinja(c, n.x - camX, G - camY, {
-        dir: this.me.x < n.x ? -1 : 1, anim: 'idle', t, pal: [nt.look[0], nt.look[2], nt.look[1]], noMask: true, name: n.name,
+        dir: this.me.x < n.x ? -1 : 1, anim: 'idle', t, pal: [nt.look[0], nt.look[2], nt.look[1]], noMask: true, name: n.name, npcType: n.type,
         weaponType: null, look: { h: n.type === 'elder' ? 4 : -1 },
       });
     }
@@ -894,7 +894,7 @@ export class Game {
     // Mũi tên mục tiêu
     if (target) {
       const e = target.e;
-      const top = target.kind === 'm' ? e.y - e.h - (e.def.fly ? 0 : 0) : e.y - 26;
+      const top = target.kind === 'm' ? e.y - e.h - (e.def.fly ? 0 : 0) : e.y - NINJA_H - 4;
       const ay = Math.round(top - 9 - camY + Math.sin(t * 6) * 1.5);
       const ax = Math.round(e.x - camX);
       c.fillStyle = target.kind === 'p' ? '#ff5252' : '#ffeb3b';
@@ -940,7 +940,7 @@ export class Game {
     // NPC
     for (const n of this.map.npcs) {
       if (n.x < camX - 40 || n.x > camX + W + 40) continue;
-      const [sx, sy] = this.toScreen(n.x, G - 24);
+      const [sx, sy] = this.toScreen(n.x, G - NINJA_H - 5);
       this.label(ctx, n.name, sx, sy, '#ffe082', size);
       this.label(ctx, S.G.npcTypes[n.type].title, sx, sy - size, '#b3e5fc', Math.round(size * 0.85));
       const mark = this.npcMark(n);
@@ -956,7 +956,7 @@ export class Game {
     }
     // Người chơi
     const drawName = (x, y, info, isMe, pk) => {
-      const [sx, sy] = this.toScreen(x, y - 25);
+      const [sx, sy] = this.toScreen(x, y - NINJA_H - 3);
       let col = '#ffffff';
       if (isMe) col = '#fff59d';
       else if (info.party && info.party === S.party.id) col = '#69f0ae';
@@ -971,9 +971,9 @@ export class Game {
     };
     for (const p of this.players.values()) {
       if (p.x < camX - 40 || p.x > camX + W + 40) continue;
-      let line = showNames ? drawName(p.x, p.y, p.info, false, p.pk) : this.toScreen(p.x, p.y - 25)[1];
+      let line = showNames ? drawName(p.x, p.y, p.info, false, p.pk) : this.toScreen(p.x, p.y - NINJA_H - 3)[1];
       if (p.hp < p.mhp && !p.dead) {
-        const [bx, by] = this.toScreen(p.x - 8, p.y - 27);
+        const [bx, by] = this.toScreen(p.x - 8, p.y - NINJA_H - 5);
         ctx.fillStyle = '#1a1020';
         ctx.fillRect(bx - 1, by - 1, 16 * z + 2, Math.max(3, z) + 2);
         ctx.fillStyle = '#e53935';
