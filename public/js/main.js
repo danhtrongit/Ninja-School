@@ -12,6 +12,8 @@ const net = new Net();
 const ui = new UI(net);
 const input = new Input();
 const game = new Game(net, ui, input);
+// Truy cập từ console/công cụ kiểm thử (tools/shot.js, test giao diện)
+window.ninja = { game, ui, net, S };
 
 let screen = 'login';
 let mode = 'login';

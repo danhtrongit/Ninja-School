@@ -8,7 +8,8 @@
     "start": "node server/index.js",
     "dev": "node --watch server/index.js",
     "test": "node test/smoke.js",
-    "check": "node tools/check-data.js"
+    "check": "node tools/check-data.js",
+    "test:ui": "node tools/ui-multiplayer.js"
   },
   "engines": {
     "node": ">=18"

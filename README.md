@@ -54,6 +54,7 @@ Kiểm thử tự động (bật server tạm và cho 2 bot chơi thử qua WebS
 ```bash
 npm test
 npm run check
+npm run test:ui    # giao diện 2 người chơi thật (cần Playwright, server chạy với ADMINS=duoalpha,duobravo)
 ```
 
 Khi phát triển thêm, xem **[DESIGN_RULES.md](DESIGN_RULES.md)** (quy chuẩn đồ họa, giao diện, cân bằng) và **[CLAUDE.md](CLAUDE.md)** (quy tắc làm việc cho người và agent AI).

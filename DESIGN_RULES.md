@@ -155,7 +155,7 @@ Các con số dưới đây lấy từ code hiện tại. Nếu cần đổi m�
 
   Không viết mã màu mới trực tiếp khi đã có token phù hợp.
 - **Khung**: cửa sổ dùng `--frame-win` với nền da thuộc `--leather`. Bảng HUD dùng `--frame-hud`, khung boss dùng `--frame-boss`, tiêu đề dùng dải lụa `--ribbon`. Màn hình mở đầu dùng các token `--sc-*` trong `screens.css`.
-- **Font**: VT323, cỡ chữ gốc 20px; chữ nhỏ (`.tiny`) không dưới 15px.
+- **Font**: VT323 (lưu kèm game trong `public/fonts/`, giấy phép OFL, khai báo ở `public/css/fonts.css`, không tải từ Google Fonts), cỡ chữ gốc 20px; chữ nhỏ (`.tiny`) không dưới 15px.
 - **Nút**: bấm thì lún xuống 1-2px. Nút chính (`.primary`) màu cam vàng, nút nguy hiểm (`.danger`) màu đỏ sơn mài. Nút kỹ năng **tròn**, hồi chiêu dạng quét tròn kèm số giây.
 - **Bố cục HUD cố định**:
   - Trên trái: trạng thái (avatar tròn, huy hiệu cấp, thanh HP/MP/EXP, xu và lượng).

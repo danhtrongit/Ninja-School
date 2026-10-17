@@ -75,6 +75,8 @@ PORT=3000 DATA_DIR=/tmp/ns ADMINS=tentk1,tentk2 node server/index.js   # admin d
 1. **Đổi server** (`server/**`): chạy `npm test`, phải in `TẤT CẢ KIỂM TRA ĐỀU ĐẠT`. Có tính năng mới thì **thêm kiểm thử** vào `test/smoke.js`.
 2. **Đổi dữ liệu game**: chạy `npm run check`, không được có dòng lỗi.
 3. **Đổi client**: chụp ảnh bằng `tools/shot.js` (xem đầu file để biết tham số) ở desktop 1280×720 **và** điện thoại `mobile: true`. Xem ảnh, đảm bảo đẹp và đúng `DESIGN_RULES.md`. Script phải in `OK no console errors`.
+   Đổi giao diện xã hội (menu người chơi, lời mời, giao dịch, nhóm, thách đấu): chạy `npm run test:ui` (2 trình duyệt thật, cần Playwright và server có `ADMINS=duoalpha,duobravo`).
+   Trong trình duyệt, `window.ninja = { game, ui, net, S }` để công cụ kiểm thử đọc trạng thái game.
 4. Kiểm tra hiệu năng khi thêm vẽ mới: bản đồ đông quái, bật tự động đánh, phải giữ khoảng 60fps.
 
 ## Quy ước code
