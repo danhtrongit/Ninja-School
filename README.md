@@ -49,11 +49,14 @@ Biến môi trường:
 | `ADMINS` | Danh sách **tên tài khoản** admin, cách nhau bởi dấu phẩy | (trống) |
 | `MOTD` | Thông báo hiện khi người chơi vào game | (trống) |
 
-Kiểm thử tự động (bật server tạm và cho 2 bot chơi thử qua WebSocket):
+Kiểm thử tự động (bật server tạm và cho 2 bot chơi thử qua WebSocket) và kiểm tra chéo dữ liệu game:
 
 ```bash
 npm test
+npm run check
 ```
+
+Khi phát triển thêm, xem **[DESIGN_RULES.md](DESIGN_RULES.md)** (quy chuẩn đồ họa, giao diện, cân bằng) và **[CLAUDE.md](CLAUDE.md)** (quy tắc làm việc cho người và agent AI).
 
 ## Đưa game lên mạng (online)
 
