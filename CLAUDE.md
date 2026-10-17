@@ -13,7 +13,7 @@ npm install
 npm start                      # http://localhost:3000
 npm test                       # khởi động server tạm + bot WebSocket chơi thử, phải đạt hết
 npm run check                  # kiểm tra chéo dữ liệu game (item, quái, bản đồ, nhiệm vụ)
-PORT=3000 DATA_DIR=/tmp/ns ADMINS=tentk1,tentk2 node server/index.js   # admin dùng được lệnh /lv /item /tp /xu /boss
+PORT=3000 DATA_DIR=/tmp/ns ADMINS=tentk1,tentk2 node server/index.js   # admin dùng được lệnh /lv /item /plus /tp /xu /boss
 ```
 
 ## Kiến trúc và bất biến

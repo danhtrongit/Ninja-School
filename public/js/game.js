@@ -992,8 +992,18 @@ export class Game {
     for (const n of this.map.npcs) {
       if (n.x < camX - 40 || n.x > camX + W + 40) continue;
       let [sx, sy] = this.toScreen(n.x, G - NINJA_H - 5);
-      // người chơi đứng sát NPC: đẩy nhãn NPC lên trên tên người chơi để không đè chữ
-      if (Math.abs(this.me.x - n.x) < 26 && Math.abs(this.me.y - G) < 6) sy -= size + 2;
+      // người chơi đứng sát NPC: đẩy nhãn NPC lên trên tên (và bong bóng chat) của người chơi để không đè chữ
+      if (showNames && Math.abs(this.me.y - G) < 6) {
+        ctx.font = `${size}px VT323, monospace`;
+        const wn = Math.max(ctx.measureText(n.name).width, ctx.measureText(S.G.npcTypes[n.type].title).width);
+        const wp = ctx.measureText(S.me.name).width;
+        const px = this.toScreen(this.me.x, 0)[0];
+        if (Math.abs(px - sx) < (wn + wp) / 2 + 4) {
+          sy -= size + 2;
+          const b = this.bubbles.get(S.me.id);
+          if (b && b.until >= this.t) sy -= Math.round(size * 1.35) + 10;
+        }
+      }
       this.label(ctx, n.name, sx, sy, '#ffe082', size);
       this.label(ctx, S.G.npcTypes[n.type].title, sx, sy - size, '#b3e5fc', Math.round(size * 0.85));
       const mark = this.npcMark(n);
@@ -1050,17 +1060,37 @@ export class Game {
     const sx = this.toScreen(x, 0)[0];
     ctx.font = `${size}px VT323, monospace`;
     const text = b.msg.length > 40 ? `${b.msg.slice(0, 40)}…` : b.msg;
-    const w = ctx.measureText(text).width + size;
-    const h = size * 1.3;
-    const y = lineY - h - 6;
-    ctx.fillStyle = 'rgba(255,253,240,0.95)';
-    ctx.fillRect(sx - w / 2, y, w, h);
-    ctx.fillStyle = '#3e2723';
-    ctx.fillRect(sx - w / 2, y + h, w, 2);
-    ctx.fillRect(sx - 3, y + h, 6, 5);
+    const w = Math.round(ctx.measureText(text).width + size);
+    const h = Math.round(size * 1.35);
+    const x0 = Math.round(sx - w / 2);
+    const y = Math.round(lineY - h - 8);
+    const r = Math.max(3, Math.round(size / 4));
+    const tw = Math.max(4, Math.round(size / 4));
+    // bong bóng giấy bo góc, viền tối và đuôi nhọn chỉ xuống nhân vật
+    ctx.beginPath();
+    ctx.moveTo(x0 + r, y);
+    ctx.lineTo(x0 + w - r, y);
+    ctx.quadraticCurveTo(x0 + w, y, x0 + w, y + r);
+    ctx.lineTo(x0 + w, y + h - r);
+    ctx.quadraticCurveTo(x0 + w, y + h, x0 + w - r, y + h);
+    ctx.lineTo(sx + tw, y + h);
+    ctx.lineTo(sx, y + h + tw + 2);
+    ctx.lineTo(sx - tw, y + h);
+    ctx.lineTo(x0 + r, y + h);
+    ctx.quadraticCurveTo(x0, y + h, x0, y + h - r);
+    ctx.lineTo(x0, y + r);
+    ctx.quadraticCurveTo(x0, y, x0 + r, y);
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(255,248,228,0.96)';
+    ctx.fill();
+    ctx.lineWidth = Math.max(2, Math.round(size / 9));
+    ctx.strokeStyle = '#1d1424';
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(176,125,51,0.28)';
+    ctx.fillRect(x0 + r, y + h - Math.max(2, ctx.lineWidth) - 1, w - r * 2, Math.max(2, ctx.lineWidth));
     ctx.textBaseline = 'middle';
-    ctx.fillStyle = '#3e2723';
-    ctx.fillText(text, sx, y + h / 2);
+    ctx.fillStyle = '#3a2416';
+    ctx.fillText(text, sx, y + h / 2 + 1);
     ctx.textBaseline = 'bottom';
   }
 

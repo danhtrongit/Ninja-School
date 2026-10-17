@@ -109,7 +109,7 @@ location / {
 Bấm vào NPC để nói chuyện, bấm vào quái để chọn mục tiêu, bấm vào người chơi để mời nhóm, giao dịch, thách đấu, nhắn tin, xem thông tin.
 
 Lệnh chat: `/w tên tin` (nhắn riêng), `/p` (nhóm), `/g` (gia tộc), `/a` (thế giới), `/moi tên`, `/gd tên`, `/td tên`, `/xem tên`, `/online`, `/help`.
-Lệnh admin: `/lv n`, `/item id sl`, `/xu n`, `/luong n`, `/tp map`, `/boss`, `/all tin`, `/kick tên`.
+Lệnh admin: `/lv n`, `/item id sl [độ hiếm]`, `/plus n` (cường hóa vũ khí), `/xu n`, `/luong n`, `/tp map`, `/boss`, `/all tin`, `/kick tên`.
 
 ## Cấu trúc mã nguồn
 

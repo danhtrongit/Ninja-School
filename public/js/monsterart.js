@@ -1519,7 +1519,8 @@ export function drawMonster(ctx, x, y, def, o) {
   const id = o.id || 0;
   const boss = !!def.boss;
   const accent = def.pal[2];
-  const fx = !o.flash;
+  // boss bị đánh liên tục: chỉ phủ trắng mờ, giữ hào quang/vương miện để không thành khối trắng
+  const fx = !o.flash || boss;
   let fy = y;
   if (def.fly) fy -= 10 * s + Math.sin(t * 4 + id) * 3 * s;
   const rx0 = Math.round(x);
@@ -1593,14 +1594,19 @@ export function drawMonster(ctx, x, y, def, o) {
 
   // thân
   if (ghost) ctx.globalAlpha = ga * (o.flash ? 0.9 : 0.72 + 0.12 * Math.sin(t * 2.6 + id));
-  const img = o.flash ? whiteOf(sp) : sp.img;
-  if (dir > 0) ctx.drawImage(img, left, top, W, H);
-  else {
-    ctx.save();
-    ctx.translate(rx0, 0);
-    ctx.scale(-1, 1);
-    ctx.drawImage(img, -(sp.W / 2) * s, top, W, H);
-    ctx.restore();
+  const img = o.flash && !boss ? whiteOf(sp) : sp.img;
+  const pass = o.flash && boss ? 2 : 1;
+  for (let i = 0; i < pass; i++) {
+    const im = i ? whiteOf(sp) : img;
+    if (i) ctx.globalAlpha = ga * 0.55;
+    if (dir > 0) ctx.drawImage(im, left, top, W, H);
+    else {
+      ctx.save();
+      ctx.translate(rx0, 0);
+      ctx.scale(-1, 1);
+      ctx.drawImage(im, -(sp.W / 2) * s, top, W, H);
+      ctx.restore();
+    }
   }
   ctx.globalAlpha = ga;
 

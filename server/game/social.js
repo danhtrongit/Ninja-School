@@ -1,6 +1,6 @@
 'use strict';
 
-const { ITEMS, makeItem } = require('../data/items');
+const { ITEMS, UPGRADE, makeItem } = require('../data/items');
 const { MAPS } = require('../data/maps');
 const { MONSTERS } = require('../data/monsters');
 const { MAX_LEVEL } = require('./player');
@@ -117,7 +117,7 @@ class Social {
     switch (cmd.toLowerCase()) {
       case 'help':
         sys('Lệnh: /w <tên> <tin> (mật), /p <tin> (nhóm), /g <tin> (gia tộc), /a <tin> (thế giới), /online, /moi <tên> (mời nhóm), /gd <tên> (giao dịch), /td <tên> (thách đấu), /xem <tên>');
-        if (isAdmin) sys('Admin: /lv <n>, /item <id> [sl], /xu <n>, /luong <n>, /tp <map>, /boss, /all <tin>, /kick <tên>');
+        if (isAdmin) sys('Admin: /lv <n>, /item <id> [sl] [hiếm], /plus <n> (cường hóa vũ khí), /xu <n>, /luong <n>, /tp <map>, /boss, /all <tin>, /kick <tên>');
         return;
       case 'w': return this.chat(p, { ch: 'pm', to: args[0], msg: args.slice(1).join(' ') });
       case 'p': return this.chat(p, { ch: 'party', msg: args.join(' ') });
@@ -153,6 +153,15 @@ class Social {
         if (!ITEMS[args[0]]) return sys('Không có vật phẩm này.');
         p.addItem(args[0], Math.max(1, int(args[1], 1)), int(args[2], 0));
         return sys('Đã thêm vật phẩm.');
+      case 'plus': {
+        const w = p.c.equip.weapon;
+        if (!w) return sys('Chưa trang bị vũ khí.');
+        w.p = Math.max(0, Math.min(UPGRADE.max, n));
+        p.recalc();
+        p.markInv();
+        this.world.actions.refreshInfo(p);
+        return sys(`Vũ khí +${w.p}`);
+      }
       case 'xu': p.gainXu(n); return sys(`+${n} xu`);
       case 'luong': p.c.luong += n; p.markMe(); return sys(`+${n} lượng`);
       case 'tp':

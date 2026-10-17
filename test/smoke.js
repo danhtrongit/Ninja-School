@@ -317,6 +317,8 @@ async function main() {
     a.send('equip', { slot: a.inv.inv.findIndex((it) => it && it.id === 'w_kiem_11') });
     await sleep(150);
     ok(a.inv.equip.weapon.id === 'w_kiem_11', 'mặc vũ khí bậc Thánh cấp 110');
+    a.send('chat', { ch: 'map', msg: '/plus 11' });
+    ok(!!(await a.wait('chat', (m) => /Vũ khí \+11/.test(m.msg))), 'lệnh admin /plus đặt cấp cường hóa vũ khí');
     a.send('chat', { ch: 'map', msg: '/tp dragon_palace' });
     await a.wait('enterMap');
     ok(a.map === 'dragon_palace' && [...a.monsters.values()].some((m) => m.k === 'seaserpent'), 'Long Cung có quái cấp 114-120');
