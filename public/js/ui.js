@@ -1,6 +1,7 @@
 // Giao diện người dùng (DOM): HUD, cửa sổ, hội thoại, chat
 import { S, fmt, skillVal, itemStats, itemName, rarityColor, saveSettings } from './store.js';
 import { iconURL, drawPortrait, ELEMENT_COLORS } from './sprites.js';
+import { sfx } from './sound.js';
 
 const $ = (sel, root = document) => root.querySelector(sel);
 
@@ -75,7 +76,7 @@ export class UI {
       const lvUp = S.me && m.level > S.me.level;
       S.me = m;
       this.updateStatus();
-      if (lvUp || this.winName === 'char' || this.winName === 'skill' || this.winName === 'quest') this.refresh();
+      if (lvUp || ['char', 'skill', 'quest', 'gift', 'wheel', 'shop'].includes(this.winName)) this.refresh();
     });
     n.on('inv', (m) => {
       S.inv = m.inv;
@@ -83,7 +84,28 @@ export class UI {
       this.updatePotions();
       if (['inv', 'upgrade', 'shop', 'trade'].includes(this.winName)) this.refresh();
     });
-    n.on('notice', (m) => this.toast(m.msg, m.kind));
+    n.on('notice', (m) => {
+      this.toast(m.msg, m.kind);
+      if (m.kind === 'reward' || m.kind === 'quest') sfx('quest');
+      if (m.kind === 'boss') sfx('boss');
+    });
+    n.on('storage', (m) => {
+      this.storage = m;
+      this.closeDialog();
+      if (this.winName !== 'storage') this.open('storage');
+      else this.refresh();
+    });
+    n.on('friends', (m) => {
+      this.friends = m.list;
+      if (this.winName === 'friends') this.refresh();
+    });
+    n.on('spinResult', (m) => this.onSpin(m));
+    n.on('dungeon', (m) => {
+      this.dungeonState = m;
+      const s = Math.ceil(m.left / 1000);
+      const el = $('#map-info');
+      if (el) el.textContent = m.state === 'done' ? 'Thử thách kết thúc' : `Đợt ${m.wave}/${m.waves} · ${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+    });
     n.on('chat', (m) => this.addChat(m));
     n.on('dialog', (m) => this.showDialog(m));
     n.on('shop', (m) => {
@@ -179,10 +201,13 @@ export class UI {
     menu.innerHTML = '';
     const items = [
       ['inv', '🎒', 'Túi đồ (B)'], ['char', '👤', 'Nhân vật (C)'], ['skill', '📜', 'Kỹ năng (V)'], ['quest', '❗', 'Nhiệm vụ (N)'],
-      ['party', '👥', 'Nhóm (P)'], ['clan', '🏯', 'Gia tộc (G)'], ['rank', '🏆', 'Xếp hạng (R)'], ['map', '🗺', 'Bản đồ (M)'], ['settings', '⚙', 'Cài đặt'],
+      ['party', '👥', 'Nhóm (P)'], ['friends', '💞', 'Bạn bè (O)'], ['clan', '🏯', 'Gia tộc (G)'], ['rank', '🏆', 'Xếp hạng (R)'], ['map', '🗺', 'Bản đồ (M)'],
+      ['gift', '🎁', 'Điểm danh hằng ngày'], ['wheel', '🎡', 'Vòng quay may mắn'], ['settings', '⚙', 'Cài đặt'],
     ];
     for (const [k, icon, title] of items) {
-      menu.appendChild(h('button', { class: 'mbtn', title, onclick: () => this.toggle(k) }, icon));
+      const b = h('button', { class: 'mbtn', title, onclick: () => { sfx('click'); this.toggle(k); } }, icon);
+      if (k === 'gift') this.giftBtn = b;
+      menu.appendChild(b);
     }
     this.autoBtn = h('button', { class: 'mbtn wide', title: 'Tự động đánh (F)', onclick: () => game.toggleAuto() }, 'AUTO');
     this.pkBtn = h('button', { class: 'mbtn wide', title: 'Chế độ PK', onclick: () => this.net.send('pk', { on: !S.me.pkMode }) }, 'PK');
@@ -301,6 +326,10 @@ export class UI {
       b.classList.toggle('empty', !sid);
     });
     if (this.pkBtn) this.pkBtn.classList.toggle('on', !!me.pkMode);
+    if (this.giftBtn) {
+      const today = new Date(Date.now() + 7 * 3600 * 1000).toISOString().slice(0, 10);
+      this.giftBtn.classList.toggle('gift', !me.checkin || me.checkin.day !== today);
+    }
     // Buff
     const bf = $('#hud-buffs');
     bf.innerHTML = '';
@@ -355,7 +384,8 @@ export class UI {
 
   onEnterMap(map) {
     $('#map-name').textContent = map.name;
-    $('#map-info').textContent = map.town ? 'Khu an toàn' : map.pvp ? 'Khu PK tự do' : map.lv ? `Quái cấp ${map.lv[0]}-${map.lv[1]}` : '';
+    $('#map-info').textContent = map.town ? 'Khu an toàn' : map.pvp ? 'Khu PK tự do' : map.instance ? 'Phó bản' : map.lv ? `Quái cấp ${map.lv[0]}-${map.lv[1]}` : '';
+    sfx('portal');
     this.closeDialog();
     this.drawMinimap(true);
     this.toast(map.name, 'map');
@@ -489,6 +519,7 @@ export class UI {
     this.winName = name;
     if (name === 'rank') this.net.send('rank');
     if (name === 'clan') this.net.send('clanInfo');
+    if (name === 'friends') this.net.send('friendList');
     const win = h('div', { class: `win win-${name}` });
     this.win = win;
     $('#windows').appendChild(win);
@@ -498,6 +529,8 @@ export class UI {
   close(silent) {
     if (this.win) this.win.remove();
     if (this.winName === 'trade' && this.trade && !silent) this.net.send('tradeCancel');
+    if (this.wheelAnim) cancelAnimationFrame(this.wheelAnim);
+    this.wheelAnim = null;
     this.win = null;
     this.winName = null;
     this.hideItem();
@@ -524,6 +557,7 @@ export class UI {
       inv: this.renderInv, char: this.renderChar, skill: this.renderSkills, quest: this.renderQuest, party: this.renderParty,
       clan: this.renderClan, rank: this.renderRank, map: this.renderWorldMap, settings: this.renderSettings, shop: this.renderShop,
       upgrade: this.renderUpgrade, trade: this.renderTrade, inspect: this.renderInspect,
+      storage: this.renderStorage, friends: this.renderFriends, gift: this.renderGift, wheel: this.renderWheel,
     }[this.winName];
     if (fn) fn.call(this);
     const b = this.win.querySelector('.win-body');
@@ -776,7 +810,7 @@ export class UI {
 
   // ----- Bản đồ thế giới
   renderWorldMap() {
-    const maps = Object.values(S.G.maps);
+    const maps = Object.values(S.G.maps).filter((m) => !m.instance);
     const cur = this.game.map.id;
     const order = ['fire_field', 'v_fire', 'arena', 'bamboo', 'v_water', 'water_lake', 'coast', 'bat_cave', 'v_wind', 'wind_hill', 'wasteland', 'misty_valley', 'snow_mountain', 'ice_peak', 'demon_forest', 'demon_cave', 'hell_gate'];
     maps.sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id));
@@ -795,7 +829,7 @@ export class UI {
       h('input', { type: 'checkbox', checked: st[k], onchange: (e) => { st[k] = e.target.checked; saveSettings(); } }));
     this.frameWin('Cài Đặt', h('div', null,
       h('div', { class: 'sec' }, h('b', null, 'Tự động đánh'), num('autoHp', 'Tự uống HP khi dưới (%)', 0, 95), num('autoMp', 'Tự uống MP khi dưới (%)', 0, 95), num('autoRange', 'Phạm vi tìm quái', 100, 2000), chk('autoPick', 'Tự nhặt đồ')),
-      h('div', { class: 'sec' }, chk('names', 'Hiện tên người chơi')),
+      h('div', { class: 'sec' }, chk('names', 'Hiện tên người chơi'), chk('sound', 'Âm thanh')),
       h('div', { class: 'sec help' }, h('b', null, 'Điều khiển'),
         h('div', null, 'A/D hoặc ←/→: di chuyển · W/↑/Space: nhảy (nhấn 2 lần để nhảy đôi) · S+Space: xuống bục'),
         h('div', null, 'J: đánh thường · 1-5: kỹ năng · Q/E: bình HP/MP · Z: nhặt đồ · X: nói chuyện/vào cửa · Tab: đổi mục tiêu'),
@@ -862,6 +896,149 @@ export class UI {
       }
     }
     this.frameWin('Cường Hóa Trang Bị', h('div', { class: 'upg-wrap' }, grid, panel), h('div', { class: 'muted tiny' }, `Mỗi cấp cường hóa +${Math.round(U.bonus * 100)}% chỉ số gốc. Đá cường hóa rơi từ quái hoặc mua ở Lò Rèn.`));
+  }
+
+  // ----- Thủ kho
+  renderStorage() {
+    const st = this.storage;
+    if (!st) return;
+    const grid = h('div', { class: 'inv-grid' }, ...st.items.map((it, i) => (it
+      ? itemIcon(it, { onclick: () => { sfx('click'); this.net.send('storeTake', { npc: st.npc, slot: i }); } })
+      : h('div', { class: 'slot empty' }))));
+    const used = st.items.filter(Boolean).length;
+    this.frameWin('Thủ Kho', h('div', { class: 'store-wrap' },
+      h('div', null, h('b', null, `Kho đồ ${used}/${st.items.length} (bấm để lấy ra)`), grid),
+      h('div', null, h('b', null, 'Hành trang (bấm để cất vào kho)'), this.invGrid((it, i) => { sfx('click'); this.net.send('storePut', { npc: st.npc, slot: i }); }))),
+    h('span', { class: 'muted tiny' }, 'Kho đồ dùng chung giữa mọi làng, miễn phí.'));
+  }
+
+  // ----- Bạn bè
+  renderFriends() {
+    const list = this.friends || [];
+    const inName = h('input', { placeholder: 'Tên người chơi', class: 'in' });
+    const rows = list.map((f) => h('div', { class: 'list-row' },
+      h('span', { class: f.online ? 'good' : 'muted' }, `${f.online ? '●' : '○'} ${f.name}`),
+      h('span', { class: 'muted' }, `Lv${f.lv} ${S.G.classes[f.cls] ? S.G.classes[f.cls].name : ''}${f.map ? ` · ${f.map}` : ''}`),
+      f.online ? h('button', { class: 'btn small', onclick: () => { this.pmTo = f.name; this.setChatCh('pm'); this.close(); this.focusChat(); } }, 'Nhắn') : null,
+      f.online ? h('button', { class: 'btn small', onclick: () => this.net.send('partyInvite', { name: f.name }) }, 'Mời nhóm') : null,
+      h('button', { class: 'btn small danger', onclick: () => confirm(`Xóa ${f.name} khỏi danh sách bạn bè?`) && this.net.send('friendDel', { name: f.name }) }, 'Xóa')));
+    this.frameWin(`Bạn Bè (${list.length}/50)`, h('div', null,
+      list.length ? h('div', null, ...rows) : h('div', { class: 'muted' }, 'Chưa có bạn bè. Bấm vào người chơi khác → "Kết bạn", hoặc nhập tên bên dưới.'),
+      h('div', { class: 'row' }, inName, h('button', { class: 'btn primary', onclick: () => inName.value && this.net.send('friendAdd', { name: inName.value }) }, 'Kết bạn'))));
+  }
+
+  // ----- Điểm danh
+  renderGift() {
+    const ck = S.me.checkin || { day: '', streak: 0 };
+    const day = (off) => new Date(Date.now() + 7 * 3600 * 1000 + off * 86400000).toISOString().slice(0, 10);
+    const claimed = ck.day === day(0);
+    const nextStreak = claimed ? ck.streak : ck.day === day(-1) ? ck.streak + 1 : 1;
+    const cur = (nextStreak - 1) % 7;
+    const label = (r) => {
+      const parts = [];
+      if (r.xu) parts.push(`${fmt(Math.round(r.xu * (1 + S.me.level / 20)))} xu`);
+      if (r.luong) parts.push(`${r.luong} lượng`);
+      for (const [id, q] of r.items || []) parts.push(`${S.G.items[id].name}${q > 1 ? ` x${q}` : ''}`);
+      return parts;
+    };
+    const cells = S.G.checkin.map((r, i) => h('div', { class: `gift-day${i < cur || (claimed && i === cur) ? ' got' : ''}${i === cur ? ' cur' : ''}` },
+      h('b', null, `Ngày ${i + 1}`), ...label(r).map((t) => h('div', { class: 'tiny' }, t))));
+    this.frameWin('Điểm Danh Hằng Ngày', h('div', null,
+      h('div', { class: 'muted' }, `Đăng nhập liên tục để nhận quà lớn hơn. Chuỗi hiện tại: ${claimed ? ck.streak : Math.max(0, nextStreak - 1)} ngày.`),
+      h('div', { class: 'gift-grid' }, ...cells)),
+    h('button', { class: 'btn primary', disabled: claimed, onclick: () => this.net.send('checkin') }, claimed ? 'Đã điểm danh hôm nay' : 'Điểm danh nhận quà'));
+  }
+
+  // ----- Vòng quay may mắn
+  renderWheel() {
+    const W = S.G.wheel;
+    const cv = h('canvas', { width: 240, height: 240, class: 'wheel' });
+    this.wheelCanvas = cv;
+    this.wheelRot = this.wheelRot || 0;
+    this.drawWheel();
+    const busy = !!this.wheelAnim;
+    this.frameWin('Vòng Quay May Mắn', h('div', { class: 'wheel-wrap' }, h('div', { class: 'wheel-box' }, h('div', { class: 'wheel-pin' }, '▼'), cv),
+      h('div', { class: 'wheel-side' },
+        h('div', { class: 'muted' }, 'Quay bằng lượng có tỉ lệ ra quà quý cao hơn.'),
+        h('button', { class: 'btn primary', disabled: busy, onclick: () => this.net.send('spin', { cur: 'xu' }) }, `Quay (${fmt(W.cost.xu)} xu)`),
+        h('button', { class: 'btn primary', disabled: busy, onclick: () => this.net.send('spin', { cur: 'luong' }) }, `Quay (${W.cost.luong} lượng)`),
+        h('div', { class: 'wheel-result' }, this.wheelResult || ''))),
+    h('div', { class: 'money' }, `💰 ${fmt(S.me.xu)} xu   💎 ${fmt(S.me.luong)} lượng`));
+  }
+
+  drawWheel() {
+    const cv = this.wheelCanvas;
+    if (!cv) return;
+    const g = cv.getContext('2d');
+    const prizes = S.G.wheel.prizes;
+    const n = prizes.length;
+    const seg = (Math.PI * 2) / n;
+    const R = 112;
+    g.clearRect(0, 0, 240, 240);
+    g.save();
+    g.translate(120, 120);
+    for (let i = 0; i < n; i++) {
+      const a0 = this.wheelRot + i * seg - Math.PI / 2;
+      g.beginPath();
+      g.moveTo(0, 0);
+      g.arc(0, 0, R, a0, a0 + seg);
+      g.closePath();
+      g.fillStyle = i % 2 ? prizes[i].c : shadeHex(prizes[i].c);
+      g.fill();
+      g.strokeStyle = '#2b1d14';
+      g.lineWidth = 2;
+      g.stroke();
+      g.save();
+      g.rotate(a0 + seg / 2);
+      g.fillStyle = '#1a1020';
+      g.font = '16px VT323, monospace';
+      g.textAlign = 'right';
+      g.textBaseline = 'middle';
+      g.fillText(prizes[i].label, R - 8, 0);
+      g.restore();
+    }
+    g.beginPath();
+    g.arc(0, 0, 16, 0, Math.PI * 2);
+    g.fillStyle = '#e8c271';
+    g.fill();
+    g.strokeStyle = '#2b1d14';
+    g.stroke();
+    g.restore();
+  }
+
+  onSpin(m) {
+    const n = S.G.wheel.prizes.length;
+    const seg = (Math.PI * 2) / n;
+    const target = -(m.idx + 0.5) * seg;
+    const base = this.wheelRot || 0;
+    const final = target + Math.PI * 2 * Math.ceil((base + Math.PI * 8 - target) / (Math.PI * 2));
+    const start = performance.now();
+    const dur = 2600;
+    this.wheelResult = '';
+    if (this.winName !== 'wheel') this.open('wheel');
+    else this.refresh();
+    let lastSeg = -1;
+    const step = (now) => {
+      const t = Math.min(1, (now - start) / dur);
+      const e = 1 - Math.pow(1 - t, 3);
+      this.wheelRot = base + (final - base) * e;
+      const sIdx = Math.floor(this.wheelRot / seg);
+      if (sIdx !== lastSeg) {
+        lastSeg = sIdx;
+        sfx('spin');
+      }
+      this.drawWheel();
+      if (t < 1) this.wheelAnim = requestAnimationFrame(step);
+      else {
+        this.wheelAnim = null;
+        this.wheelRot = final % (Math.PI * 2);
+        this.wheelResult = `Bạn nhận được: ${m.label}!`;
+        this.toast(this.wheelResult, 'reward');
+        sfx('quest');
+        if (this.winName === 'wheel') this.refresh();
+      }
+    };
+    this.wheelAnim = requestAnimationFrame(step);
   }
 
   // ----- Giao dịch
@@ -932,8 +1109,10 @@ export class UI {
   showInvite(m) {
     const text = {
       party: `${m.from} mời bạn vào nhóm.`, trade: `${m.from} muốn giao dịch với bạn.`, duel: `${m.from} thách đấu bạn!`, clan: `${m.from} mời bạn vào gia tộc ${m.clan}.`,
+      friend: `${m.from} muốn kết bạn với bạn.`,
     }[m.kind];
-    const accept = { party: 'partyAccept', trade: 'tradeAccept', duel: 'duelAccept', clan: 'clanAccept' }[m.kind];
+    const accept = { party: 'partyAccept', trade: 'tradeAccept', duel: 'duelAccept', clan: 'clanAccept', friend: 'friendAccept' }[m.kind];
+    sfx('quest');
     const el = h('div', { class: 'invite' }, h('div', null, text), h('div', { class: 'row' },
       h('button', { class: 'btn primary', onclick: () => { this.net.send(accept, { from: m.from }); el.remove(); } }, 'Đồng ý'),
       h('button', { class: 'btn', onclick: () => { this.net.send('decline', { kind: m.kind, from: m.from }); el.remove(); } }, 'Từ chối')));
@@ -949,6 +1128,7 @@ export class UI {
       h('div', { class: 'pm-head' }, `${info.name} · Lv${info.lv} ${S.G.classes[info.cls].name}`),
       h('button', { onclick: () => send('inspect', { name: info.name }) }, 'Xem thông tin'),
       h('button', { onclick: () => send('partyInvite', { name: info.name }) }, 'Mời vào nhóm'),
+      h('button', { onclick: () => send('friendAdd', { name: info.name }) }, 'Kết bạn'),
       h('button', { onclick: () => send('tradeReq', { name: info.name }) }, 'Giao dịch'),
       h('button', { onclick: () => send('duelReq', { name: info.name }) }, 'Thách đấu'),
       h('button', { onclick: () => { this.pmTo = info.name; this.setChatCh('pm'); this.focusChat(); this.hideMenu(); } }, 'Nhắn tin'),
@@ -993,4 +1173,10 @@ export class UI {
     S.party = { id: 0, members: [] };
     this.renderPartyHud();
   }
+}
+
+function shadeHex(hex) {
+  const n = parseInt(hex.slice(1), 16);
+  const f = 0.82;
+  return `rgb(${(((n >> 16) & 255) * f) | 0},${(((n >> 8) & 255) * f) | 0},${((n & 255) * f) | 0})`;
 }

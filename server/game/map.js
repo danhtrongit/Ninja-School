@@ -102,7 +102,7 @@ class GameMap {
   update(dt, now) {
     if (this.players.size === 0) {
       // Bản đồ trống: chỉ xử lý hồi sinh quái/boss để tiết kiệm CPU
-      for (const m of this.monsters.values()) if (m.dead && now >= m.respawnAt) m.respawn();
+      for (const m of this.monsters.values()) if (m.dead && !m.noRespawn && now >= m.respawnAt) m.respawn();
       for (const g of this.ground.values()) if (now > g.expire) this.ground.delete(g.id);
       return;
     }

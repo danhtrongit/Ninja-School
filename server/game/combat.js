@@ -315,7 +315,8 @@ class Combat {
         if (!pl || pl.map !== map) return;
         const share = dmg / total;
         const got = pl.gainExp(Math.round(d.exp * (0.15 + share)));
-        const luong = idx === 0 ? 20 : idx === 1 ? 10 : idx === 2 ? 5 : share > 0.02 ? 1 : 0;
+        let luong = idx === 0 ? 20 : idx === 1 ? 10 : idx === 2 ? 5 : share > 0.02 ? 1 : 0;
+        if (m.noRespawn) luong = idx === 0 ? 3 : 1;
         if (luong) {
           pl.c.luong += luong;
           pl.markMe();
@@ -323,7 +324,7 @@ class Combat {
         pl.notice(`Tham gia diệt ${d.name}: +${got} EXP${luong ? `, +${luong} lượng` : ''}`, 'reward');
         pl.onKill(m.k);
       });
-      this.world.announce(`${owner.name} đã tiêu diệt boss ${d.name} tại ${map.def.name}!`, 'boss');
+      if (!m.noRespawn) this.world.announce(`${owner.name} đã tiêu diệt boss ${d.name} tại ${map.def.name}!`, 'boss');
     } else {
       this.shareExp(owner, m);
     }

@@ -6,9 +6,11 @@ const { ITEMS, SHOPS, UPGRADE, SLOTS, sellPrice, makeItem } = require('../data/i
 const { MAPS, GROUND, VILLAGES, NPC_TYPES } = require('../data/maps');
 const { MONSTERS } = require('../data/monsters');
 const { MAIN_QUESTS, DAILY } = require('../data/quests');
+const { CHECKIN, WHEEL } = require('../data/extras');
+const { DAILY_RUNS, MIN_LV, WAVES } = require('./dungeon');
 
 const NPC_RANGE = 130;
-const vnDay = () => new Date(Date.now() + 7 * 3600 * 1000).toISOString().slice(0, 10);
+const vnDay = (offset = 0) => new Date(Date.now() + 7 * 3600 * 1000 + offset * 86400000).toISOString().slice(0, 10);
 const int = (v, d = 0) => (Number.isFinite(+v) ? Math.floor(+v) : d);
 
 // Bản đồ nơi mỗi loại quái xuất hiện (để chỉ dẫn nhiệm vụ)
@@ -27,6 +29,7 @@ class Actions {
       npc: this.npc, npcAct: this.npcAct, buy: this.buy, sell: this.sell, upgrade: this.upgrade,
       addStat: this.addStat, resetStats: this.resetStats, learnSkill: this.learnSkill, hotbar: this.hotbar,
       revive: this.revive, pk: this.pk, rank: this.rank, ping: this.ping, inspect: this.inspect,
+      storePut: this.storePut, storeTake: this.storeTake, checkin: this.checkin, spin: this.spin,
     };
   }
 
@@ -68,6 +71,7 @@ class Actions {
     const pt = p.map.def.portals[int(m.i, -1)];
     if (!pt) return;
     if (Math.abs(p.x - pt.x) > 60) return;
+    if (pt.to === '@home') return this.world.sendHome(p);
     const dest = MAPS[pt.to];
     if (dest && dest.pvp && p.lv < 10) {
       p.notice('Cần đạt cấp 10 để vào Đấu Trường.', 'warn');
@@ -265,6 +269,8 @@ class Actions {
       case 'task': return this.taskDialog(p, n);
       case 'tele': return this.teleDialog(p, n);
       case 'clan': return this.clanDialog(p, n);
+      case 'storage': return p.send('storage', { npc: n.id, items: p.c.storage });
+      case 'dungeon': return this.dungeonDialog(p, n);
       default:
     }
   }
@@ -297,6 +303,9 @@ class Actions {
       case 'clan':
         if (a === 'create') return this.world.social.clanCreate(p, String(m.text || ''));
         if (a === 'info') return p.send('openUi', { ui: 'clan' });
+        return;
+      case 'dungeon':
+        if (a === 'enter') this.enterDungeon(p);
         return;
       default:
     }
@@ -436,6 +445,152 @@ class Actions {
   clanDialog(p, n) {
     if (p.c.clan) return this.dialog(p, n, 'Gia tộc của ngươi đang phát triển thế nào rồi?', [{ a: 'info', label: 'Quản lý gia tộc' }]);
     this.dialog(p, n, 'Lập gia tộc cần cấp 15 và 50.000 xu. Tên gia tộc 3-12 ký tự (chữ, số).', [{ a: 'create', label: 'Lập gia tộc', input: 'Nhập tên gia tộc' }]);
+  }
+
+  // ---------- Hang động thử thách
+  dungeonDay(c) {
+    const today = vnDay();
+    if (!c.dungeon || c.dungeon.day !== today) c.dungeon = { day: today, runs: 0 };
+    return c.dungeon;
+  }
+
+  dungeonDialog(p, n) {
+    const left = DAILY_RUNS - this.dungeonDay(p.c).runs;
+    const text = `Hang Động Thử Thách: ${WAVES} đợt quái và 1 boss trong 10 phút. Quái mạnh theo cấp trung bình của nhóm.\n`
+      + `Yêu cầu cấp ${MIN_LV}. Lượt còn lại hôm nay: ${left}/${DAILY_RUNS}.\nTrưởng nhóm sẽ đưa các thành viên đứng gần vào cùng.\n`
+      + 'Phần thưởng: nhiều EXP, xu, Rương Báu và đá cường hóa.';
+    const opts = left > 0 && p.lv >= MIN_LV ? [{ a: 'enter', label: p.party ? 'Vào hang cùng nhóm' : 'Vào hang' }] : [];
+    this.dialog(p, n, text, opts);
+  }
+
+  enterDungeon(p) {
+    if (p.lv < MIN_LV) return p.notice(`Cần đạt cấp ${MIN_LV}.`, 'warn');
+    if (p.party && p.party.leader !== p.id) return p.notice('Chỉ trưởng nhóm mới mở được hang động.', 'warn');
+    if (this.dungeonDay(p.c).runs >= DAILY_RUNS) return p.notice('Hôm nay bạn đã hết lượt vào hang.', 'warn');
+    let members = [p];
+    if (p.party) {
+      members = [];
+      for (const id of p.party.members) {
+        const o = this.world.players.get(id);
+        if (!o || o.map !== p.map || o.dead || Math.abs(o.x - p.x) > 300) continue;
+        if (o.lv < MIN_LV || this.dungeonDay(o.c).runs >= DAILY_RUNS) {
+          o.notice('Bạn không đủ điều kiện vào hang (cấp hoặc hết lượt).', 'warn');
+          continue;
+        }
+        members.push(o);
+      }
+    }
+    for (const o of members) {
+      this.dungeonDay(o.c).runs++;
+      o.markMe();
+      if (o.trade) this.world.social.cancelTrade(o, 'Giao dịch bị hủy.');
+    }
+    this.world.startDungeon(members);
+  }
+
+  // ---------- Thủ kho
+  storePut(p, m) {
+    if (!this.nearNpc(p, m.npc, 'storage') || p.trade) return;
+    const slot = int(m.slot, -1);
+    const it = p.c.inv[slot];
+    if (!it) return;
+    const def = ITEMS[it.id];
+    const st = p.c.storage;
+    if (def.stack) {
+      for (const s of st) {
+        if (it.q <= 0) break;
+        if (s && s.id === it.id && s.q < def.stack) {
+          const n = Math.min(def.stack - s.q, it.q);
+          s.q += n;
+          it.q -= n;
+        }
+      }
+    }
+    if (it.q > 0) {
+      const i = st.indexOf(null);
+      if (i < 0) {
+        p.markInv();
+        p.send('storage', { npc: m.npc, items: st });
+        return p.notice('Kho đã đầy!', 'warn');
+      }
+      st[i] = it;
+    }
+    p.c.inv[slot] = null;
+    p.markInv();
+    p.onInventoryChanged();
+    p.send('storage', { npc: m.npc, items: st });
+  }
+
+  storeTake(p, m) {
+    if (!this.nearNpc(p, m.npc, 'storage') || p.trade) return;
+    const slot = int(m.slot, -1);
+    const it = p.c.storage[slot];
+    if (!it) return;
+    if (!p.addItemObj(it)) return p.notice('Hành trang đã đầy!', 'warn');
+    p.c.storage[slot] = null;
+    p.send('storage', { npc: m.npc, items: p.c.storage });
+  }
+
+  // ---------- Điểm danh & vòng quay
+  giveReward(p, r) {
+    const items = r.items || [];
+    const need = items.reduce((s, [id, q]) => s + (ITEMS[id].stack ? 1 : q), 0);
+    if (p.freeSlots() < need) {
+      p.notice(`Cần ${need} ô trống trong hành trang.`, 'warn');
+      return false;
+    }
+    if (r.xu) p.gainXu(r.xu);
+    if (r.luong) p.c.luong += r.luong;
+    for (const [id, q] of items) p.addItem(id, q);
+    p.markMe();
+    return true;
+  }
+
+  rewardLabel(r) {
+    const parts = [];
+    if (r.xu) parts.push(`${r.xu.toLocaleString('vi-VN')} xu`);
+    if (r.luong) parts.push(`${r.luong} lượng`);
+    for (const [id, q] of r.items || []) parts.push(`${ITEMS[id].name}${q > 1 ? ` x${q}` : ''}`);
+    return parts.join(', ');
+  }
+
+  checkin(p) {
+    const ck = p.c.checkin;
+    const today = vnDay();
+    if (ck.day === today) return p.notice('Hôm nay bạn đã điểm danh rồi.');
+    const streak = ck.day === vnDay(-1) ? ck.streak + 1 : 1;
+    const base = CHECKIN[(streak - 1) % CHECKIN.length];
+    const r = { ...base, xu: base.xu ? Math.round(base.xu * (1 + p.lv / 20)) : 0 };
+    if (!this.giveReward(p, r)) return;
+    ck.day = today;
+    ck.streak = streak;
+    p.markMe();
+    p.notice(`Điểm danh ngày ${((streak - 1) % 7) + 1}: ${this.rewardLabel(r)}`, 'reward');
+  }
+
+  spin(p, m) {
+    const now = Date.now();
+    if (now - (p.lastSpin || 0) < 1200) return;
+    const cur = m.cur === 'luong' ? 'luong' : 'xu';
+    const cost = WHEEL.cost[cur];
+    if ((cur === 'luong' ? p.c.luong : p.c.xu) < cost) return p.notice(cur === 'luong' ? 'Không đủ lượng.' : 'Không đủ xu.', 'warn');
+    const key = cur === 'luong' ? 'wl' : 'w';
+    const total = WHEEL.prizes.reduce((s, x) => s + x[key], 0);
+    let roll = Math.random() * total;
+    let idx = 0;
+    for (; idx < WHEEL.prizes.length - 1; idx++) {
+      roll -= WHEEL.prizes[idx][key];
+      if (roll < 0) break;
+    }
+    const prize = WHEEL.prizes[idx];
+    const need = (prize.items || []).length;
+    if (p.freeSlots() < need) return p.notice('Hành trang đã đầy!', 'warn');
+    p.lastSpin = now;
+    if (cur === 'luong') p.c.luong -= cost;
+    else p.c.xu -= cost;
+    this.giveReward(p, prize);
+    p.send('spinResult', { idx, label: prize.label });
+    if (prize.luong >= 20) this.world.announce(`${p.name} quay trúng ${prize.label} ở Vòng Quay May Mắn!`, 'world');
   }
 
   // ---------- Cửa hàng

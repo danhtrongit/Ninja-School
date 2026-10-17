@@ -16,11 +16,15 @@ Toàn bộ đồ họa pixel được **vẽ bằng code**, không dùng hình �
 | Quái & Boss | 33 loại quái với AI tuần tra/đuổi đánh/đánh xa, 6 boss thế giới hồi sinh định kỳ, thông báo toàn server, chia thưởng theo sát thương |
 | Trang bị | 9 ô trang bị, 10 bậc (Gỗ → Thần), 5 độ hiếm với dòng chỉ số ngẫu nhiên, rơi đồ có chủ sở hữu |
 | Cường hóa | +1 đến +12 tại Thợ Rèn, đá cường hóa 3 cấp, tỉ lệ thành công giảm dần, Bùa Bảo Hộ chống tụt cấp |
-| NPC | Trưởng Làng (nhiệm vụ chính), Bà Thuốc, Thợ Rèn, Tiểu Nhị (nhiệm vụ hằng ngày), Phu Xe (dịch chuyển), Lão Gia Tộc |
+| NPC | Trưởng Làng (nhiệm vụ chính), Bà Thuốc, Thợ Rèn, Tiểu Nhị (nhiệm vụ hằng ngày), Phu Xe (dịch chuyển), Lão Gia Tộc, Thủ Kho, Hộ Pháp (hang động) |
 | Nhiệm vụ | 21 nhiệm vụ chính theo cốt truyện + 20 nhiệm vụ diệt quái mỗi ngày |
 | Xã hội | Chat bản đồ (bong bóng trên đầu), thế giới, nhóm, gia tộc, nhắn riêng · Nhóm 6 người chia EXP · Gia tộc 30 người (tộc trưởng/trưởng lão) · Giao dịch an toàn (khóa + xác nhận 2 bên) |
 | PvP | Thách đấu 1-1, chế độ PK (điểm hiếu chiến, phạt EXP), Đấu Trường |
-| Tiện ích | Tự động đánh (tự tìm quái, dùng kỹ năng, uống thuốc, nhặt đồ), bảng xếp hạng, bản đồ thu nhỏ, điều khiển cảm ứng |
+| Hang Động Thử Thách | Phó bản riêng cho từng nhóm: 5 đợt quái + boss trong 10 phút, quái mạnh theo cấp trung bình nhóm, 3 lượt/ngày, thưởng EXP, xu, Rương Báu, đá cường hóa |
+| Thủ Kho | 60 ô cất đồ, dùng chung ở mọi làng |
+| Bạn bè | Kết bạn, xem online/offline, nhắn tin, mời nhóm nhanh, thông báo khi bạn bè online |
+| Điểm danh & Vòng quay | Quà điểm danh 7 ngày liên tục · Vòng quay may mắn bằng xu hoặc lượng |
+| Tiện ích | Tự động đánh (tự tìm quái, dùng kỹ năng, uống thuốc, nhặt đồ), bảng xếp hạng, bản đồ thu nhỏ, điều khiển cảm ứng, âm thanh tổng hợp bằng WebAudio |
 | Tiền tệ | Xu (đánh quái, nhiệm vụ) và Lượng (boss, nhiệm vụ hằng ngày) mua Bí Kíp x2 EXP, Bùa Bảo Hộ, Thẻ Hồi Sinh |
 
 ## Chạy trên máy
@@ -53,7 +57,11 @@ npm test
 
 Server là một tiến trình Node.js duy nhất phục vụ cả web lẫn WebSocket, nên chạy được trên mọi host hỗ trợ Node hoặc Docker. Dữ liệu người chơi nằm trong `DATA_DIR`, vì vậy cần **ổ đĩa lưu trữ bền vững**.
 
-**Render.com**: tạo *Blueprint* từ repo này. File `render.yaml` đã cấu hình sẵn web service, ổ đĩa `/var/data` và health check.
+**Render.com**: bấm nút dưới (hoặc *New → Blueprint* rồi chọn repo này). File `render.yaml` đã cấu hình sẵn web service, ổ đĩa `/var/data` và health check.
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/danhtrongit/ninja-school)
+
+> Gói miễn phí của Render không có ổ đĩa bền vững, dữ liệu sẽ mất mỗi lần server khởi động lại. Muốn giữ tài khoản người chơi thì dùng gói có disk (như cấu hình sẵn) hoặc một VPS.
 
 **Docker / VPS**:
 
@@ -90,7 +98,7 @@ location / {
 | Z | Nhặt đồ |
 | Tab | Đổi mục tiêu |
 | F | Bật/tắt tự động đánh |
-| B, C, V, N, P, G, R, M | Túi đồ, Nhân vật, Kỹ năng, Nhiệm vụ, Nhóm, Gia tộc, Xếp hạng, Bản đồ |
+| B, C, V, N, P, O, G, R, M | Túi đồ, Nhân vật, Kỹ năng, Nhiệm vụ, Nhóm, Bạn bè, Gia tộc, Xếp hạng, Bản đồ |
 | Enter | Chat |
 
 Bấm vào NPC để nói chuyện, bấm vào quái để chọn mục tiêu, bấm vào người chơi để mời nhóm, giao dịch, thách đấu, nhắn tin, xem thông tin.
@@ -110,9 +118,10 @@ server/
     map.js          Bản đồ: người chơi, quái, vật phẩm rơi, đồng bộ trạng thái
     monster.js      AI quái & boss
     combat.js       Kỹ năng, sát thương, ngũ hành, rơi đồ, chết/hồi sinh
+    dungeon.js      Phó bản Hang Động Thử Thách (bản sao riêng theo nhóm)
     player.js       Nhân vật, chỉ số, túi đồ, kinh nghiệm
-    actions.js      NPC, cửa hàng, cường hóa, nhiệm vụ, tiềm năng, kỹ năng
-    social.js       Chat, nhóm, giao dịch, thách đấu, gia tộc, lệnh admin
+    actions.js      NPC, cửa hàng, cường hóa, nhiệm vụ, thủ kho, điểm danh, vòng quay
+    social.js       Chat, nhóm, bạn bè, giao dịch, thách đấu, gia tộc, lệnh admin
 public/
   index.html, css/style.css
   js/
@@ -122,6 +131,7 @@ public/
     maprender.js    17 chủ đề bản đồ, parallax, trang trí, hạt thời tiết
     fx.js           Hiệu ứng kỹ năng, số sát thương
     ui.js           HUD và các cửa sổ
+    sound.js        Hiệu ứng âm thanh WebAudio
 test/smoke.js       Kiểm thử tự động end-to-end
 ```
 

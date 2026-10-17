@@ -12,7 +12,7 @@ export const S = {
 };
 
 function loadSettings() {
-  const def = { autoHp: 40, autoMp: 25, names: true, autoPick: true, autoRange: 600, chatTab: 'all' };
+  const def = { autoHp: 40, autoMp: 25, names: true, autoPick: true, autoRange: 600, chatTab: 'all', sound: true };
   try {
     return { ...def, ...JSON.parse(localStorage.getItem('ns_settings') || '{}') };
   } catch (e) {

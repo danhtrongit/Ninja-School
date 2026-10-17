@@ -7,6 +7,7 @@ const { Player, expNeed } = require('./player');
 const { Combat } = require('./combat');
 const { Social } = require('./social');
 const { Actions } = require('./actions');
+const { Dungeon } = require('./dungeon');
 
 const TICK = 50;
 
@@ -24,7 +25,9 @@ class World {
     this.social = new Social(this);
     this.actions = new Actions(this);
     this.rankCache = { level: [], clan: [], at: 0 };
-    for (const id in MAPS) this.maps[id] = new GameMap(this, MAPS[id]);
+    this.dungeons = new Map();
+    this.nextDungeon = 1;
+    for (const id in MAPS) if (!MAPS[id].instance) this.maps[id] = new GameMap(this, MAPS[id]);
     this.tickN = 0;
     this.last = Date.now();
     this.timer = setInterval(() => this.tick(), TICK);
@@ -45,7 +48,14 @@ class World {
     this.last = now;
     this.tickN++;
     for (const id in this.maps) this.maps[id].update(dt, now);
-    if (this.tickN % 2 === 0) for (const id in this.maps) this.maps[id].sendState();
+    for (const d of [...this.dungeons.values()]) {
+      d.map.update(dt, now);
+      d.update(now);
+    }
+    if (this.tickN % 2 === 0) {
+      for (const id in this.maps) this.maps[id].sendState();
+      for (const d of this.dungeons.values()) d.map.sendState();
+    }
     if (this.tickN % 20 === 0) this.secondTick(now);
     if (this.tickN % 1200 === 0) this.computeRank();
     for (const p of this.players.values()) this.flush(p);
@@ -113,6 +123,7 @@ class World {
     p.send('chat', { ch: 'sys', msg: `Chào mừng ${c.name} đến với thế giới Ninja! Hiện có ${this.players.size} người đang online.` });
     if (c.clan) this.social.clanBroadcast(c.clan, 'chat', { ch: 'clan', from: 'Hệ thống', msg: `${c.name} đã online.` }, p);
     if (this.config.motd) p.send('chat', { ch: 'sys', msg: this.config.motd });
+    this.social.onJoin(p);
     return p;
   }
 
@@ -120,9 +131,7 @@ class World {
     if (!this.players.has(p.id)) return;
     this.social.onLeave(p);
     if (p.map) {
-      p.c.map = p.map.id;
-      p.c.x = Math.round(p.x);
-      p.c.y = Math.round(p.y);
+      this.persistPos(p);
       p.map.remove(p);
     }
     if (p.dead) {
@@ -138,12 +147,37 @@ class World {
     p.conn.player = null;
   }
 
+  persistPos(p) {
+    if (!p.map) return;
+    if (p.map.def.instance) {
+      p.c.map = CLASSES[p.c.cls].village;
+      p.c.x = MAPS[p.c.map].spawnX;
+      p.c.y = GROUND;
+      return;
+    }
+    p.c.map = p.map.id;
+    p.c.x = Math.round(p.x);
+    p.c.y = Math.round(p.y);
+  }
+
+  sendHome(p) {
+    const v = CLASSES[p.c.cls].village;
+    this.enterMap(p, v, MAPS[v].spawnX, GROUND);
+  }
+
+  startDungeon(players) {
+    const d = new Dungeon(this, players);
+    this.dungeons.set(d.id, d);
+    d.enter(players);
+    return d;
+  }
+
   enterMap(p, mapId, x, y) {
-    const map = this.maps[mapId] || this.maps[CLASSES[p.c.cls].village];
+    const map = typeof mapId === 'object' ? mapId : this.maps[mapId] || this.maps[CLASSES[p.c.cls].village];
     if (p.map) p.map.remove(p);
     p.x = Math.max(20, Math.min(map.def.w - 20, x == null ? map.def.spawnX : x));
     p.y = y == null ? GROUND : Math.max(0, Math.min(GROUND, y));
-    p.c.map = map.id;
+    p.c.map = map.def.instance ? p.c.map : map.id;
     p.moveGrace = Date.now() + 1500;
     p.lastMoveAt = Date.now();
     if (p.duel) this.social.cancelDuel(p, 'Rời bản đồ, trận thách đấu bị hủy.');
@@ -151,7 +185,7 @@ class World {
     if (map.def.town && p.pkMode) p.pkMode = false;
     map.add(p);
     const snap = map.snapshot();
-    p.send('enterMap', { map: map.id, x: Math.round(p.x), y: Math.round(p.y), me: p.selfData(), ...snap });
+    p.send('enterMap', { map: map.def.id, x: Math.round(p.x), y: Math.round(p.y), me: p.selfData(), ...snap });
     this.social.sendParty(p);
   }
 
@@ -213,11 +247,7 @@ class World {
 
   saveAll() {
     for (const p of this.players.values()) {
-      if (p.map) {
-        p.c.map = p.map.id;
-        p.c.x = Math.round(p.x);
-        p.c.y = Math.round(p.y);
-      }
+      this.persistPos(p);
       this.db.putChar(p.c);
     }
     this.db.save();

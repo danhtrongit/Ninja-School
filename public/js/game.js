@@ -3,6 +3,7 @@ import { S, skillVal } from './store.js';
 import { drawNinja, drawMonster, monsterHeight, iconCanvas, ELEMENT_COLORS } from './sprites.js';
 import { MapRenderer } from './maprender.js';
 import { FX } from './fx.js';
+import { sfx } from './sound.js';
 
 const GRAV = 1000;
 const JUMP = 378;
@@ -114,6 +115,7 @@ export class Game {
     n.on('levelUp', (m) => {
       const getter = () => this.entity(`p${m.id}`);
       this.fx.levelUp(getter);
+      if (S.me && m.id === S.me.id) sfx('level');
       const e = getter();
       if (e) this.fx.text(e.x, e.y - 34, 'LÊN CẤP!', '#ffd54f', true);
     });
@@ -122,6 +124,7 @@ export class Game {
     });
     n.on('loot', (m) => {
       if (!this.me) return;
+      sfx(m.k === 'xu' ? 'coin' : 'pickup');
       if (m.k === 'xu') this.fx.text(this.me.x, this.me.y - 30, `+${m.q} xu`, '#ffd54f');
       else {
         const def = S.G.items[m.k];
@@ -136,6 +139,7 @@ export class Game {
       }
     });
     n.on('dead', () => {
+      sfx('die');
       this.chase = null;
       this.walkTo = null;
     });
@@ -237,6 +241,8 @@ export class Game {
         this.fx.text(e.x, cy - 14, 'Né', '#b0bec5');
         continue;
       }
+      if (m.a === meTid) sfx(crit ? 'crit' : 'hit');
+      else if (tid === meTid) sfx('hurt');
       e.flash = this.t + 0.12;
       let col = '#ffffff';
       if (tid === meTid) col = '#ff5252';
@@ -259,6 +265,12 @@ export class Game {
     if (S.me && m.a !== S.me.id) {
       a.attackUntil = this.t + 0.25;
       a.dir = dir;
+    }
+    if (S.me && m.a === S.me.id) {
+      if (f.k === 'slash' || f.k === 'dash') sfx('swing');
+      else if (f.k === 'proj' || f.k === 'rain' || f.k === 'wave') sfx('shoot');
+      else if (f.k === 'heal') sfx('heal');
+      else sfx('magic');
     }
     const te = m.tid ? this.entity(m.tid) : null;
     const tx = te ? te.x : m.tx;

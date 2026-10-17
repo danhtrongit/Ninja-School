@@ -14,6 +14,7 @@ const { ITEMS, SLOTS, SLOT_NAMES, RARITY, TIER_COLORS, STAT_LABELS, UPGRADE } = 
 const { MONSTERS } = require('./data/monsters');
 const { clientMaps, NPC_TYPES, GROUND } = require('./data/maps');
 const { MAIN_QUESTS } = require('./data/quests');
+const { CHECKIN, WHEEL } = require('./data/extras');
 const { expNeed } = require('./game/player');
 
 const config = {
@@ -44,6 +45,7 @@ const GAME_DATA = JSON.stringify({
   monsters: Object.fromEntries(Object.entries(MONSTERS).map(([k, m]) => [k, { name: m.name, lv: m.lv, type: m.type, pal: m.pal, el: m.el, boss: !!m.boss, scale: m.scale, w: m.w, h: m.h, fly: m.fly, ranged: m.ranged, aggro: m.aggro }])),
   maps: clientMaps(), npcTypes: NPC_TYPES, ground: GROUND,
   quests: MAIN_QUESTS.map((q) => ({ name: q.name, req: q.req })),
+  checkin: CHECKIN, wheel: { cost: WHEEL.cost, prizes: WHEEL.prizes.map((x) => ({ label: x.label, c: x.c })) },
   expTable: Array.from({ length: 101 }, (_, i) => (i ? expNeed(i) : 0)),
 });
 
@@ -202,7 +204,7 @@ function handleLobby(conn, m) {
       const online = world.byName.get(name.toLowerCase());
       if (online) world.leave(online);
       const c = db.getChar(name);
-      if (c && c.clan && db.clans[c.clan]) world.social.removeFromClan(c.name, c.clan);
+      if (c && c.clan && db.clans[c.clan]) world.social.leaveClan(c.name, c.clan);
       db.deleteChar(name);
       acc.chars.splice(i, 1);
       return sendChars(conn);

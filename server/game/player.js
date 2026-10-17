@@ -7,6 +7,7 @@ const { MAPS, GROUND } = require('../data/maps');
 const { MAIN_QUESTS } = require('../data/quests');
 
 const INV_SIZE = 40;
+const STORAGE_SIZE = 60;
 const MAX_LEVEL = 100;
 const expNeed = (lv) => Math.floor(20 * lv * lv + 80 * lv);
 
@@ -91,7 +92,12 @@ class Player {
     c.daily = c.daily || { day: '', done: 0, task: null };
     c.buffs = c.buffs || {};
     c.settings = c.settings || {};
-    if (!MAPS[c.map] || MAPS[c.map].pvp) {
+    c.storage = Array.isArray(c.storage) ? c.storage.map((it) => (it && ITEMS[it.id] ? it : null)) : [];
+    while (c.storage.length < STORAGE_SIZE) c.storage.push(null);
+    c.friends = Array.isArray(c.friends) ? c.friends : [];
+    c.checkin = c.checkin || { day: '', streak: 0 };
+    c.dungeon = c.dungeon || { day: '', runs: 0 };
+    if (!MAPS[c.map] || MAPS[c.map].pvp || MAPS[c.map].instance) {
       c.map = CLASSES[c.cls].village;
       c.x = MAPS[c.map].spawnX;
       c.y = GROUND;
@@ -177,7 +183,7 @@ class Player {
       xu: c.xu, luong: c.luong, hp: c.hp, mp: c.mp, s: this.s, stats: c.stats, potential: c.potential,
       skillPoints: c.skillPoints, skills: c.skills, hotbar: c.hotbar, quest: this.questView(), daily: c.daily,
       clan: c.clan ? this.world.clanView(c.clan, c.name) : null, pk: c.pk, pkMode: this.pkMode, buffs, dead: this.dead,
-      kills: c.kills, look: this.look(), now,
+      kills: c.kills, look: this.look(), now, checkin: c.checkin, dungeon: c.dungeon,
     };
   }
 
@@ -357,4 +363,4 @@ class Player {
   }
 }
 
-module.exports = { Player, newChar, expNeed, INV_SIZE, MAX_LEVEL, ELEMENTS };
+module.exports = { Player, newChar, expNeed, INV_SIZE, STORAGE_SIZE, MAX_LEVEL, ELEMENTS };

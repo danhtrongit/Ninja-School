@@ -64,7 +64,7 @@ class Monster {
 
   update(dt, now) {
     if (this.dead) {
-      if (now >= this.respawnAt) this.respawn();
+      if (!this.noRespawn && now >= this.respawnAt) this.respawn();
       return;
     }
     const d = this.def;

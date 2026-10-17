@@ -5,7 +5,7 @@ const KEYMAP = {
   KeyJ: 'attack', Digit1: 's1', Digit2: 's2', Digit3: 's3', Digit4: 's4', Digit5: 's5',
   KeyQ: 'hp', KeyE: 'mp', KeyZ: 'pick', KeyX: 'talk', Tab: 'target',
   KeyB: 'w_inv', KeyI: 'w_inv', KeyC: 'w_char', KeyV: 'w_skill', KeyN: 'w_quest', KeyP: 'w_party', KeyG: 'w_clan',
-  KeyR: 'w_rank', KeyF: 'auto', KeyM: 'w_map', Enter: 'chat', Escape: 'esc',
+  KeyR: 'w_rank', KeyF: 'auto', KeyM: 'w_map', KeyO: 'w_friends', Enter: 'chat', Escape: 'esc',
 };
 
 export class Input {

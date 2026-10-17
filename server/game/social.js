@@ -24,6 +24,7 @@ class Social {
       clanInvite: this.clanInvite, clanAccept: this.clanAccept, clanLeave: this.clanLeave, clanKick: this.clanKick,
       clanInfo: this.clanInfo, clanNotice: this.clanNotice, clanPromote: this.clanPromote,
       decline: this.decline,
+      friendAdd: this.friendAdd, friendAccept: this.friendAccept, friendDel: this.friendDel, friendList: this.friendList,
     };
   }
 
@@ -54,7 +55,18 @@ class Social {
     if (o) o.notice(`${p.name} đã từ chối lời mời.`);
   }
 
+  onJoin(p) {
+    for (const name of p.c.friends) {
+      const o = this.find(name);
+      if (o) o.send('chat', { ch: 'sys', msg: `Bạn bè ${p.name} đã online.` });
+    }
+  }
+
   onLeave(p) {
+    for (const name of p.c.friends) {
+      const o = this.find(name);
+      if (o) o.send('chat', { ch: 'sys', msg: `Bạn bè ${p.name} đã offline.` });
+    }
     if (p.trade) this.cancelTrade(p, 'Đối phương đã thoát game.');
     if (p.duel) this.cancelDuel(p, 'Đối phương đã thoát game.');
     if (p.party) this.leaveParty(p);
@@ -154,6 +166,48 @@ class Social {
       case 'mobs': return sys(Object.keys(MONSTERS).join(', '));
       default: return sys('Lệnh không tồn tại.');
     }
+  }
+
+  // ---------- Bạn bè
+  friendAdd(p, m) {
+    const o = this.find(m.name);
+    if (!o || o === p) return p.notice('Người chơi không online.');
+    if (p.c.friends.some((n) => n.toLowerCase() === o.name.toLowerCase())) return p.notice(`${o.name} đã là bạn bè.`);
+    if (p.c.friends.length >= 50) return p.notice('Danh sách bạn bè đã đầy (50).');
+    this.invite(p, o, 'friend');
+    p.notice(`Đã gửi lời mời kết bạn tới ${o.name}.`);
+  }
+
+  friendAccept(p, m) {
+    const o = this.find(m.from);
+    if (!o || !this.takeInvite(p, 'friend', m.from)) return p.notice('Lời mời đã hết hạn.');
+    for (const [a, b] of [[p, o], [o, p]]) {
+      if (!a.c.friends.some((n) => n.toLowerCase() === b.name.toLowerCase()) && a.c.friends.length < 50) a.c.friends.push(b.name);
+      a.notice(`${b.name} và bạn đã trở thành bạn bè!`, 'reward');
+      this.friendList(a);
+    }
+    this.world.db.dirty = true;
+  }
+
+  friendDel(p, m) {
+    const name = String(m.name || '').toLowerCase();
+    p.c.friends = p.c.friends.filter((n) => n.toLowerCase() !== name);
+    const o = this.find(name);
+    const c = o ? o.c : this.world.db.getChar(name);
+    if (c) c.friends = (c.friends || []).filter((n) => n.toLowerCase() !== p.name.toLowerCase());
+    if (o) this.friendList(o);
+    this.world.db.dirty = true;
+    this.friendList(p);
+  }
+
+  friendList(p) {
+    const list = p.c.friends.map((name) => {
+      const o = this.find(name);
+      if (o) return { name: o.name, lv: o.lv, cls: o.c.cls, map: o.map ? o.map.def.name : '', online: true };
+      const c = this.world.db.getChar(name);
+      return c ? { name: c.name, lv: c.level, cls: c.cls, map: '', online: false } : null;
+    }).filter(Boolean).sort((a, b) => b.online - a.online || b.lv - a.lv);
+    p.send('friends', { list });
   }
 
   // ---------- Nhóm
@@ -462,18 +516,19 @@ class Social {
     db.dirty = true;
   }
 
-  clanLeave(p) {
-    const cl = this.myClan(p);
-    if (!cl) return;
-    const id = p.c.clan;
-    if (cl.leader === p.name) {
-      // Tộc trưởng rời đi: giải tán nếu chỉ còn 1 người, ngược lại nhường cho trưởng lão / thành viên lâu nhất
-      const others = Object.entries(cl.members).filter(([k]) => k !== p.name.toLowerCase());
+  // Rời gia tộc (dùng cả khi xóa nhân vật): tộc trưởng rời thì nhường chức, còn 1 người thì giải tán
+  leaveClan(name, id) {
+    const db = this.world.db;
+    const cl = db.clans[id];
+    if (!cl) return null;
+    const key = name.toLowerCase();
+    if (cl.leader.toLowerCase() === key) {
+      const others = Object.entries(cl.members).filter(([k]) => k !== key);
       if (!others.length) {
-        this.removeFromClan(p.name, id);
-        delete this.world.db.clans[id];
-        this.world.db.dirty = true;
-        return p.notice('Gia tộc đã giải tán.');
+        this.removeFromClan(name, id);
+        delete db.clans[id];
+        db.dirty = true;
+        return 'dissolved';
       }
       others.sort((a, b) => (b[1].rank === 'elder') - (a[1].rank === 'elder') || a[1].joined - b[1].joined);
       const [, heir] = others[0];
@@ -481,9 +536,15 @@ class Social {
       cl.leader = heir.name;
       this.clanBroadcast(id, 'chat', { ch: 'clan', from: 'Hệ thống', msg: `${heir.name} trở thành tộc trưởng mới.` });
     }
-    this.removeFromClan(p.name, id);
-    this.clanBroadcast(id, 'chat', { ch: 'clan', from: 'Hệ thống', msg: `${p.name} đã rời gia tộc.` });
-    p.notice('Bạn đã rời gia tộc.');
+    this.removeFromClan(name, id);
+    this.clanBroadcast(id, 'chat', { ch: 'clan', from: 'Hệ thống', msg: `${name} đã rời gia tộc.` });
+    return 'left';
+  }
+
+  clanLeave(p) {
+    if (!this.myClan(p)) return;
+    const r = this.leaveClan(p.name, p.c.clan);
+    p.notice(r === 'dissolved' ? 'Gia tộc đã giải tán.' : 'Bạn đã rời gia tộc.');
   }
 
   clanKick(p, m) {
