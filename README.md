@@ -69,7 +69,15 @@ Server là một tiến trình Node.js duy nhất phục vụ cả web lẫn Web
 
 > Gói miễn phí của Render không có ổ đĩa bền vững, dữ liệu sẽ mất mỗi lần server khởi động lại. Muốn giữ tài khoản người chơi thì dùng gói có disk (như cấu hình sẵn) hoặc một VPS.
 
-**Docker / VPS**:
+**Docker có sẵn (không cần build)**: mỗi lần push lên `main`, GitHub Actions tự kiểm thử rồi đẩy image lên GitHub Container Registry.
+
+```bash
+docker run -d --name ninja --restart unless-stopped -p 80:3000 -v ninja-data:/data -e ADMINS=tentaikhoan ghcr.io/danhtrongit/ninja-school:latest
+```
+
+> Lần đầu, vào GitHub → Packages → `ninja-school` → Package settings, đặt **Public** để máy chủ kéo image không cần đăng nhập (hoặc `docker login ghcr.io`).
+
+**Docker tự build / VPS**:
 
 ```bash
 docker build -t ninja-school .
