@@ -1560,7 +1560,7 @@ function auroraCanvas(seed) {
 function halo(b, cx, cy, r, col, a) {
   for (let y = Math.floor(cy - r); y <= cy + r; y++) for (let x = Math.floor(cx - r); x <= cx + r; x++) {
     const d = Math.hypot(x - cx, y - cy) / r;
-    if (d < 1) b.a(x, y, col, Math.round(a * (1 - d) * (1 - d) * 8) / 8);
+    if (d < 1) b.a(x, y, col, a * (1 - d) * (1 - d) * (1 - d));
   }
 }
 
@@ -1851,7 +1851,7 @@ const SCENES = {
 // ======================= Mặt đất =======================
 const VILLAGE = {
   fire: { roof: '#cf4630', wall: '#f3e2c4', wood: '#5e3424', stone: ['#efdcbc', '#d2bc96', '#a8906c', '#7a6650'], tree: 'sakura', glow: '#ffb050' },
-  water: { roof: '#3a6fb8', wall: '#eef0ee', wood: '#463634', stone: ['#dfe4ea', '#bcc4cf', '#929cab', '#68717f'], tree: 'willow', glow: '#ffd890' },
+  water: { roof: '#3a6fb8', wall: '#eef0ee', wood: '#463634', stone: ['#ccd4de', '#a8b2c0', '#828c9e', '#5a6274'], tree: 'willow', glow: '#ffd890' },
   wind: { roof: '#4a9a52', wall: '#f2ead0', wood: '#5a4228', stone: ['#dcdcc0', '#b8bc9c', '#8e9478', '#666c56'], tree: 'bamboo', glow: '#fff0a0' },
 };
 
@@ -2070,15 +2070,8 @@ function buildGround(T, m, th, sc, R) {
       if (R() < 0.06) { const l = 1 + ((R() * 4) | 0); for (let k = 0; k < l; k++) T.p(x, G + depth + 1 + k, k === l - 1 ? '#ffffff' : '#bfe6fa'); }
     }
   } else if (kind === 'ice') {
-    T.r(0, G, W, H - G, '#4a7fa6');
-    strata(T, R, W, G + 14, H, '#3c6a8e', 10);
-    // khối băng sâu có vết nứt
-    for (let i = 0; i < W / 18; i++) {
-      let x = R() * W;
-      let y = G + 8 + R() * 40;
-      for (let k = 0; k < 10; k++) { T.p(x, y, '#8ac4e4'); x += R() < 0.5 ? 1 : -1; y += 1; }
-    }
-    for (let i = 0; i < W / 10; i++) T.p(R() * W, G + 10 + R() * (H - G - 10), '#a8dcf4');
+    voronoiRock(T, R, W, G + 6, H, ['#8cc8ea', '#64a4cc', '#4a84b0', '#2e5a84']);
+    for (let i = 0; i < W / 10; i++) T.p(R() * W, G + 10 + R() * (H - G - 10), '#d8f4ff');
     for (let x = 0; x < W; x++) {
       T.r(x, G, 1, 7, '#bfe8fa');
       T.p(x, G, '#ffffff');
@@ -3219,7 +3212,7 @@ export class MapRenderer {
     for (const p of this.map.portals) {
       const x = Math.round(p.x - camX);
       const y = Math.round(G - camY);
-      if (x < -80 || x > 2000) continue;
+      if (x < -80 || x > ctx.canvas.width + 80) continue;
       if (p.door) {
         const cy = this.map.town ? y - 30 : y - 34;
         ctx.globalCompositeOperation = 'lighter';
