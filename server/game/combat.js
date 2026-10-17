@@ -354,7 +354,7 @@ class Combat {
       members = [...owner.party.members].map((id) => map.players.get(id)).filter((o) => o && !o.dead);
       if (!members.includes(owner)) members.push(owner);
     }
-    const bonus = 1 + 0.12 * (members.length - 1);
+    const bonus = (1 + 0.12 * (members.length - 1)) * this.world.expEvent();
     const each = (d.exp * bonus) / members.length;
     for (const o of members) {
       const got = o.gainExp(each * mods(o.lv) * (o === owner ? 1.1 : 1));

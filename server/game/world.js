@@ -10,6 +10,9 @@ const { Actions } = require('./actions');
 const { Dungeon } = require('./dungeon');
 
 const TICK = 50;
+// Giờ Vàng: nhân đôi EXP toàn máy chủ (giờ Việt Nam)
+const GOLDEN_HOURS = [[12, 13], [20, 22]];
+const vnHour = () => new Date(Date.now() + 7 * 3600 * 1000).getUTCHours();
 
 class World {
   constructor(db, config) {
@@ -32,7 +35,18 @@ class World {
     this.last = Date.now();
     this.timer = setInterval(() => this.tick(), TICK);
     this.saveTimer = setInterval(() => this.saveAll(), 30000);
+    this.golden = this.isGoldenHour();
     this.computeRank();
+  }
+
+  isGoldenHour() {
+    if (this.config.golden === false) return false;
+    const h = vnHour();
+    return GOLDEN_HOURS.some(([a, b]) => h >= a && h < b);
+  }
+
+  expEvent() {
+    return this.golden ? 2 : 1;
   }
 
   stop() {
@@ -62,6 +76,11 @@ class World {
   }
 
   secondTick(now) {
+    const golden = this.isGoldenHour();
+    if (golden !== this.golden) {
+      this.golden = golden;
+      this.announce(golden ? 'GIỜ VÀNG bắt đầu: nhân đôi kinh nghiệm toàn máy chủ!' : 'Giờ Vàng đã kết thúc.', 'world');
+    }
     for (const p of this.players.values()) {
       p.c.playtime += 1;
       // Hết hạn buff
@@ -125,6 +144,7 @@ class World {
     p.send('chat', { ch: 'sys', msg: `Chào mừng ${c.name} đến với thế giới Ninja! Hiện có ${this.players.size} người đang online.` });
     if (c.clan) this.social.clanBroadcast(c.clan, 'chat', { ch: 'clan', from: 'Hệ thống', msg: `${c.name} đã online.` }, p);
     if (this.config.motd) p.send('chat', { ch: 'sys', msg: this.config.motd });
+    p.send('chat', { ch: 'sys', msg: this.golden ? 'Đang trong GIỜ VÀNG: nhân đôi kinh nghiệm!' : 'Giờ Vàng nhân đôi EXP: 12h-13h và 20h-22h hằng ngày.' });
     this.social.onJoin(p);
     return p;
   }
