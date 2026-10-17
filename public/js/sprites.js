@@ -105,7 +105,6 @@ const OY = 56; // hàng ứng với y = 0 (ngay dưới lòng bàn chân)
 const BUF = new Int32Array(FW * FH);
 const TAG = new Uint8Array(FW * FH); // 1 = điểm ảnh vũ khí
 const TMP = new Int32Array(FW * FH);
-const TMPT = new Uint8Array(FW * FH);
 let TAGV = 0;
 
 function clr() {
@@ -132,9 +131,6 @@ function at(x, y) {
   const gy = OY + y;
   if (gx < 0 || gy < 0 || gx >= FW || gy >= FH) return -1;
   return BUF[gy * FW + gx];
-}
-function rect(x, y, w, h, c) {
-  for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) px(x + i, y + j, c);
 }
 // Dán bản đồ ký tự: '.' bỏ qua, '_' xóa điểm
 function stamp(x, y, rows, P) {
@@ -364,9 +360,10 @@ function drawEyes(P, hx, hy, mode, female) {
     return;
   }
   if (mode === 'dead') {
+    // mắt nhắm xoáy
     for (const ex of [0, 4]) {
-      px(hx + ex, hy - 22, P.e); px(hx + ex + 1, hy - 21, P.e); px(hx + ex, hy - 20, P.e);
-      px(hx + ex + 1, hy - 22, P.e); px(hx + ex, hy - 21, P.e); px(hx + ex + 1, hy - 20, P.e);
+      px(hx + ex - 1, hy - 21, P.e); px(hx + ex, hy - 21, P.e); px(hx + ex + 1, hy - 21, P.e);
+      px(hx + ex, hy - 22, P.S);
     }
     return;
   }
@@ -731,12 +728,12 @@ function drawKunai(P, hx, hy, d) {
   px(hx - dx * 2, hy - dy * 2, P.Y);
   px(hx - dx * 3 + ex, hy - dy * 3 + ey, P.Y); px(hx - dx * 3 - ex, hy - dy * 3 - ey, P.Y);
   px(hx - dx * 3, hy - dy * 3, -1);
-  for (let i = 1; i <= 4; i++) {
+  for (let i = 1; i <= 5; i++) {
     const x = hx + dx * i;
     const y = hy + dy * i;
-    px(x, y, i === 4 ? P.X : P.W);
-    if (i >= 1 && i <= 2) px(x + ex, y + ey, P.X);
-    if (i === 2) px(x - ex, y - ey, P.V);
+    px(x, y, i === 5 ? P.X : P.W);
+    if (i <= 3) px(x + ex, y + ey, P.X);
+    if (i === 2 || i === 3) px(x - ex, y - ey, P.V);
   }
   TAGV = 0;
 }
@@ -1009,7 +1006,6 @@ function drawHairBack(P, sp, hx, hy, p, f) {
     px(hx - 9 + sway, hy - 10, G); px(hx - 7 + sway, hy - 9, J);
   } else if (style === 'pony') {
     // đuôi ngựa buộc cao, đung đưa
-    const sw = p.moving ? [0, 1, 2, 3, 4, 5] : [0, 0, 1, 1, 1, 1];
     const ph = p.moving ? (f & 1) : (f >> 1);
     const pts = [[-8, -26], [-9, -25], [-10, -24], [-10, -23], [-11, -22], [-11, -21], [-11, -20], [-11, -19], [-10, -18]];
     pts.forEach(([x, y], i) => {
@@ -1019,22 +1015,17 @@ function drawHairBack(P, sp, hx, hy, p, f) {
       else if (i > 4) xx += ph;
       px(hx + xx, hy + yy, G); px(hx + xx + 1, hy + yy, J); px(hx + xx + 2, hy + yy, i < 5 ? H : J);
     });
-    void sw;
     px(hx - 7, hy - 26, P.a); px(hx - 7, hy - 25, P.A);
   } else if (style === 'wild') {
     // đuôi tóc ngắn buộc thấp
     const ph = p.moving ? 1 : 0;
     stamp(hx - 11 - ph, hy - 21 + ph, ['..JH', '.GJH', 'GJJ.', 'GJ..', 'G...'], P);
-  } else if (style === 'bob') {
-    void f;
   }
-  void J;
 }
 
 // Xoay khung nằm (chết): đầu sang trái, mặt ngửa lên
 function rotateDead() {
   TMP.set(BUF);
-  TMPT.set(TAG);
   BUF.fill(-1);
   TAG.fill(0);
   for (let gy = 0; gy < FH; gy++) {
@@ -1192,7 +1183,6 @@ const NPCS = {
     sp.robe = true;
     sp.hunch = 1;
     sp.noScarf = true;
-    sp.hairStyleFn = 'bald';
     sp.headGear = gearBaldTopknot;
     sp.trim = C(pal[1]);
     sp.robeTrim = true;
@@ -1254,7 +1244,7 @@ const NPCS = {
     sp.frontProp = propNone;
     sp.hideBackArm = true;
   },
-  storage(sp, pal) {
+  storage(sp) {
     sp.hairCol = C('#4a3020');
     sp.hair = 'spiky';
     sp.bulk = 1;
@@ -1263,7 +1253,6 @@ const NPCS = {
     sp.accent = C('#c8763a');
     sp.frontProp = propChest;
     sp.hideBackArm = true;
-    void pal;
   },
   dungeon(sp, pal) {
     sp.hairCol = C('#2a2030');
@@ -1357,12 +1346,11 @@ function gearConical(P, sp, hx, hy) {
     '...888877777777777..',
     '.88888877777777777..',
     '9999988888888888888.',
-  ].map((r) => r), { 7: s1, 8: s2, 9: s3 });
+  ], { 7: s1, 8: s2, 9: s3 });
   // vân nan nón
   px(hx - 4, hy - 30, s2); px(hx + 2, hy - 29, s2); px(hx - 1, hy - 28, s3); px(hx + 5, hy - 28, s2);
   // quai nón
   px(hx + 5, hy - 22, s3); px(hx + 5, hy - 21, s3); px(hx + 4, hy - 20, s3); px(hx + 4, hy - 19, s3); px(hx + 3, hy - 18, s3);
-  void s3;
 }
 
 function gearHelmet(P, sp, hx, hy) {
@@ -1384,8 +1372,6 @@ function gearHelmet(P, sp, hx, hy) {
     'NNN..............',
     '.NN..............',
   ], { M, N, n, a, Y: P.Y, k: INK });
-  // đường lông mày giận
-  void sp;
 }
 
 // ---------- phụ kiện thân
@@ -1490,7 +1476,7 @@ function propScroll(P, sp, ux, by) {
   const hx = ux + 5;
   const hy = by - 11;
   drawArm(P, sp, ux + 3, by - 14, hx, hy, true);
-  stamp(hx - 1, hy - 7, ['a..', '444', '454', '444', '454', '444', 'a..'].map((r) => r), { 4: P[4], 5: P[6], a: 0xc0392b });
+  stamp(hx - 1, hy - 7, ['a..', '444', '454', '444', '454', '444', 'a..'], { 4: P[4], 5: P[6], a: 0xc0392b });
   px(hx + 2, hy - 7, 0xc0392b); px(hx + 2, hy - 1, 0xc0392b);
   px(hx, hy, P.s); px(hx + 1, hy, P.s);
 }
@@ -1709,7 +1695,7 @@ export function drawNinja(ctx, x, y, o) {
 
 function drawSparkle(ctx, X, Y, ps, dir, t, wpx, sp) {
   const n = wpx.length >> 1;
-  const count = sp.wp >= 8 ? 2 : 1;
+  const count = sp.wp >= 8 ? 3 : 2;
   for (let k = 0; k < count; k++) {
     const step = Math.floor(t * 6 + k * 3.7);
     const ph = (t * 6 + k * 3.7) - step;
@@ -1722,12 +1708,19 @@ function drawSparkle(ctx, X, Y, ps, dir, t, wpx, sp) {
     const a = Math.sin(ph * Math.PI);
     ctx.fillStyle = `rgba(255,255,255,${a})`;
     ctx.fillRect(px0, py0, ps, ps);
-    if (a > 0.5) {
-      ctx.fillStyle = css(sh(sp.wcol, 0.6), a * 0.85);
+    if (a > 0.35) {
+      ctx.fillStyle = css(sh(sp.wcol, 0.6), a * 0.9);
       ctx.fillRect(px0 - ps, py0, ps, ps);
       ctx.fillRect(px0 + ps, py0, ps, ps);
       ctx.fillRect(px0, py0 - ps, ps, ps);
       ctx.fillRect(px0, py0 + ps, ps, ps);
+      if (a > 0.8) {
+        ctx.fillStyle = css(sh(sp.wcol, 0.3), 0.6);
+        ctx.fillRect(px0 - 2 * ps, py0, ps, ps);
+        ctx.fillRect(px0 + 2 * ps, py0, ps, ps);
+        ctx.fillRect(px0, py0 - 2 * ps, ps, ps);
+        ctx.fillRect(px0, py0 + 2 * ps, ps, ps);
+      }
     }
   }
 }

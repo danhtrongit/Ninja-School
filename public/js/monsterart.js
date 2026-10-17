@@ -785,12 +785,22 @@ const DESIGNS = {
       const body = S.M().ell(X, 19.4 + Y, 10.4, 8.8).ell(X + 0.5, 23 + Y, 9, 6);
       S.fill(body, rock, { c: [X, 19 + Y, 10.4, 9], lt: 0.55, dk: 0.16 });
       // vết nứt / mảng đá
-      const crk = lava ? P.c.hi : rock.dk;
-      const cracks = [[X - 4, 17, X - 2, 20, X - 3, 23], [X + 4, 21, X + 6, 24, X + 5, 26], [X + 1, 15, X + 3, 17]];
+      const cracks = lava
+        ? [[X - 6, 13, X - 3, 16.5, X - 4, 20.5, X - 1.5, 23.5], [X + 3, 12.5, X + 5.5, 16.5, X + 4, 20], [X + 6, 21.5, X + 8.5, 25], [X - 8.5, 21, X - 6, 24.5, X - 7, 27], [X - 1, 25, X + 2, 27.5]]
+        : [[X - 4, 17, X - 2, 20, X - 3, 23], [X + 4, 21, X + 6, 24, X + 5, 26], [X + 1, 15, X + 3, 17]];
       for (const c of cracks) {
         const m = S.M().path(c.map((q, k) => (k % 2 ? q + Y : q)), 1).and(body);
-        S.dm(m, crk, 1);
-        if (lava) S.glow.push([c[2], c[3] + Y, 5, P.c.col]);
+        S.dm(m, lava ? P.a.lt : rock.dk, 1);
+        if (lava) {
+          S.px(c[2], c[3] + Y, P.c.hi);
+          S.glow.push([c[2], c[3] + Y, 5, P.a.col]);
+        }
+      }
+      if (lava) {
+        // lõi dung nham trước ngực
+        S.dm(S.M().ell(X + 1.5, 18.6 + Y, 2.6, 2.3).and(body), P.a.lt, 1);
+        S.dm(S.M().ell(X + 1.5, 18.6 + Y, 1.4, 1.3), P.c.hi, 1);
+        S.glow.push([X + 1.5, 18.6 + Y, 9, P.c.col]);
       }
       if (ice) {
         S.dm(S.M().line(X - 6, 15 + Y, X - 2, 13 + Y, 1).and(body), P.c.hi, 0.9);
@@ -823,7 +833,7 @@ const DESIGNS = {
       S.fill(S.M().line(X + 8, 15 + Y, ffx, ffy, 5.2), rock, { sh: 'edge' });
       S.fill(S.M().ell(ffx, ffy, 4.6, 4.1), rock, { lt: 0.5 });
       S.px(R(ffx - 2), R(ffy - 2), rock.hi);
-      if (lava) { S.px(R(ffx + 1), R(ffy), P.c.hi); S.px(R(ffx + 2), R(ffy + 1), P.a.lt); }
+      if (lava) { S.px(R(ffx + 1), R(ffy - 1), P.c.hi); S.px(R(ffx + 2), R(ffy), P.a.lt); S.px(R(ffx), R(ffy + 1), P.a.lt); S.px(R(ffx + 3), R(ffy - 2), P.a.md); S.glow.push([ffx + 1, ffy, 5, P.a.col]); }
       if (pose === 2) {
         for (const [dx, dy] of [[-3, 3], [4, 2], [-5, 1], [6, 0]]) S.px(R(ffx + dx), R(ffy + dy), '#d8ccb8', 0.8);
       }
@@ -1144,7 +1154,8 @@ function drawBat(S, P, an, i, bl, demon) {
   S.fill(S.M().poly([X + 1.8, by - 4, X + 5.2, by - 7.8, X + 4.8, by - 2.6]), P.a, { sh: 'facet', fx: X + 4.4 });
   S.fill(S.M().poly([X - 3.4, by - 3.4, X - 3.6, by - 6, X - 1.8, by - 4]).poly([X + 2.8, by - 4, X + 4.6, by - 6.2, X + 4.2, by - 3.4]), P.c, { il: 0, sh: 'flat' });
   if (demon) {
-    S.fill(S.M().poly([X - 2, by - 4, X - 1.4, by - 7.4, X - 0.2, by - 4.2]).poly([X + 1.4, by - 4.2, X + 2.4, by - 7.4, X + 3, by - 4]), P.horn, { sh: 'facet', fx: X });
+    crystal(S, X - 1.4, by - 3.8, -0.25, 2.2, 4.2, P.horn);
+    crystal(S, X + 2.4, by - 3.8, 0.25, 2.2, 4.2, P.horn);
   }
   // thân tròn lông xù
   const body = S.M().ell(X + 0.5, by, 5.2, 4.8);
@@ -1190,25 +1201,27 @@ function drawScorpion(S, P, an, i, bl) {
   // thân đốt
   const body = S.M().ell(X, 14 + Y, 7.6, 3.6);
   S.fill(body, P.a, { lt: 0.55, dk: 0.22 });
-  for (const sx of [-4, -1, 2]) { S.dm(S.M().rect(X + sx, R(11 + Y), 1, 6).and(body), P.a.dk, 1); }
+  for (const sx of [-4, -1, 2]) { S.dm(S.M().rect(X + sx, R(11 + Y), 1, 6).and(body), P.a.dk, 0.7); }
+  S.px(X - 5, R(11.6 + Y), P.a.hi); S.px(X - 2, R(11.2 + Y), P.a.hi); S.px(X + 1, R(11.2 + Y), P.a.hi);
   // càng
   const claw = (bx, by2, sx, sy, o, tn) => {
     S.fill(S.M().line(bx, by2, sx, sy + 1, 2), tn, { sh: 'edge' });
-    const c = S.M().ell(sx + 1, sy, 3, 2.2);
-    if (o > 0.05) c.poly([sx + 0.8, sy, sx + 4.6, sy - 0.6 - 1.4 * o, sx + 4.6, sy + 0.6 * o], 0);
+    const c = S.M().ell(sx + 1.2, sy, 3.4, 2.5);
+    if (o > 0.05) c.poly([sx + 1, sy + 0.2, sx + 5, sy - 0.8 - 1.6 * o, sx + 5, sy + 0.8 * o], 0);
     S.fill(c, tn, { lt: 0.5 });
+    S.px(sx + 0.4, sy - 1.4, tn.hi);
   };
-  claw(X + 5, 14.6 + Y, X + 9.6, 15.6 + Y, open * 0.7, P.aD);
+  claw(X + 5, 14.6 + Y, X + 9.4, 16 + Y, open * 0.7, P.aD);
   // đầu
   const hx = X + 6.4;
   const hy = 13.2 + Y;
   S.fill(S.M().ell(hx, hy, 3.6, 3.2), P.a, { lt: 0.5 });
   const ex = R(hx - 0.6);
   const ey = R(hy - 2);
-  S.eye(ex, ey, 2, 2, { blink: bl });
-  S.eye(ex + 3, ey, 1, 2, { blink: bl });
-  S.blush(ex - 1, ey + 2, 1);
-  claw(X + 7, 13 + Y, X + 11 + (strike ? 1 : 0), 11.4 + Y, open, P.a);
+  S.eye(ex - 1, ey - 1, 2, 3, { blink: bl });
+  S.eye(ex + 2, ey - 1, 2, 3, { blink: bl });
+  S.blush(ex - 2, ey + 2, 1);
+  claw(X + 7, 13 + Y, X + 11.4 + (strike ? 1 : 0), 10.8 + Y, open, P.a);
   S.head = [X + 1, 9 + Y];
 }
 
@@ -1319,6 +1332,18 @@ function getSprite(type, v, an, i, pal, bl) {
   sp = S.bake();
   sprCache.set(key, sp);
   return sp;
+}
+
+// Cache nhanh theo đối tượng def (tránh tạo chuỗi khóa mỗi khung hình)
+const defSpr = new WeakMap();
+function spriteFor(def, v, an, i, bl) {
+  let arr = defSpr.get(def);
+  if (!arr) {
+    arr = [];
+    defSpr.set(def, arr);
+  }
+  const k = (an === 'idle' ? 0 : an === 'walk' ? 1 : 2) * 32 + i * 2 + (bl ? 1 : 0);
+  return arr[k] || (arr[k] = getSprite(def.type, v, an, i, def.pal, bl));
 }
 
 // ================= HIỆU ỨNG PHỤ (cache) =================
@@ -1552,7 +1577,7 @@ export function drawMonster(ctx, x, y, def, o) {
       bl = o.fr == null && k % 13 === 12;
     }
   }
-  const sp = getSprite(def.type, v, an, fi, def.pal, bl);
+  const sp = spriteFor(def, v, an, fi, bl);
   const W = sp.W * s;
   const H = sp.H * s;
   const left = rx0 - (sp.W / 2) * s;
@@ -1583,7 +1608,7 @@ export function drawMonster(ctx, x, y, def, o) {
   // pha lê / lửa phát sáng
   if (sp.glow.length) {
     const pulse = 0.5 + 0.5 * Math.sin(t * 2.4 + id);
-    for (const [gx, gy, r, col] of sp.glow) glow(ctx, sx(gx), top + gy * s, r * s * (0.9 + pulse * 0.2), col, 0.22 + pulse * 0.2);
+    for (const [gx, gy, r, col] of sp.glow) glow(ctx, sx(gx), top + gy * s, r * s * (0.9 + pulse * 0.2), col, 0.26 + pulse * 0.24);
   }
   if (boss) {
     // mắt phát sáng

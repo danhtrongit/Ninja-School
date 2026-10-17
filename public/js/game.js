@@ -973,7 +973,7 @@ export class Game {
       if (p.x < camX - 40 || p.x > camX + W + 40) continue;
       let line = showNames ? drawName(p.x, p.y, p.info, false, p.pk) : this.toScreen(p.x, p.y - NINJA_H - 3)[1];
       if (p.hp < p.mhp && !p.dead) {
-        const [bx, by] = this.toScreen(p.x - 8, p.y - NINJA_H - 5);
+        const [bx, by] = this.toScreen(p.x - 8, p.y - NINJA_H - 2);
         ctx.fillStyle = '#1a1020';
         ctx.fillRect(bx - 1, by - 1, 16 * z + 2, Math.max(3, z) + 2);
         ctx.fillStyle = '#e53935';
