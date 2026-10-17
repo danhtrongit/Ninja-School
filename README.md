@@ -10,15 +10,17 @@ Toàn bộ đồ họa pixel được **vẽ bằng code**, không dùng hình �
 |---|---|
 | Tài khoản | Đăng ký / đăng nhập (mật khẩu băm scrypt), tự đăng nhập lại bằng token, tối đa 3 nhân vật mỗi tài khoản |
 | 6 phái - 3 hệ | Kiếm, Tiêu (Hỏa) · Kunai, Cung (Thủy) · Đao, Quạt (Phong). Hỏa khắc Phong, Phong khắc Thủy, Thủy khắc Hỏa |
-| Kỹ năng | Mỗi phái 1 đòn thường + 5 kỹ năng (đơn mục tiêu, diện rộng, xuyên thẳng, lướt chém, buff, hồi máu), nâng tới cấp 10, gán vào thanh phím 1-5 |
-| Nhân vật | Cấp 1-100, điểm tiềm năng (Sức mạnh, Thân pháp, Chakra, Thể lực), tẩy điểm |
-| Thế giới | 17 bản đồ: 3 làng, 13 bãi luyện công (cấp 1-100), Đấu Trường PK tự do; bục nhảy, nhảy đôi, cổng dịch chuyển |
-| Quái & Boss | 33 loại quái với AI tuần tra/đuổi đánh/đánh xa, 6 boss thế giới hồi sinh định kỳ, thông báo toàn server, chia thưởng theo sát thương |
-| Trang bị | 9 ô trang bị, 10 bậc (Gỗ → Thần), 5 độ hiếm với dòng chỉ số ngẫu nhiên, rơi đồ có chủ sở hữu |
-| Cường hóa | +1 đến +12 tại Thợ Rèn, đá cường hóa 3 cấp, tỉ lệ thành công giảm dần, Bùa Bảo Hộ chống tụt cấp |
+| Kỹ năng | Mỗi phái 1 đòn thường + 5 kỹ năng (đơn mục tiêu, diện rộng, xuyên thẳng, lướt chém, buff, hồi máu) + 1 tuyệt kỹ cấp 60, nâng tới cấp 15, thanh phím 1-6 |
+| Nhân vật | Cấp 1-120, điểm tiềm năng (Sức mạnh, Thân pháp, Chakra, Thể lực), tẩy điểm |
+| Thế giới | 23 bản đồ: 3 làng, 19 bãi luyện công (cấp 1-120, có 3 nhánh phụ vào qua cửa bí mật), Đấu Trường PK tự do; bục nhảy, nhảy đôi, cổng dịch chuyển |
+| Quái & Boss | 51 loại quái với AI tuần tra/đuổi đánh/đánh xa, 11 boss thế giới hồi sinh định kỳ (Vua Slime → Long Vương cấp 125), thông báo toàn server, chia thưởng theo sát thương |
+| Trang bị | 9 ô trang bị + ô thú cưng, 12 bậc (Gỗ → Thần → Tiên → Thánh), 5 độ hiếm với dòng chỉ số ngẫu nhiên, rơi đồ có chủ sở hữu |
+| Cường hóa | +1 đến +16 tại Thợ Rèn, đá cường hóa 4 cấp (Sơ, Trung, Cao, Thần), tỉ lệ thành công giảm dần, Bùa Bảo Hộ chống tụt cấp |
+| Thú cưng & đồ ăn | 6 thú cưng đi theo chủ, tăng % EXP và chỉ số (Rồng Con rơi từ Long Vương) · Đồ ăn buff 30 phút (+10% tấn công/phòng thủ/sinh lực) |
+| Sự kiện | Giờ Vàng nhân đôi EXP toàn máy chủ 12h-13h và 20h-22h (giờ Việt Nam) |
 | NPC | Trưởng Làng (nhiệm vụ chính), Bà Thuốc, Thợ Rèn, Tiểu Nhị (nhiệm vụ hằng ngày), Phu Xe (dịch chuyển), Lão Gia Tộc, Thủ Kho, Hộ Pháp (hang động) |
-| Nhiệm vụ | 21 nhiệm vụ chính theo cốt truyện + 20 nhiệm vụ diệt quái mỗi ngày |
-| Xã hội | Chat bản đồ (bong bóng trên đầu), thế giới, nhóm, gia tộc, nhắn riêng · Nhóm 6 người chia EXP · Gia tộc 30 người (tộc trưởng/trưởng lão) · Giao dịch an toàn (khóa + xác nhận 2 bên) |
+| Nhiệm vụ | 51 nhiệm vụ chính từ cấp 1 đến 120 (diệt quái, thu thập, săn boss, khám phá bản đồ, cường hóa, vượt hang động, đạt cấp) + 20 nhiệm vụ diệt quái mỗi ngày |
+| Xã hội | Chat bản đồ (bong bóng trên đầu), thế giới, nhóm, gia tộc, nhắn riêng · Nhóm 6 người chia EXP · Gia tộc 10 cấp (góp quỹ xu, tới 70 thành viên, +% EXP cho cả tộc), tộc trưởng/trưởng lão · Giao dịch an toàn (khóa + xác nhận 2 bên) |
 | PvP | Thách đấu 1-1, chế độ PK (điểm hiếu chiến, phạt EXP), Đấu Trường |
 | Hang Động Thử Thách | Phó bản riêng cho từng nhóm: 5 đợt quái + boss trong 10 phút, quái mạnh theo cấp trung bình nhóm, 3 lượt/ngày, thưởng EXP, xu, Rương Báu, đá cường hóa |
 | Thủ Kho | 60 ô cất đồ, dùng chung ở mọi làng |
@@ -92,7 +94,7 @@ location / {
 | W / ↑ / Space | Nhảy (nhấn lần 2 trên không để nhảy đôi), vào cửa |
 | S + Space | Xuống khỏi bục |
 | J | Đánh thường |
-| 1 - 5 | Kỹ năng trên thanh |
+| 1 - 6 | Kỹ năng trên thanh |
 | Q / E | Uống bình HP / MP |
 | X | Nói chuyện NPC, vào cửa, nhặt đồ |
 | Z | Nhặt đồ |
