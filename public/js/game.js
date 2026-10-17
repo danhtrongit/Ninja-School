@@ -111,7 +111,7 @@ export class Game {
     n.on('heal', (m) => {
       for (const [tid, amt] of m.list) {
         const e = this.entity(tid);
-        if (e && amt) this.fx.text(e.x, e.y - 28, `+${amt}`, '#69f0ae');
+        if (e && amt) this.fx.text(e.x, e.y - NINJA_H - 2, `+${amt}`, '#69f0ae');
       }
     });
     n.on('levelUp', (m) => {
@@ -119,7 +119,7 @@ export class Game {
       this.fx.levelUp(getter);
       if (S.me && m.id === S.me.id) sfx('level');
       const e = getter();
-      if (e) this.fx.text(e.x, e.y - 34, 'LÊN CẤP!', '#ffd54f', true);
+      if (e) this.fx.text(e.x, e.y - NINJA_H - 16, 'LÊN CẤP!', '#ffd54f', true);
     });
     n.on('expGain', (m) => {
       if (m.n > 0) this.fx.text(m.x, m.y - 6, `+${m.n} EXP`, '#b3e5fc');
@@ -127,10 +127,14 @@ export class Game {
     n.on('loot', (m) => {
       if (!this.me) return;
       sfx(m.k === 'xu' ? 'coin' : 'pickup');
-      if (m.k === 'xu') this.fx.text(this.me.x, this.me.y - 30, `+${m.q} xu`, '#ffd54f');
+      // nhặt liên tiếp thì xếp chữ lệch lên trên, không đè nhau và không đè tên nhân vật
+      const ls = this.lootStack && this.t - this.lootStack.t < 0.45 ? this.lootStack.n + 1 : 0;
+      this.lootStack = { t: this.t, n: ls % 4 };
+      const ly = this.me.y - NINJA_H - 14 - (ls % 4) * 7;
+      if (m.k === 'xu') this.fx.text(this.me.x, ly, `+${m.q} xu`, '#ffd54f');
       else {
         const def = S.G.items[m.k];
-        this.fx.text(this.me.x, this.me.y - 30, `${def.name}${m.q > 1 ? ` x${m.q}` : ''}`, S.G.rarity[m.r || 0].color);
+        this.fx.text(this.me.x, ly, `${def.name}${m.q > 1 ? ` x${m.q}` : ''}`, S.G.rarity[m.r || 0].color);
       }
     });
     n.on('pos', (m) => {
@@ -225,7 +229,7 @@ export class Game {
 
   centerY(tid, e) {
     if (tid[0] === 'm') return e.y - e.def.h / 2 - (e.def.fly ? 10 : 0);
-    return e.y - 11;
+    return e.y - Math.round(NINJA_H / 2);
   }
 
   onHit(m) {
@@ -239,8 +243,10 @@ export class Game {
         if (m.ranged) this.fx.proj(att.x, att.y - att.def.h / 2, e.x, cy, 'fire', att.def.pal[2], { life: 0.25 });
         else this.fx.sparks(e.x, cy, '#ff8a80', 5, 40);
       }
+      // chữ trên người chơi bắt đầu phía trên nhãn tên để không đè tên
+      const ty = tid[0] === 'p' ? e.y - NINJA_H - 12 : cy - 14;
       if (miss) {
-        this.fx.text(e.x, cy - 14, 'Né', '#b0bec5');
+        this.fx.text(e.x, ty, 'Né', '#b0bec5');
         continue;
       }
       if (m.a === meTid) sfx(crit ? 'crit' : 'hit');
@@ -250,7 +256,7 @@ export class Game {
       if (tid === meTid) col = '#ff5252';
       else if (m.a === meTid) col = crit ? '#ffeb3b' : '#ffffff';
       else col = '#ffcc80';
-      this.fx.text(e.x, cy - 14, crit ? `${dmg}!` : `${dmg}`, col, crit);
+      this.fx.text(e.x, ty, crit ? `${dmg}!` : `${dmg}`, col, crit);
       if (tid[0] === 'm') e.hp = Math.max(0, e.hp - dmg);
       this.fx.sparks(e.x, cy, crit ? '#ffeb3b' : '#ffffff', crit ? 10 : 4, 50);
       if (tid === meTid && m.a[0] === 'm' && !this.getTarget()) this.target = { kind: 'm', id: +m.a.slice(1) };
@@ -708,7 +714,12 @@ export class Game {
       if (Math.abs(dx) < 14) {
         if (this.walkTo.npc) this.net.send('npc', { id: this.walkTo.npc });
         if (this.walkTo.door != null) this.usePortal(this.walkTo.door);
-        else if (!this.walkTo.npc) this.net.send('pickup', {});
+        else if (!this.walkTo.npc) {
+          const it = this.walkTo.item != null ? this.items.get(this.walkTo.item) : null;
+          // nhặt không được (của người khác, túi đầy) thì tạm bỏ qua để auto không kẹt gửi nhặt liên tục
+          if (it) it.tryUntil = this.t + 3;
+          this.net.send('pickup', it ? { id: it.id } : {});
+        }
         this.walkTo = null;
         return 0;
       }
@@ -760,14 +771,16 @@ export class Game {
       let best = null;
       let bd = 170;
       for (const it of this.items.values()) {
+        if (it.tryUntil > this.t) continue;
         const dx = Math.abs(it.x - this.me.x);
-        if (dx < bd && Math.abs(it.y - this.me.y) < 80 && this.t - it.born < 14) {
+        // server chỉ cho nhặt khi lệch cao dưới 60
+        if (dx < bd && Math.abs(it.y - this.me.y) < 50 && this.t - it.born < 14) {
           bd = dx;
           best = it;
         }
       }
       if (best && bd > 12) {
-        this.walkTo = { x: best.x };
+        this.walkTo = { x: best.x, item: best.id };
         return;
       }
     }
@@ -894,11 +907,12 @@ export class Game {
       dir: me.dir, cls: S.me.cls, gender: S.me.gender, look: S.me.look, anim: meAnim, t, name: S.me.name,
       el: S.G.classes[S.me.cls].element, weaponType: S.G.classes[S.me.cls].weapon, flash: me.flash > t,
     });
-    // Mũi tên mục tiêu
+    // Mũi tên mục tiêu: đặt trên nhãn tên (nhãn vẽ ở lớp phân giải cao) để không đè chữ và thanh máu
     if (target) {
       const e = target.e;
-      const top = target.kind === 'm' ? e.y - e.h - (e.def.fly ? 0 : 0) : e.y - NINJA_H - 4;
-      const ay = Math.round(top - 9 - camY + Math.sin(t * 6) * 1.5);
+      const lh = Math.ceil(this.labelSize() / this.zoom);
+      const top = target.kind === 'm' ? e.y - e.h - (e.def.boss ? 3 : 7) - lh : e.y - this.nameLift(e) - 3 - lh * (e.info && e.info.clan ? 1.85 : 1);
+      const ay = Math.round(top - 6 - camY + Math.sin(t * 6) * 1.5);
       const ax = Math.round(e.x - camX);
       c.fillStyle = target.kind === 'p' ? '#ff5252' : '#ffeb3b';
       c.fillRect(ax - 3, ay, 7, 1);
@@ -954,10 +968,20 @@ export class Game {
     ctx.fillText(text, x, y);
   }
 
+  labelSize() {
+    return Math.max(Math.round(15 * this.dpr), Math.round(this.zoom * 5));
+  }
+
+  // Độ cao đỉnh đầu so với chân: nằm xuống khi trọng thương thì nhãn hạ thấp theo
+  nameLift(e) {
+    const dead = e === this.me ? S.me && S.me.dead : e.dead;
+    return dead ? 12 : NINJA_H;
+  }
+
   renderOverlay() {
     const ctx = this.ctx;
     const z = this.zoom;
-    const size = Math.max(Math.round(15 * this.dpr), Math.round(z * 5));
+    const size = this.labelSize();
     const camX = this.camX;
     const W = this.W;
     ctx.textAlign = 'center';
@@ -967,7 +991,9 @@ export class Game {
     // NPC
     for (const n of this.map.npcs) {
       if (n.x < camX - 40 || n.x > camX + W + 40) continue;
-      const [sx, sy] = this.toScreen(n.x, G - NINJA_H - 5);
+      let [sx, sy] = this.toScreen(n.x, G - NINJA_H - 5);
+      // người chơi đứng sát NPC: đẩy nhãn NPC lên trên tên người chơi để không đè chữ
+      if (Math.abs(this.me.x - n.x) < 26 && Math.abs(this.me.y - G) < 6) sy -= size + 2;
       this.label(ctx, n.name, sx, sy, '#ffe082', size);
       this.label(ctx, S.G.npcTypes[n.type].title, sx, sy - size, '#b3e5fc', Math.round(size * 0.85));
       const mark = this.npcMark(n);
@@ -978,12 +1004,12 @@ export class Game {
     for (const m of this.monsters.values()) {
       const sel = target && target.kind === 'm' && target.id === m.id;
       if (!sel && !m.def.boss) continue;
-      const [sx, sy] = this.toScreen(m.x, m.y - m.h - 7);
+      const [sx, sy] = this.toScreen(m.x, m.y - m.h - (m.def.boss ? 3 : 7));
       this.label(ctx, `${m.def.name} Lv${m.def.lv}`, sx, sy, m.def.boss ? '#ff8a80' : this.mobColor(m.def.lv), size);
     }
     // Người chơi
-    const drawName = (x, y, info, isMe, pk) => {
-      const [sx, sy] = this.toScreen(x, y - NINJA_H - 3);
+    const drawName = (x, y, info, isMe, pk, lift) => {
+      const [sx, sy] = this.toScreen(x, y - lift - 3);
       let col = '#ffffff';
       if (isMe) col = '#fff59d';
       else if (info.party && info.party === S.party.id) col = '#69f0ae';
@@ -998,7 +1024,7 @@ export class Game {
     };
     for (const p of this.players.values()) {
       if (p.x < camX - 40 || p.x > camX + W + 40) continue;
-      let line = showNames ? drawName(p.x, p.y, p.info, false, p.pk) : this.toScreen(p.x, p.y - NINJA_H - 3)[1];
+      let line = showNames ? drawName(p.x, p.y, p.info, false, p.pk, this.nameLift(p)) : this.toScreen(p.x, p.y - NINJA_H - 3)[1];
       if (p.hp < p.mhp && !p.dead) {
         const [bx, by] = this.toScreen(p.x - 8, p.y - NINJA_H - 2);
         ctx.fillStyle = '#1a1020';
@@ -1009,7 +1035,7 @@ export class Game {
       this.bubble(ctx, p.id, p.x, line, size);
     }
     const meInfo = { name: S.me.name, clan: S.me.clan ? S.me.clan.name : null, pk: S.me.pk };
-    const line = drawName(this.me.x, this.me.y, meInfo, true, S.me.pkMode);
+    const line = drawName(this.me.x, this.me.y, meInfo, true, S.me.pkMode, this.nameLift(this.me));
     this.bubble(ctx, S.me.id, this.me.x, line, size);
     this.fx.drawTexts(ctx, (x, y) => this.toScreen(x, y), Math.max(1, z / 3));
   }

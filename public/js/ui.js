@@ -141,6 +141,7 @@ export class UI {
     n.on('shop', (m) => {
       this.shop = m;
       this.shopTab = this.shopTab || 'buy';
+      this.closeDialog();
       this.open('shop');
     });
     n.on('openUi', (m) => {
@@ -667,9 +668,12 @@ export class UI {
   // ---------------- Thông báo
   toast(msg, kind = 'info') {
     const box = $('#toasts');
+    // gộp thông báo trùng liên tiếp thay vì xếp chồng
+    const last = box.lastElementChild;
+    if (last && !last.classList.contains('out') && last.textContent === msg) last.remove();
     const el = h('div', { class: `toast k-${kind}` }, h('span', null, msg));
     box.appendChild(el);
-    while (box.children.length > 5) box.firstChild.remove();
+    while (box.children.length > 4) box.firstChild.remove();
     const long = kind === 'map' || kind === 'level';
     setTimeout(() => el.classList.add('out'), long ? 2200 : 3200);
     setTimeout(() => el.remove(), long ? 2800 : 3800);
@@ -690,6 +694,7 @@ export class UI {
     const win = h('div', { class: `win win-${name}` });
     this.win = win;
     $('#windows').appendChild(win);
+    document.body.classList.add('win-open');
     if (this.menuBtns) for (const k in this.menuBtns) this.menuBtns[k].classList.toggle('open', k === name);
     this.refresh();
   }
@@ -702,6 +707,7 @@ export class UI {
     this.win = null;
     this.winName = null;
     this.dollCv = null;
+    document.body.classList.remove('win-open');
     if (this.menuBtns) for (const k in this.menuBtns) this.menuBtns[k].classList.remove('open');
     this.hideItem();
   }
@@ -1416,11 +1422,13 @@ export class UI {
     box.appendChild(opts);
     $('#dialogs').appendChild(box);
     this.dialogEl = box;
+    document.body.classList.add('dlg-open');
   }
 
   closeDialog() {
     if (this.dialogEl) this.dialogEl.remove();
     this.dialogEl = null;
+    document.body.classList.remove('dlg-open');
   }
 
   // ---------------- Lời mời

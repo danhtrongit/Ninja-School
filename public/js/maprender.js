@@ -2640,6 +2640,7 @@ function placeDecor(T, m, th, sc, R, A, kind, x) {
   switch (kind) {
     case 'round': return put(sprTree('round', 54 + ((R() * 26) | 0), (R() * 3) | 0, { leaf: t === 'lake' ? 'lush' : 'green' }), 2);
     case 'maple': return put(sprTree('maple', 52 + ((R() * 26) | 0), (R() * 3) | 0), 2);
+    case 'sakura': return put(sprTree('sakura', 54 + ((R() * 24) | 0), (R() * 3) | 0), 2);
     case 'willow': return put(sprTree('willow', 60 + ((R() * 16) | 0), (R() * 2) | 0), 2);
     case 'pine': return put(sprTree('pine', 52 + ((R() * 30) | 0), (R() * 3) | 0, { snow: !!th.snowcap, leaf: t === 'mist' ? 'mist' : undefined }), 2);
     case 'bamboo': return put(sprTree('bamboo', 100 + ((R() * 50) | 0), (R() * 3) | 0), 2);
@@ -2712,7 +2713,7 @@ function buildFieldDecor(T, m, th, sc, R, A) {
   while (x < m.w - 50) {
     const kind = R() < 0.25 ? list[(R() * list.length) | 0] : list[k++ % list.length];
     if (!skip(x)) placeDecor(T, m, th, sc, R, A, kind, x);
-    const big = ['round', 'maple', 'willow', 'pine', 'bamboo', 'palm', 'deadtree'].includes(kind);
+    const big = ['round', 'maple', 'sakura', 'willow', 'pine', 'bamboo', 'palm', 'deadtree'].includes(kind);
     x += (big ? 70 : 44) + R() * 70;
   }
   for (const p of m.portals) if (p.door) {
@@ -2769,6 +2770,11 @@ function stoneGateSpr(theme) {
 // ======================= Bộ đệm theo chủ đề (dùng lại khi đổi bản đồ) =======================
 const LW = 1024;
 const LAYER_CACHE = new Map();
+
+// Biến thể theo bản đồ: dùng lại chủ đề có sẵn nhưng đổi loại cây/hạt cho hợp tên bản đồ
+const MAP_VARIANTS = {
+  sakura_garden: { part: 'petal', swap: { maple: 'sakura' } },
+};
 function avgRow(b, y) {
   let r = 0;
   let g = 0;
@@ -2920,6 +2926,12 @@ export class MapRenderer {
     this.map = map;
     this.th = THEMES[map.theme] || THEMES.grass_fire;
     this.sc = SCENES[map.theme] || SCENES.grass_fire;
+    const v = MAP_VARIANTS[map.id];
+    if (v) {
+      const sw = (k) => v.swap[k] || k;
+      this.th = { ...this.th, part: v.part || this.th.part, decor: (this.th.decor || []).map(sw) };
+      this.sc = { ...this.sc, layers: this.sc.layers.map((l) => (l.kinds ? { ...l, kinds: l.kinds.map(sw) } : l)) };
+    }
     this.seed = seedOf(map.id);
     this.lights = [];
     this.anims = [];
@@ -2928,7 +2940,7 @@ export class MapRenderer {
     this._pc = null;
     this.sky = cached(`sky:${map.theme}`, () => ({ canvas: buildSky(this.sc, seedOf(map.theme)) })).canvas;
     this.skyH = this.sky.height;
-    this.layers = getLayers(map.theme, this.sc);
+    this.layers = getLayers(v ? `${map.theme}:${map.id}` : map.theme, this.sc);
     this.terrain = this.buildTerrain();
     for (const l of this.lights) l.r = Math.max(8, Math.round(l.r / 4) * 4);
     const R = rng(this.seed + 17);

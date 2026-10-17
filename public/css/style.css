@@ -1101,3 +1101,14 @@ body.touch #dialogs { bottom: 6px; }
 @media (orientation: portrait) and (pointer: coarse) {
   #rotate-hint.ingame { display: flex; }
 }
+
+/* Khi có cửa sổ mở: thông báo chuyển xuống đáy giữa để không đè tiêu đề và nội dung cửa sổ */
+body.win-open #toasts { top: auto; bottom: 14px; flex-direction: column-reverse; }
+body.win-open .toast { max-width: min(520px, 92vw); }
+body.win-open .toast.k-map { display: none; }
+/* Hội thoại NPC che phần phải khung chat trên màn hình vừa: ẩn chat tạm thời cho gọn */
+@media (max-width: 1499px) {
+  body.dlg-open:not(.touch) #hud-chat { opacity: 0; pointer-events: none; transition: opacity 0.15s; }
+}
+/* Tooltip menu nằm dưới lớp cửa sổ (z 20 < 50) nên bị cắt: ẩn khi có cửa sổ mở */
+body.win-open .mbtn::after { display: none; }
