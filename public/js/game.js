@@ -592,7 +592,7 @@ export class Game {
           break;
         }
         case 'attack': this.useSkill(this.basicSkill()); break;
-        case 's1': case 's2': case 's3': case 's4': case 's5':
+        case 's1': case 's2': case 's3': case 's4': case 's5': case 's6':
           this.useSkill(S.me.hotbar[+a[1] - 1]);
           break;
         case 'hp': this.usePotion('hp'); break;
@@ -875,6 +875,9 @@ export class Game {
       drawMonster(c, d.x - camX, d.y - camY + d.dieT * 10, d.def, { t, dir: d.dir, st: 0, id: d.id, flash: true });
       c.globalAlpha = 1;
     }
+    // Thú cưng đi theo chủ
+    for (const p of this.players.values()) this.drawPet(c, p, p.info.look, camX, camY, t);
+    this.drawPet(c, this.me, S.me.look, camX, camY, t);
     // Người chơi khác
     for (const p of this.players.values()) {
       if (p.x < camX - 40 || p.x > camX + W + 40) continue;
@@ -912,6 +915,30 @@ export class Game {
     ctx.imageSmoothingEnabled = false;
     ctx.drawImage(this.lo, 0, 0, W, H, 0, 0, W * this.zoom, H * this.zoom);
     this.renderOverlay(camX, camY);
+  }
+
+  // Thú cưng: vẽ quái thu nhỏ (scale 1) bay/chạy theo sau lưng chủ
+  drawPet(c, owner, look, camX, camY, t) {
+    const key = look && look.pet;
+    if (!key || !S.G.monsters[key] || owner.dead || (S.me && owner === this.me && S.me.dead)) return;
+    this.petDefs = this.petDefs || {};
+    let def = this.petDefs[key];
+    if (!def) {
+      const base = S.G.monsters[key];
+      def = { ...base, scale: 1, boss: false, w: Math.round(base.w / (base.scale || 1)), h: Math.round(base.h / (base.scale || 1)) };
+      this.petDefs[key] = def;
+    }
+    const tx = owner.x - (owner.dir || 1) * 18;
+    if (owner.petX == null || Math.abs(owner.petX - tx) > 200) {
+      owner.petX = tx;
+      owner.petY = owner.y;
+    }
+    const k = Math.min(1, (1 / 60) * 5);
+    owner.petX += (tx - owner.petX) * k;
+    owner.petY += (owner.y - owner.petY) * k;
+    const moving = Math.abs(tx - owner.petX) > 2;
+    if (owner.x < camX - 60 || owner.x > camX + this.W + 60) return;
+    drawMonster(c, owner.petX - camX, owner.petY - camY, def, { t: t + 0.3, dir: owner.dir || 1, st: moving ? 1 : 0, id: 7 });
   }
 
   toScreen(x, y) {

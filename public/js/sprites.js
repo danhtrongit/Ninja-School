@@ -8,9 +8,10 @@ export const ELEMENT_COLORS = { fire: '#ff7043', water: '#42a5f5', wind: '#7ccd5
 export const NINJA_H = 28;
 
 const CLASS_OUTFIT = { kiem: '#a8383c', tieu: '#b8682c', kunai: '#2e5fa3', cung: '#22808c', dao: '#3d8a40', quat: '#7d8a24' };
-const TIER_OUTFIT = ['#7a5a3c', '#9a5a2e', '#55606e', '#6f8094', '#b48a1c', '#1f9070', '#5e40b8', '#b02a24', '#2a80c8', '#b850b4'];
-const TIER_METAL = ['#a0703c', '#c9803c', '#9aa4ad', '#dfe6ec', '#f2c230', '#3fd0a0', '#8a63e8', '#e8463c', '#5cc4ff', '#ff7ef0'];
-const TIER_TRIM = ['#e8dcc0', '#f0d8b0', '#d0d8e0', '#f4f8fc', '#ffe27a', '#f2c230', '#f2c230', '#ffd54a', '#e0f6ff', '#ffe46a'];
+// 12 bậc: Gỗ, Đồng, Sắt, Bạc, Vàng, Ngọc, Huyền, Long, Thiên, Thần, Tiên, Thánh
+const TIER_OUTFIT = ['#7a5a3c', '#9a5a2e', '#55606e', '#6f8094', '#b48a1c', '#1f9070', '#5e40b8', '#b02a24', '#2a80c8', '#b850b4', '#d8b23a', '#c2185b'];
+const TIER_METAL = ['#a0703c', '#c9803c', '#9aa4ad', '#dfe6ec', '#f2c230', '#3fd0a0', '#8a63e8', '#e8463c', '#5cc4ff', '#ff7ef0', '#fff176', '#ff4081'];
+const TIER_TRIM = ['#e8dcc0', '#f0d8b0', '#d0d8e0', '#f4f8fc', '#ffe27a', '#f2c230', '#f2c230', '#ffd54a', '#e0f6ff', '#ffe46a', '#ffffff', '#ffd6e8'];
 const HAIR = ['#2a2433', '#4a2c20', '#7a4628', '#273760', '#7c2a34', '#d8d4dc', '#3c2a4a', '#5a3018'];
 const IRIS = ['#3b2a6a', '#1f4f8a', '#5a3218', '#1f6a4a', '#7a2a4a', '#2a2a3a'];
 const SKIN = ['#ffd6b0', '#fcd0a8', '#f6c49a'];

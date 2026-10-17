@@ -2,7 +2,7 @@
 const KEYMAP = {
   ArrowLeft: 'left', KeyA: 'left', ArrowRight: 'right', KeyD: 'right',
   ArrowUp: 'jump', KeyW: 'jump', Space: 'jump', ArrowDown: 'down', KeyS: 'down',
-  KeyJ: 'attack', Digit1: 's1', Digit2: 's2', Digit3: 's3', Digit4: 's4', Digit5: 's5',
+  KeyJ: 'attack', Digit1: 's1', Digit2: 's2', Digit3: 's3', Digit4: 's4', Digit5: 's5', Digit6: 's6',
   KeyQ: 'hp', KeyE: 'mp', KeyZ: 'pick', KeyX: 'talk', Tab: 'target',
   KeyB: 'w_inv', KeyI: 'w_inv', KeyC: 'w_char', KeyV: 'w_skill', KeyN: 'w_quest', KeyP: 'w_party', KeyG: 'w_clan',
   KeyR: 'w_rank', KeyF: 'auto', KeyM: 'w_map', KeyO: 'w_friends', Enter: 'chat', Escape: 'esc',
