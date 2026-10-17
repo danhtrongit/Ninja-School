@@ -118,7 +118,7 @@ class Dungeon {
   complete(now) {
     this.state = 'done';
     this.closeAt = now + 20000;
-    const stone = this.level < 30 ? 'stone1' : this.level < 60 ? 'stone2' : 'stone3';
+    const stone = this.level < 30 ? 'stone1' : this.level < 60 ? 'stone2' : this.level < 90 ? 'stone3' : 'stone4';
     for (const p of this.map.players.values()) {
       const exp = Math.round(expNeed(p.lv) * 0.22);
       const xu = 1000 + this.level * 300;
@@ -126,7 +126,8 @@ class Dungeon {
       p.gainXu(xu);
       p.addItem('chest', 1);
       p.addItem(stone, 3);
-      p.notice(`Vượt qua Hang Động! +${got.toLocaleString('vi-VN')} EXP, +${xu.toLocaleString('vi-VN')} xu, Rương Báu, 3 ${stone === 'stone1' ? 'Đá Sơ' : stone === 'stone2' ? 'Đá Trung' : 'Đá Cao'}.`, 'reward');
+      p.onDungeonClear();
+      p.notice(`Vượt qua Hang Động! +${got.toLocaleString('vi-VN')} EXP, +${xu.toLocaleString('vi-VN')} xu, Rương Báu, 3 ${stone === 'stone1' ? 'Đá Sơ' : stone === 'stone2' ? 'Đá Trung' : stone === 'stone3' ? 'Đá Cao' : 'Đá Thần'}.`, 'reward');
     }
     this.map.broadcast('chat', { ch: 'sys', msg: 'Thử thách hoàn thành! Hang động sẽ đóng sau 20 giây (đi về cổng bên trái để ra ngay).' });
     this.world.announce(`Nhóm của ${this.memberNames[0]} đã vượt qua Hang Động Thử Thách cấp ${this.level}!`, 'world');

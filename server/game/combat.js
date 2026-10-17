@@ -3,7 +3,7 @@
 const { SKILLS, skillVal } = require('../data/skills');
 const { ELEMENTS, CLASSES } = require('../data/classes');
 const { MONSTERS } = require('../data/monsters');
-const { makeItem, SLOTS } = require('../data/items');
+const { makeItem, GEAR_SLOTS, TIERS } = require('../data/items');
 const { expNeed } = require('./player');
 
 const rand = (a, b) => a + Math.random() * (b - a);
@@ -27,7 +27,7 @@ function rollRarity(boss) {
 }
 
 function randomEquipId(tier) {
-  const slot = SLOTS[Math.floor(Math.random() * SLOTS.length)];
+  const slot = GEAR_SLOTS[Math.floor(Math.random() * GEAR_SLOTS.length)];
   if (slot === 'weapon') {
     const classes = Object.keys(CLASSES);
     return `w_${classes[Math.floor(Math.random() * classes.length)]}_${tier}`;
@@ -370,13 +370,13 @@ class Combat {
     const boss = m.boss;
     out.push({ xu: randInt(lv * 2 + 3, lv * 5 + 8) * (boss ? 40 : 1) });
     for (const [id, ch] of d.drops || []) if (Math.random() < ch) out.push({ it: makeItem(id, 1) });
-    const tier = Math.min(9, Math.floor(lv / 10));
+    const tier = Math.min(TIERS - 1, Math.floor(lv / 10));
     const eqCount = boss ? 4 : Math.random() < 0.045 ? 1 : 0;
     for (let i = 0; i < eqCount; i++) {
-      const id = randomEquipId(boss ? Math.min(9, tier) : tier);
+      const id = randomEquipId(tier);
       out.push({ it: makeItem(id, 1, rollRarity(boss)) });
     }
-    const stone = lv < 30 ? 'stone1' : lv < 60 ? 'stone2' : 'stone3';
+    const stone = lv < 30 ? 'stone1' : lv < 60 ? 'stone2' : lv < 90 ? 'stone3' : 'stone4';
     if (boss) out.push({ it: makeItem(stone, randInt(3, 6)) });
     else if (Math.random() < 0.035) out.push({ it: makeItem(stone, 1) });
     if (Math.random() < 0.06) {

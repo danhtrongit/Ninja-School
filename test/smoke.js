@@ -295,17 +295,44 @@ async function main() {
     const dd2 = await a.wait('dialog');
     ok(/còn lại hôm nay: 2\/3/.test(dd2.text), 'trừ 1 lượt vào hang');
 
-    console.log('7. Lưu dữ liệu');
+    console.log('7. Nội dung hậu kỳ: cấp 120, tuyệt kỹ, thú cưng, đồ ăn, bản đồ mới');
+    a.send('chat', { ch: 'map', msg: '/lv 120' });
+    await a.wait('chat', (m) => /Cấp hiện tại: 120/.test(m.msg));
+    await sleep(120);
+    ok(a.me.level === 120, 'đạt cấp tối đa 120');
+    a.send('learnSkill', { sid: 'k6' });
+    await sleep(150);
+    ok(a.me.skills.k6 === 1, 'học tuyệt kỹ cấp 60 Hỏa Long Thần Kiếm');
+    a.send('chat', { ch: 'map', msg: '/item pet_bunny 1' });
+    a.send('chat', { ch: 'map', msg: '/item food_atk 1' });
+    a.send('chat', { ch: 'map', msg: '/item w_kiem_11 1' });
+    await sleep(250);
+    const atk0 = a.me.s.atk;
+    a.send('useItem', { slot: a.inv.inv.findIndex((it) => it && it.id === 'food_atk') });
+    await sleep(150);
+    ok(a.me.s.atk > atk0 && a.me.buffs.some((b) => b.k === 'food_atk'), 'đồ ăn tăng % tấn công');
+    a.send('equip', { slot: a.inv.inv.findIndex((it) => it && it.id === 'pet_bunny') });
+    await sleep(150);
+    ok(a.inv.equip.pet && a.me.s.expMul >= 1.08 && a.me.look.pet === 'bunny', 'trang bị thú cưng tăng EXP');
+    a.send('equip', { slot: a.inv.inv.findIndex((it) => it && it.id === 'w_kiem_11') });
+    await sleep(150);
+    ok(a.inv.equip.weapon.id === 'w_kiem_11', 'mặc vũ khí bậc Thánh cấp 110');
+    a.send('chat', { ch: 'map', msg: '/tp dragon_palace' });
+    await a.wait('enterMap');
+    ok(a.map === 'dragon_palace' && [...a.monsters.values()].some((m) => m.k === 'seaserpent'), 'Long Cung có quái cấp 114-120');
+
+    console.log('8. Lưu dữ liệu');
     a.ws.close();
     await sleep(300);
     const c = new Bot('C');
     await c.connect();
     c.send('login', { u: 'botadmin', token: auth.token });
     const ch2 = await c.wait('chars');
-    ok(ch2.chars[0].level === 25, 'đăng nhập lại bằng token, dữ liệu được giữ');
+    ok(ch2.chars[0].level === 120, 'đăng nhập lại bằng token, dữ liệu được giữ');
     c.send('selectChar', { name: 'KiemSi' });
     await Promise.all([c.wait('enterMap'), c.wait('inv')]);
-    ok(c.inv.equip.weapon.p === 1, 'vũ khí +1 vẫn còn sau khi đăng nhập lại');
+    ok(c.inv.equip.weapon.id === 'w_kiem_11' && c.inv.equip.pet && c.inv.equip.pet.id === 'pet_bunny', 'trang bị & thú cưng vẫn còn sau khi đăng nhập lại');
+    ok(c.me.buffs.some((b) => b.k === 'food_atk'), 'buff đồ ăn được giữ qua đăng nhập lại');
     c.ws.close();
     b.ws.close();
   } catch (e) {

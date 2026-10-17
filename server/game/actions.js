@@ -2,7 +2,8 @@
 
 const { SKILLS, SKILL_MAX_LV } = require('../data/skills');
 const { CLASSES } = require('../data/classes');
-const { ITEMS, SHOPS, UPGRADE, SLOTS, sellPrice, makeItem } = require('../data/items');
+const { ITEMS, SHOPS, UPGRADE, GEAR_SLOTS, TIERS, sellPrice, makeItem } = require('../data/items');
+const { HOTBAR } = require('./player');
 const { MAPS, GROUND, VILLAGES, NPC_TYPES } = require('../data/maps');
 const { MONSTERS } = require('../data/monsters');
 const { MAIN_QUESTS, DAILY } = require('../data/quests');
@@ -137,6 +138,13 @@ class Actions {
         return;
       }
     }
+    if (def.type === 'food') {
+      p.c.buffs[e.buff] = Math.max(now, p.c.buffs[e.buff] || 0) + e.dur;
+      p.removeAt(slot, 1);
+      p.recalc();
+      p.notice(`${def.name}: ${def.desc}`, 'reward');
+      return;
+    }
     if (def.type === 'chest') {
       if (p.freeSlots() < 1) return p.notice('Hành trang đã đầy!', 'warn');
       p.removeAt(slot, 1);
@@ -147,18 +155,18 @@ class Actions {
   openChest(p) {
     const lv = p.lv;
     const r = Math.random();
-    const tier = Math.min(9, Math.floor(lv / 10));
+    const tier = Math.min(TIERS - 1, Math.floor(lv / 10));
     if (r < 0.3) {
       const xu = 500 + lv * 200 + Math.floor(Math.random() * lv * 200);
       p.gainXu(xu);
       p.notice(`Mở rương nhận ${xu} xu!`, 'reward');
     } else if (r < 0.5) {
-      const st = lv < 30 ? 'stone1' : lv < 60 ? 'stone2' : 'stone3';
+      const st = lv < 30 ? 'stone1' : lv < 60 ? 'stone2' : lv < 90 ? 'stone3' : 'stone4';
       const q = 2 + Math.floor(Math.random() * 4);
       p.addItem(st, q);
       p.notice(`Mở rương nhận ${q} ${ITEMS[st].name}!`, 'reward');
     } else if (r < 0.75) {
-      const slot = SLOTS[Math.floor(Math.random() * SLOTS.length)];
+      const slot = GEAR_SLOTS[Math.floor(Math.random() * GEAR_SLOTS.length)];
       const id = slot === 'weapon' ? `w_${p.c.cls}_${tier}` : `${slot}_${tier}`;
       const rar = Math.random() < 0.1 ? 3 : Math.random() < 0.4 ? 2 : 1;
       p.addItem(id, 1, rar);
@@ -323,7 +331,7 @@ class Actions {
     if (q.st === 2 || v.prog >= v.n) {
       return this.dialog(p, n, `Làm tốt lắm! Ngươi đã hoàn thành "${def.name}".`, [{ a: 'finish', label: 'Nhận thưởng' }]);
     }
-    return this.dialog(p, n, `【${def.name}】\n${def.desc}\nTiến độ: ${v.prog}/${v.n}${def.m && MONSTER_MAP[def.m] ? `\nĐịa điểm: ${MONSTER_MAP[def.m]}` : ''}`);
+    return this.dialog(p, n, `【${def.name}】\n${def.desc}\nTiến độ: ${v.prog}/${v.n}${def.m && MONSTER_MAP[def.m] ? `\nĐịa điểm: ${MONSTER_MAP[def.m]}` : ''}${def.map && MAPS[def.map] ? `\nĐịa điểm: ${MAPS[def.map].name}` : ''}`);
   }
 
   rewardText(p, r) {
@@ -351,6 +359,8 @@ class Actions {
     if (def.kind === 'talk') q.st = 2;
     if (def.kind === 'collect' && p.countItem(def.item) >= def.n) q.st = 2;
     if (def.kind === 'level' && p.lv >= def.n) q.st = 2;
+    if (def.kind === 'upgrade' && p.maxPlus() >= def.n) q.st = 2;
+    if (def.kind === 'visit' && p.map && p.map.def.id === def.map) q.st = 2;
     p.markMe();
     if (q.st === 2) return this.finishMain(p);
     p.notice(`Đã nhận nhiệm vụ: ${def.name}`, 'quest');
@@ -363,6 +373,7 @@ class Actions {
     const v = p.questView();
     if (v.prog < v.n && q.st !== 2) return;
     if (def.kind === 'collect' && p.countItem(def.item) < def.n) return;
+    if (def.kind === 'upgrade' && p.maxPlus() < def.n) return;
     const r = def.reward;
     const items = (r.items || []).map(([id, n]) => [this.rewardId(p, id), n]);
     const need = items.reduce((s, [id, n]) => s + (ITEMS[id].stack ? 1 : n), 0);
@@ -599,7 +610,7 @@ class Actions {
     const list = sh.items.map((id) => ({ id, price: ITEMS[id].price, cur: 'xu' }));
     for (const id of sh.luong || []) list.push({ id, price: ITEMS[id].priceLuong, cur: 'luong' });
     for (const t of sh.equipTiers || []) {
-      for (const s of SLOTS) {
+      for (const s of GEAR_SLOTS) {
         const id = s === 'weapon' ? `w_${p.c.cls}_${t}` : `${s}_${t}`;
         list.push({ id, price: ITEMS[id].price, cur: 'xu' });
       }
@@ -652,6 +663,7 @@ class Actions {
     if (!it) return;
     const def = ITEMS[it.id];
     if (def.type !== 'equip') return;
+    if (def.noUpgrade) return p.notice('Vật phẩm này không thể cường hóa.', 'warn');
     const plus = it.p || 0;
     if (plus >= UPGRADE.max) return p.notice('Trang bị đã đạt cấp cường hóa tối đa.', 'warn');
     const stone = UPGRADE.stone(plus);
@@ -674,6 +686,7 @@ class Actions {
     if (fromEq) {
       p.recalc();
       this.refreshInfo(p);
+      p.checkQuestState();
     }
     p.markInv();
     p.markMe();
@@ -724,7 +737,7 @@ class Actions {
 
   hotbar(p, m) {
     const i = int(m.i, -1);
-    if (i < 0 || i > 4) return;
+    if (i < 0 || i >= HOTBAR) return;
     const sid = m.sid ? String(m.sid) : null;
     if (sid && (!SKILLS[sid] || !p.c.skills[sid] || SKILLS[sid].basic)) return;
     const j = sid ? p.c.hotbar.indexOf(sid) : -1;

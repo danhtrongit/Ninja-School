@@ -10,12 +10,12 @@ const { World } = require('./game/world');
 const { newChar } = require('./game/player');
 const { CLASSES, ELEMENTS, STAT_NAMES } = require('./data/classes');
 const { SKILLS, SKILL_MAX_LV } = require('./data/skills');
-const { ITEMS, SLOTS, SLOT_NAMES, RARITY, TIER_COLORS, STAT_LABELS, UPGRADE } = require('./data/items');
+const { ITEMS, SLOTS, SLOT_NAMES, RARITY, TIER_COLORS, STAT_LABELS, UPGRADE, TIERS } = require('./data/items');
 const { MONSTERS } = require('./data/monsters');
 const { clientMaps, NPC_TYPES, GROUND } = require('./data/maps');
 const { MAIN_QUESTS } = require('./data/quests');
 const { CHECKIN, WHEEL } = require('./data/extras');
-const { expNeed } = require('./game/player');
+const { expNeed, MAX_LEVEL, HOTBAR } = require('./game/player');
 
 const config = {
   port: +process.env.PORT || 3000,
@@ -34,7 +34,7 @@ const UPGRADE_INFO = {
   max: UPGRADE.max, rate: UPGRADE.rate,
   stone: Array.from({ length: UPGRADE.max }, (_, i) => UPGRADE.stone(i)),
   stoneQty: Array.from({ length: UPGRADE.max }, (_, i) => UPGRADE.stoneQty(i)),
-  cost: Array.from({ length: 10 }, (_, t) => Array.from({ length: UPGRADE.max }, (_, i) => UPGRADE.cost(i, t))),
+  cost: Array.from({ length: TIERS }, (_, t) => Array.from({ length: UPGRADE.max }, (_, i) => UPGRADE.cost(i, t))),
   bonus: UPGRADE.bonus,
 };
 const GAME_DATA = JSON.stringify({
@@ -46,7 +46,8 @@ const GAME_DATA = JSON.stringify({
   maps: clientMaps(), npcTypes: NPC_TYPES, ground: GROUND,
   quests: MAIN_QUESTS.map((q) => ({ name: q.name, req: q.req })),
   checkin: CHECKIN, wheel: { cost: WHEEL.cost, prizes: WHEEL.prizes.map((x) => ({ label: x.label, c: x.c })) },
-  expTable: Array.from({ length: 101 }, (_, i) => (i ? expNeed(i) : 0)),
+  expTable: Array.from({ length: MAX_LEVEL + 1 }, (_, i) => (i ? expNeed(i) : 0)),
+  maxLevel: MAX_LEVEL, hotbar: HOTBAR,
 });
 
 // ---------- HTTP tĩnh

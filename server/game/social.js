@@ -3,6 +3,7 @@
 const { ITEMS, makeItem } = require('../data/items');
 const { MAPS } = require('../data/maps');
 const { MONSTERS } = require('../data/monsters');
+const { MAX_LEVEL } = require('./player');
 
 const PARTY_MAX = 6;
 const CLAN_MAX = 30;
@@ -130,7 +131,7 @@ class Social {
     const n = int(args[0], 0);
     switch (cmd.toLowerCase()) {
       case 'lv': {
-        const target = Math.max(1, Math.min(100, n));
+        const target = Math.max(1, Math.min(MAX_LEVEL, n));
         const diff = target - p.c.level;
         p.c.level = target;
         p.c.exp = 0;

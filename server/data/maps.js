@@ -104,25 +104,40 @@ field('fire_field', 'Đồi Hỏa Diệm', 'grass_fire', null, 1260, 11, beginne
 field('water_lake', 'Hồ Thủy Tiên', 'lake', null, 1260, 12, beginner, [{ x: 16, to: 'v_water', tx: 750 }]);
 field('wind_hill', 'Đồi Gió Lộng', 'grass_wind', null, 1260, 13, beginner, [{ x: 16, to: 'v_wind', tx: 750 }]);
 field('bamboo', 'Rừng Trúc', 'bamboo', 'wind', 1800, 21, [['monkey', 7], ['bee', 6], ['bandit', 6]],
-  [{ x: 16, to: 'v_fire', tx: 1440 }, { x: 1784, to: 'v_water', tx: 60 }], { boss: [{ m: 'boss_slime', x: 900 }] });
+  [{ x: 16, to: 'v_fire', tx: 1440 }, { x: 1784, to: 'v_water', tx: 60 }, { x: 1320, to: 'sakura_garden', tx: 80, door: true }], { boss: [{ m: 'boss_slime', x: 900 }] });
 field('coast', 'Bờ Biển San Hô', 'beach', 'water', 1800, 31, [['crab', 7], ['crab2', 6], ['pirate', 7]],
   [{ x: 16, to: 'v_water', tx: 1440 }, { x: 1784, to: 'bat_cave', tx: 60 }]);
 field('bat_cave', 'Hang Dơi', 'cave', 'wind', 1900, 41, [['bat', 7], ['skeleton', 7], ['rockgolem', 6]],
   [{ x: 16, to: 'coast', tx: 1740 }, { x: 1884, to: 'v_wind', tx: 60 }], { boss: [{ m: 'boss_bat', x: 950 }] });
 field('wasteland', 'Hoang Mạc Cát', 'desert', 'fire', 1900, 51, [['scorpion', 7], ['sandbandit', 6], ['mummy', 7]],
-  [{ x: 16, to: 'v_wind', tx: 1440 }, { x: 1884, to: 'misty_valley', tx: 60 }]);
+  [{ x: 16, to: 'v_wind', tx: 1440 }, { x: 1884, to: 'misty_valley', tx: 60 }, { x: 960, to: 'ancient_ruins', tx: 80, door: true }]);
 field('misty_valley', 'Thung Lũng Sương', 'mist', 'wind', 2000, 61, [['wolf', 8], ['ghost', 6], ['rogue', 7]],
   [{ x: 16, to: 'wasteland', tx: 1840 }, { x: 1984, to: 'snow_mountain', tx: 60 }], { boss: [{ m: 'boss_wolf', x: 1000 }] });
 field('snow_mountain', 'Núi Tuyết', 'snow', 'water', 2000, 71, [['snowman', 7], ['icewolf', 7], ['yeti', 6]],
   [{ x: 16, to: 'misty_valley', tx: 1940 }, { x: 1984, to: 'ice_peak', tx: 60 }]);
 field('ice_peak', 'Đỉnh Băng Giá', 'ice', 'water', 2000, 81, [['icegolem', 7], ['frostghost', 6], ['iceninja', 7]],
-  [{ x: 16, to: 'snow_mountain', tx: 1940 }, { x: 1984, to: 'demon_forest', tx: 60 }], { boss: [{ m: 'boss_yeti', x: 1000 }] });
+  [{ x: 16, to: 'snow_mountain', tx: 1940 }, { x: 1984, to: 'demon_forest', tx: 60 }, { x: 1520, to: 'crystal_cave', tx: 80, door: true }], { boss: [{ m: 'boss_yeti', x: 1000 }] });
 field('demon_forest', 'Rừng Ma', 'dark_forest', 'fire', 2000, 91, [['oni', 7], ['demonbat', 7], ['shadow', 7]],
   [{ x: 16, to: 'ice_peak', tx: 1940 }, { x: 1984, to: 'demon_cave', tx: 60 }]);
 field('demon_cave', 'Hang Quỷ', 'lava', 'fire', 2000, 101, [['lavagolem', 7], ['fireghost', 6], ['samurai', 7]],
   [{ x: 16, to: 'demon_forest', tx: 1940 }, { x: 1984, to: 'hell_gate', tx: 60 }], { boss: [{ m: 'boss_oni', x: 1000 }] });
 field('hell_gate', 'Cổng Địa Ngục', 'hell', 'wind', 2100, 111, [['hellhound', 8], ['deathknight', 7], ['darkdragon', 5]],
-  [{ x: 16, to: 'demon_cave', tx: 1940 }], { boss: [{ m: 'boss_god', x: 1100 }] });
+  [{ x: 16, to: 'demon_cave', tx: 1940 }, { x: 2084, to: 'heaven', tx: 60 }], { boss: [{ m: 'boss_god', x: 1100 }] });
+
+// Nhánh phụ (vào qua cửa giữa bản đồ)
+field('sakura_garden', 'Vườn Anh Đào', 'grass_fire', 'wind', 1500, 121, [['flowerfairy', 7], ['treant', 6], ['foxspirit', 6]],
+  [{ x: 16, to: 'bamboo', tx: 1320 }], { boss: [{ m: 'boss_fox', x: 900 }] });
+field('ancient_ruins', 'Phế Tích Cổ', 'desert', 'fire', 1600, 131, [['stoneguard', 7], ['cursedmummy', 7], ['sandworm', 6]],
+  [{ x: 16, to: 'wasteland', tx: 960 }], { boss: [{ m: 'boss_pharaoh', x: 950 }] });
+field('crystal_cave', 'Hang Pha Lê', 'cave', 'water', 1600, 141, [['crystalgolem', 7], ['crystalbat', 7], ['gemcrab', 6]],
+  [{ x: 16, to: 'ice_peak', tx: 1520 }], { boss: [{ m: 'boss_crystal', x: 950 }] });
+// Hậu kỳ cấp 95-120
+field('heaven', 'Thiên Cung', 'ice', 'fire', 2100, 151, [['celestial', 8], ['cloudspirit', 7], ['thunderbird', 7]],
+  [{ x: 16, to: 'hell_gate', tx: 2040 }, { x: 2084, to: 'abyss', tx: 60 }]);
+field('abyss', 'Ma Giới', 'hell', 'fire', 2100, 161, [['abyssdemon', 8], ['bonedragon', 6], ['voidknight', 7]],
+  [{ x: 16, to: 'heaven', tx: 2040 }, { x: 2084, to: 'dragon_palace', tx: 60 }], { boss: [{ m: 'boss_heaven', x: 1100 }] });
+field('dragon_palace', 'Long Cung', 'lake', 'water', 2200, 171, [['seaserpent', 8], ['coralgolem', 7], ['dragonguard', 7]],
+  [{ x: 16, to: 'abyss', tx: 2040 }], { boss: [{ m: 'boss_dragon', x: 1200 }] });
 
 reg({
   id: 'arena', name: 'Đấu Trường', theme: 'arena', element: null, w: 900, h: MAP_H, ground: GROUND, spawnX: 120,

@@ -8,7 +8,15 @@ const { MAIN_QUESTS } = require('../data/quests');
 
 const INV_SIZE = 40;
 const STORAGE_SIZE = 60;
-const MAX_LEVEL = 100;
+const MAX_LEVEL = 120;
+const HOTBAR = 6;
+// Buff lưu lâu dài (giữ khi thoát game): khóa → [chỉ số, giá trị, tên]
+const PERSIST_BUFFS = {
+  exp2: ['exp', 100, 'Nhân đôi EXP'],
+  food_atk: ['atkPct', 10, 'Bánh Bao Sức Mạnh'],
+  food_def: ['defPct', 10, 'Trà Thiết Bích'],
+  food_hp: ['hpPct', 10, 'Canh Nhân Sâm'],
+};
 const expNeed = (lv) => Math.floor(20 * lv * lv + 80 * lv);
 
 function newChar(name, cls, gender) {
@@ -25,7 +33,7 @@ function newChar(name, cls, gender) {
     hp: 1e9, mp: 1e9,
     stats: { str: 5, agi: 5, int: 5, vit: 5 }, potential: 0, skillPoints: 0,
     skills: { [basic]: 1, [first]: 1 },
-    hotbar: [first, null, null, null, null],
+    hotbar: [first, null, null, null, null, null],
     inv, equip: { weapon: makeItem(`w_${cls}_0`) },
     map: cd.village, x: MAPS[cd.village].spawnX, y: GROUND,
     quest: { i: 0, st: 0, prog: 0 },
@@ -86,8 +94,9 @@ class Player {
     c.equip = c.equip || {};
     for (const s of Object.keys(c.equip)) if (!c.equip[s] || !ITEMS[c.equip[s].id]) delete c.equip[s];
     c.skills = c.skills || {};
-    c.hotbar = Array.isArray(c.hotbar) ? c.hotbar.slice(0, 5) : [];
-    while (c.hotbar.length < 5) c.hotbar.push(null);
+    c.hotbar = Array.isArray(c.hotbar) ? c.hotbar.slice(0, HOTBAR) : [];
+    while (c.hotbar.length < HOTBAR) c.hotbar.push(null);
+    if (c.level > MAX_LEVEL) c.level = MAX_LEVEL;
     c.quest = c.quest || { i: 0, st: 0, prog: 0 };
     c.daily = c.daily || { day: '', done: 0, task: null };
     c.buffs = c.buffs || {};
@@ -108,7 +117,7 @@ class Player {
     const c = this.c;
     const cd = CLASSES[c.cls];
     const b = cd.melee ? BASE_STATS.melee : BASE_STATS.ranged;
-    const eq = { atk: 0, def: 0, hp: 0, mp: 0, crit: 0, dodge: 0, spd: 0, str: 0, agi: 0, int: 0, vit: 0, skillDmg: 0, hit: 0 };
+    const eq = { atk: 0, def: 0, hp: 0, mp: 0, crit: 0, dodge: 0, spd: 0, str: 0, agi: 0, int: 0, vit: 0, skillDmg: 0, hit: 0, expPct: 0, hpPct: 0 };
     for (const slot of SLOTS) {
       const it = c.equip[slot];
       if (!it) continue;
@@ -120,10 +129,15 @@ class Player {
     const int = c.stats.int + eq.int;
     const vit = c.stats.vit + eq.vit;
     const lv = c.level - 1;
-    const buf = { atkPct: 0, defPct: 0, crit: 0, dodge: 0, spd: 0 };
+    const buf = { atkPct: 0, defPct: 0, crit: 0, dodge: 0, spd: 0, hpPct: 0 };
     for (const k in this.buffs) buf[this.buffs[k].stat] = (buf[this.buffs[k].stat] || 0) + this.buffs[k].v;
+    const now = Date.now();
+    for (const k in PERSIST_BUFFS) {
+      const [stat, v] = PERSIST_BUFFS[k];
+      if ((c.buffs[k] || 0) > now && stat !== 'exp') buf[stat] = (buf[stat] || 0) + v;
+    }
     const s = {
-      maxHp: Math.round(b.hp + b.hpLv * lv + vit * 12 + eq.hp),
+      maxHp: Math.round((b.hp + b.hpLv * lv + vit * 12 + eq.hp) * (1 + (buf.hpPct + eq.hpPct) / 100)),
       maxMp: Math.round(b.mp + b.mpLv * lv + int * 6 + eq.mp),
       atk: Math.round((b.atk + b.atkLv * lv + str * 2 + agi * 0.5 + eq.atk) * (1 + buf.atkPct / 100)),
       def: Math.round((b.def + b.defLv * lv + vit * 0.6 + eq.def) * (1 + buf.defPct / 100)),
@@ -132,7 +146,7 @@ class Player {
       hit: Math.round(agi + eq.hit),
       spd: Math.min(60, Math.round(eq.spd + buf.spd)),
       skillDmg: Math.round((int * 0.6 + eq.skillDmg) * 10) / 10,
-      expMul: (c.buffs.exp2 || 0) > Date.now() ? 2 : 1,
+      expMul: Math.round(((c.buffs.exp2 || 0) > now ? 2 : 1) * (1 + eq.expPct / 100) * 100) / 100,
       str, agi, int, vit,
     };
     this.s = s;
@@ -145,7 +159,10 @@ class Player {
   look() {
     const e = this.c.equip;
     const t = (s) => (e[s] ? ITEMS[e[s].id].tier : -1);
-    return { w: t('weapon'), a: t('armor'), p: t('pants'), h: t('hat'), wp: e.weapon ? e.weapon.p || 0 : 0 };
+    return {
+      w: t('weapon'), a: t('armor'), p: t('pants'), h: t('hat'), wp: e.weapon ? e.weapon.p || 0 : 0,
+      pet: e.pet && ITEMS[e.pet.id] ? ITEMS[e.pet.id].sprite : null,
+    };
   }
 
   clanTag() {
@@ -169,7 +186,44 @@ class Player {
     let prog = q.prog;
     if (def.kind === 'collect') prog = Math.min(def.n, this.countItem(def.item));
     if (def.kind === 'level') prog = Math.min(def.n, this.c.level);
-    return { i: q.i, name: def.name, desc: def.desc, req: def.req, kind: def.kind, n: def.n || 1, prog, st: q.st, m: def.m, item: def.item };
+    if (def.kind === 'upgrade') prog = Math.min(def.n, this.maxPlus());
+    if (def.kind === 'visit' || def.kind === 'talk') prog = q.st === 2 ? 1 : 0;
+    return { i: q.i, name: def.name, desc: def.desc, req: def.req, kind: def.kind, n: def.n || 1, prog, st: q.st, m: def.m, item: def.item, map: def.map };
+  }
+
+  maxPlus() {
+    let best = 0;
+    for (const s of SLOTS) if (this.c.equip[s]) best = Math.max(best, this.c.equip[s].p || 0);
+    return best;
+  }
+
+  // Kiểm tra các nhiệm vụ tự hoàn thành theo trạng thái (cấp, cường hóa, bản đồ)
+  checkQuestState() {
+    const q = this.c.quest;
+    const def = MAIN_QUESTS[q.i];
+    if (!def || q.st !== 1) return;
+    let done = false;
+    if (def.kind === 'level') done = this.c.level >= def.n;
+    if (def.kind === 'upgrade') done = this.maxPlus() >= def.n;
+    if (def.kind === 'visit') done = !!this.map && this.map.def.id === def.map;
+    if (def.kind === 'collect') done = this.countItem(def.item) >= def.n;
+    if (done) {
+      q.st = 2;
+      this.notice(`Nhiệm vụ "${def.name}" đã hoàn thành! Hãy về gặp Trưởng Làng.`, 'quest');
+      this.markMe();
+    }
+  }
+
+  onDungeonClear() {
+    const q = this.c.quest;
+    const def = MAIN_QUESTS[q.i];
+    if (!def || def.kind !== 'dungeon' || q.st !== 1) return;
+    q.prog = Math.min(def.n, q.prog + 1);
+    if (q.prog >= def.n) {
+      q.st = 2;
+      this.notice(`Nhiệm vụ "${def.name}" đã hoàn thành! Hãy về gặp Trưởng Làng.`, 'quest');
+    }
+    this.markMe();
   }
 
   selfData() {
@@ -177,7 +231,9 @@ class Player {
     const now = Date.now();
     const buffs = [];
     for (const k in this.buffs) buffs.push({ k, stat: this.buffs[k].stat, until: this.buffs[k].until, name: this.buffs[k].name });
-    if ((c.buffs.exp2 || 0) > now) buffs.push({ k: 'exp2', stat: 'exp', until: c.buffs.exp2, name: 'Nhân đôi EXP' });
+    for (const k in PERSIST_BUFFS) {
+      if ((c.buffs[k] || 0) > now) buffs.push({ k, stat: PERSIST_BUFFS[k][0], until: c.buffs[k], name: PERSIST_BUFFS[k][2] });
+    }
     return {
       id: this.id, name: c.name, cls: c.cls, gender: c.gender, level: c.level, exp: c.exp, need: expNeed(c.level),
       xu: c.xu, luong: c.luong, hp: c.hp, mp: c.mp, s: this.s, stats: c.stats, potential: c.potential,
@@ -322,8 +378,7 @@ class Player {
   }
 
   checkLevelQuest() {
-    const def = MAIN_QUESTS[this.c.quest.i];
-    if (def && def.kind === 'level' && this.c.quest.st === 1 && this.c.level >= def.n) this.c.quest.st = 2;
+    this.checkQuestState();
   }
 
   gainXu(n) {
@@ -363,4 +418,4 @@ class Player {
   }
 }
 
-module.exports = { Player, newChar, expNeed, INV_SIZE, STORAGE_SIZE, MAX_LEVEL, ELEMENTS };
+module.exports = { Player, newChar, expNeed, INV_SIZE, STORAGE_SIZE, MAX_LEVEL, HOTBAR, PERSIST_BUFFS, ELEMENTS };

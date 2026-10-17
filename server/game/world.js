@@ -72,10 +72,12 @@ class World {
           changed = true;
         }
       }
-      if (p.c.buffs.exp2 && p.c.buffs.exp2 <= now) {
-        delete p.c.buffs.exp2;
-        changed = true;
-        p.notice('Hiệu lực nhân đôi kinh nghiệm đã hết.');
+      for (const k in p.c.buffs) {
+        if (p.c.buffs[k] <= now) {
+          delete p.c.buffs[k];
+          changed = true;
+          p.notice(k === 'exp2' ? 'Hiệu lực nhân đôi kinh nghiệm đã hết.' : 'Hiệu lực món ăn đã hết.');
+        }
       }
       if (changed) p.recalc();
       // Hồi phục tự nhiên
@@ -184,6 +186,7 @@ class World {
     if (p.trade) this.social.cancelTrade(p, 'Giao dịch bị hủy.');
     if (map.def.town && p.pkMode) p.pkMode = false;
     map.add(p);
+    p.checkQuestState();
     const snap = map.snapshot();
     p.send('enterMap', { map: map.def.id, x: Math.round(p.x), y: Math.round(p.y), me: p.selfData(), ...snap });
     this.social.sendParty(p);

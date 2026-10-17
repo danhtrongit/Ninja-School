@@ -59,7 +59,17 @@ const SKILLS = {
   q5: { cls: 'quat', name: 'Cuồng Phong Bạo', req: 30, type: 'aoe', center: 'target', range: 180, radius: 140, cd: 15000, mp: [50, 6], mul: [3.2, 0.3], fx: { k: 'whirl', c: '#558b2f', big: true }, desc: 'Cuồng phong hủy diệt diện rộng.' },
 };
 
-const SKILL_MAX_LV = 10;
+// Tuyệt kỹ cấp 60 của từng phái
+Object.assign(SKILLS, {
+  k6: { cls: 'kiem', name: 'Hỏa Long Thần Kiếm', req: 60, type: 'aoe', center: 'target', range: 170, radius: 160, cd: 25000, mp: [90, 8], mul: [5.0, 0.35], fx: { k: 'meteor', c: '#ff1744' }, desc: 'Tuyệt kỹ: rồng lửa giáng xuống thiêu rụi diện rộng.' },
+  t6: { cls: 'tieu', name: 'Vạn Tiêu Quy Tông', req: 60, type: 'aoe', center: 'target', range: 200, radius: 170, cd: 25000, mp: [90, 8], mul: [4.8, 0.35], fx: { k: 'rain', p: 'fire', c: '#ff6d00', big: true }, desc: 'Tuyệt kỹ: vạn phi tiêu lửa phủ kín chiến trường.' },
+  n6: { cls: 'kunai', name: 'Băng Phong Thiên Hạ', req: 60, type: 'aoe', center: 'self', radius: 170, cd: 25000, mp: [90, 8], mul: [4.8, 0.35], slow: 4000, fx: { k: 'burst', c: '#80d8ff', big: true }, desc: 'Tuyệt kỹ: băng phong quanh thân, làm chậm mọi kẻ địch.' },
+  c6: { cls: 'cung', name: 'Thiên Tiễn Phá Không', req: 60, type: 'line', range: 320, cd: 22000, mp: [85, 8], mul: [5.2, 0.38], fx: { k: 'wave', p: 'arrow', c: '#00e5ff' }, desc: 'Tuyệt kỹ: mũi tên xuyên thấu cả chiến trường.' },
+  d6: { cls: 'dao', name: 'Phong Thần Trảm', req: 60, type: 'dash', range: 190, cd: 20000, mp: [85, 8], mul: [5.2, 0.38], fx: { k: 'dash', c: '#64dd17' }, desc: 'Tuyệt kỹ: hóa thành cuồng phong lướt chém xuyên địch.' },
+  q6: { cls: 'quat', name: 'Thiên Phong Lốc', req: 60, type: 'aoe', center: 'target', range: 190, radius: 170, cd: 25000, mp: [90, 8], mul: [4.8, 0.35], fx: { k: 'whirl', c: '#00e676', big: true }, desc: 'Tuyệt kỹ: lốc xoáy trời đất nghiền nát diện rộng.' },
+});
+
+const SKILL_MAX_LV = 15;
 
 function classSkills(cls) {
   return Object.keys(SKILLS).filter((id) => SKILLS[id].cls === cls);

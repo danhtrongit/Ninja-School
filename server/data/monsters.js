@@ -36,6 +36,30 @@ const LIST = [
   ['hellhound', 'Địa Ngục Khuyển', 83, 'beast', ['#212121', '#d50000', '#ff9100'], 'fire', 1, []],
   ['deathknight', 'Tử Thần Kỵ Sĩ', 88, 'humanoid', ['#1b1b1b', '#2e7d32', '#76ff03'], 'wind', 1, []],
   ['darkdragon', 'Hắc Long', 95, 'beast', ['#311b92', '#7c4dff', '#ff1744'], 'wind', 1, [], 0, 1.6],
+  // Vườn Anh Đào (nhánh phụ cấp 14-20)
+  ['flowerfairy', 'Hoa Tiên Tử', 14, 'flyer', ['#f48fb1', '#fce4ec', '#ad1457'], 'wind', 0, [['canh_hoa', 0.4]]],
+  ['treant', 'Mộc Tinh', 17, 'golem', ['#6d8b3a', '#4e342e', '#f8bbd0'], 'wind', 0, []],
+  ['foxspirit', 'Hồ Ly Tinh', 19, 'beast', ['#ff8f00', '#fff3e0', '#d50000'], 'fire', 1, []],
+  // Phế Tích Cổ (nhánh phụ cấp 34-40)
+  ['stoneguard', 'Tượng Đá Cổ', 35, 'golem', ['#bcaaa4', '#795548', '#ffd54f'], 'water', 0, [['manh_tuong', 0.4]]],
+  ['cursedmummy', 'Xác Ướp Nguyền', 37, 'humanoid', ['#d7ccc8', '#8d6e63', '#7cb342'], 'wind', 1, []],
+  ['sandworm', 'Sa Trùng', 39, 'beast', ['#d4a24c', '#fff8e1', '#6d4c41'], 'fire', 1, []],
+  // Hang Pha Lê (nhánh phụ cấp 56-62)
+  ['crystalgolem', 'Pha Lê Nhân', 56, 'golem', ['#9575cd', '#d1c4e9', '#e040fb'], 'water', 0, [['tinh_the_tim', 0.35]]],
+  ['crystalbat', 'Dơi Pha Lê', 59, 'flyer', ['#4dd0e1', '#006064', '#e0f7fa'], 'water', 1, []],
+  ['gemcrab', 'Cua Ngọc', 61, 'crab', ['#00bfa5', '#a7ffeb', '#004d40'], 'water', 1, []],
+  // Thiên Cung (cấp 95-105)
+  ['celestial', 'Thiên Binh', 96, 'humanoid', ['#fff8e1', '#ffd600', '#5d4037'], 'fire', 1, []],
+  ['cloudspirit', 'Vân Linh', 100, 'ghost', ['#ffffff', '#b3e5fc', '#0277bd'], 'wind', 1, [], 1],
+  ['thunderbird', 'Lôi Điểu', 103, 'flyer', ['#ffeb3b', '#1a237e', '#ffffff'], 'wind', 1, [['long_vu', 0.35]]],
+  // Ma Giới (cấp 105-112)
+  ['abyssdemon', 'Ma Giới Quỷ', 106, 'imp', ['#4a148c', '#ce93d8', '#ff1744'], 'fire', 1, [['hon_ma', 0.35]]],
+  ['bonedragon', 'Cốt Long', 109, 'beast', ['#eceff1', '#78909c', '#76ff03'], 'wind', 1, [], 0, 1.4],
+  ['voidknight', 'Hư Không Kỵ Sĩ', 112, 'humanoid', ['#0d0d1a', '#651fff', '#00e5ff'], 'water', 1, []],
+  // Long Cung (cấp 113-120)
+  ['seaserpent', 'Hải Xà', 114, 'beast', ['#00897b', '#80cbc4', '#ffd600'], 'water', 1, [['vay_rong', 0.35]]],
+  ['coralgolem', 'San Hô Nhân', 117, 'golem', ['#ff7043', '#ffccbc', '#00e5ff'], 'water', 1, []],
+  ['dragonguard', 'Long Vệ', 120, 'humanoid', ['#004d40', '#1de9b6', '#ffd600'], 'water', 1, []],
 ];
 
 // Boss thế giới
@@ -46,7 +70,20 @@ const BOSSES = [
   ['boss_yeti', 'Tuyết Quái Vương', 62, 'golem', ['#ffffff', '#b3e5fc', '#0091ea'], 'water', 1.9],
   ['boss_oni', 'Quỷ Vương', 85, 'imp', ['#b71c1c', '#ffccbc', '#ffd600'], 'fire', 2.6],
   ['boss_god', 'Ma Thần', 100, 'humanoid', ['#120024', '#6200ea', '#ff1744'], 'wind', 2.3],
+  ['boss_fox', 'Cửu Vĩ Hồ', 22, 'beast', ['#ff6d00', '#fff8e1', '#d50000'], 'fire', 2.0],
+  ['boss_pharaoh', 'Pharaoh Phục Sinh', 42, 'humanoid', ['#ffd54f', '#1565c0', '#4e342e'], 'fire', 2.3],
+  ['boss_crystal', 'Tinh Thể Vương', 66, 'golem', ['#7c4dff', '#e1bee7', '#00e5ff'], 'water', 1.9],
+  ['boss_heaven', 'Thiên Ma', 112, 'humanoid', ['#000000', '#ff1744', '#ffd600'], 'fire', 2.4],
+  ['boss_dragon', 'Long Vương', 125, 'beast', ['#006064', '#4dd0e1', '#ffd600'], 'water', 2.6],
 ];
+
+// Vật phẩm đặc biệt boss rơi thêm (ngoài trang bị, đá, rương)
+const BOSS_DROPS = {
+  boss_fox: [['pet_fox', 0.1]],
+  boss_god: [['stone4', 1]],
+  boss_heaven: [['stone4', 1], ['pet_ghost', 0.1]],
+  boss_dragon: [['stone4', 1], ['pet_dragon', 0.25]],
+};
 
 const SIZES = {
   slime: [16, 12], bunny: [14, 14], mushroom: [14, 16], imp: [14, 18], flyer: [18, 12], humanoid: [12, 22],
@@ -83,7 +120,7 @@ for (const [id, name, lv, type, pal, el, scale] of BOSSES) {
     hp: Math.round(s.hp * 45), atk: Math.round(s.atk * 2.2), def: Math.round(s.def * 1.6), exp: Math.round(s.exp * 40),
     speed: 45, atkRange: 40 * scale * 0.6, atkCd: 1500, aoe: 60 * scale * 0.5, respawn: 10 * 60 * 1000,
     w: Math.round(sz[0] * scale), h: Math.round(sz[1] * scale), fly: type === 'flyer' || type === 'ghost',
-    drops: [],
+    drops: BOSS_DROPS[id] || [],
   };
 }
 
