@@ -34,6 +34,26 @@ class DB {
     fs.renameSync(tmp, f);
   }
 
+  // Sao lưu xoay vòng (giữ 12 bản gần nhất) để phòng file dữ liệu hỏng
+  backup() {
+    try {
+      const dir = path.join(this.dir, 'backups');
+      fs.mkdirSync(dir, { recursive: true });
+      const stamp = new Date().toISOString().replace(/[-:]/g, '').slice(0, 13);
+      for (const name of ['accounts.json', 'characters.json', 'clans.json', 'meta.json']) {
+        const src = this._file(name);
+        if (fs.existsSync(src)) fs.copyFileSync(src, path.join(dir, `${stamp}-${name}`));
+      }
+      const files = fs.readdirSync(dir).sort();
+      const stamps = [...new Set(files.map((f) => f.split('-')[0]))];
+      for (const old of stamps.slice(0, Math.max(0, stamps.length - 12))) {
+        for (const f of files) if (f.startsWith(`${old}-`)) fs.unlinkSync(path.join(dir, f));
+      }
+    } catch (e) {
+      console.error('[db] Lỗi sao lưu:', e.message);
+    }
+  }
+
   save() {
     try {
       this._write('accounts.json', this.accounts);

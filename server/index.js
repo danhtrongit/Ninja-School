@@ -288,5 +288,7 @@ function shutdown() {
 process.on('SIGINT', shutdown);
 process.on('SIGTERM', shutdown);
 setInterval(() => { if (db.dirty) db.save(); }, 15000);
+setInterval(() => db.backup(), 6 * 3600 * 1000);
+setTimeout(() => db.backup(), 60 * 1000);
 
 module.exports = { server, world, db };
