@@ -172,7 +172,12 @@ async function main() {
         a.send('skill', { sid: i % 6 === 0 ? 'k1' : 'k0', tid: `m${target.id}`, dir: 1 });
         await sleep(520);
       }
-      if (!a.monsters.has(target.id)) kills++;
+      if (!a.monsters.has(target.id)) {
+        kills++;
+        // đi tới chỗ quái chết để tự nhặt xu/đồ rơi (server nhặt trong bán kính 18px)
+        await a.walkTo(Math.round(target.x));
+        await sleep(200);
+      }
     }
     ok(kills >= 3, `tiêu diệt ${kills} Slime`);
     ok(a.msgs.some((m) => m.t === 'expGain' && m.n > 0), 'nhận kinh nghiệm khi giết quái');
