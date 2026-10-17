@@ -29,11 +29,6 @@ function rgb(col) {
   return v;
 }
 
-function lum(col) {
-  const [r, g, b] = rgb(col);
-  return (r * 0.3 + g * 0.59 + b * 0.11) / 255;
-}
-
 // ================= BỘ ĐỆM ĐIỂM ẢNH =================
 class Pix {
   constructor(w, h) {
@@ -509,12 +504,12 @@ function drawPaw(P, col) {
     const lit = -dx - dy;
     return lit > 0.7 ? pal[5] : lit > -0.2 ? pal[4] : pal[3];
   });
-  pad(3.5, 7, 1.9, 2.3);
-  pad(6.4, 3.9, 1.9, 2.4);
-  pad(9.6, 3.9, 1.9, 2.4);
-  pad(12.5, 7, 1.9, 2.3);
-  pad(8, 11, 4.6, 3.4);
-  P.set(6, 9, '#ffffff');
+  pad(3.2, 6.8, 1.6, 2.1);
+  pad(6.2, 3.3, 1.6, 2.1);
+  pad(9.8, 3.3, 1.6, 2.1);
+  pad(12.8, 6.8, 1.6, 2.1);
+  pad(8, 11.2, 4, 2.9);
+  P.set(6, 10, '#ffffff');
 }
 
 function drawShurikenBig(P, col) {
@@ -726,7 +721,9 @@ function drawCoin(P, big) {
   P.set(4, 4, '#ffffff');
 }
 
-export function iconCanvas(icon, rarity) {
+// size (tùy chọn): kích thước thu nhỏ, ví dụ 12 khi vẽ trên mặt đất
+export function iconCanvas(icon, rarity, size) {
+  if (size && size !== 16) return smallIcon(icon, rarity, size);
   const key = `${icon.k}|${icon.c}|${icon.s || 0}|${rarity || 0}`;
   let c = iconCache.get(key);
   if (c) return c;
@@ -780,6 +777,28 @@ export function iconCanvas(icon, rarity) {
   return c;
 }
 const iconCache = new Map();
+
+// Thu nhỏ có lọc (giữ mép sắc bằng ngưỡng alpha) cho vật phẩm rơi trên đất
+const smallCache = new Map();
+function smallIcon(icon, rarity, size) {
+  const key = `${icon.k}|${icon.c}|${icon.s || 0}|${rarity || 0}|${size}`;
+  let c = smallCache.get(key);
+  if (c) return c;
+  const base = iconCanvas(icon, rarity);
+  c = mkCanvas(size, size);
+  const g = c.getContext('2d');
+  g.imageSmoothingEnabled = true;
+  g.imageSmoothingQuality = 'high';
+  g.drawImage(base, 0, 0, size, size);
+  const img = g.getImageData(0, 0, size, size);
+  const d = img.data;
+  for (let i = 0; i < d.length; i += 4) {
+    d[i + 3] = d[i + 3] < 110 ? 0 : 255;
+  }
+  g.putImageData(img, 0, 0);
+  smallCache.set(key, c);
+  return c;
+}
 
 const urlCache = new Map();
 export function iconURL(icon, rarity) {
@@ -1134,20 +1153,6 @@ function daoShape(P, x0, y0, x1, y1, bl) {
 
 function speedLines(P, x0, x1, ys, col) {
   for (const y of ys) P.line(x0 + (y % 3), y, x1 - (y % 2) * 2, y, col);
-}
-
-function bootWing(P, cx, cy, col) {
-  P.map([
-    '.....w.w.',
-    '....wVwVw',
-    '.33.VwVw.',
-    '.34.wVw..',
-    '.343Vw...',
-    '.3443....',
-    '.344443..',
-    '.3444443.',
-    '.hhhhhhh.',
-  ], { 3: shade(col, -0.2), 4: col, h: FIX.h, w: '#ffffff', V: '#c5e1a5' }, cx - 4, cy - 4);
 }
 
 function netGrid(P, cx, cy, R, col) {

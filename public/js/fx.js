@@ -176,8 +176,8 @@ function dotSprite(col, r) {
 
 // Cột sáng dọc (buff, lên cấp)
 const beamCache = new Map();
-function beamSprite(col, w, h) {
-  const key = `${col}|${w}|${h}`;
+function beamSprite(col, w, h, core = true) {
+  const key = `${col}|${w}|${h}|${core ? 1 : 0}`;
   let c = beamCache.get(key);
   if (c) return c;
   c = mkCanvas(w, h);
@@ -192,11 +192,11 @@ function beamSprite(col, w, h) {
       let a = Math.pow(1 - dx, 2) * ay;
       a = Math.round(a * 6) / 6;
       if (a <= 0) continue;
-      const core = dx < 0.16 && vy > 0.1;
+      const white = core && dx < 0.16 && vy > 0.1;
       const i = (y * w + x) * 4;
-      img.data[i] = core ? 255 : R;
-      img.data[i + 1] = core ? 255 : G;
-      img.data[i + 2] = core ? 255 : B;
+      img.data[i] = white ? 255 : R;
+      img.data[i + 1] = white ? 255 : G;
+      img.data[i + 2] = white ? 255 : B;
       img.data[i + 3] = R0(a * 255);
     }
   }
@@ -490,7 +490,7 @@ function silhouette(c) {
     '....LMMMMMMML...', '....LMMMMMMMML..', '...LMMML.LMMML..', '..LMMML...LMMML.', '.LMMML.....LMML.',
     'LMMML.......LML.', 'LML..........LL.',
   ];
-  const pal = { L: '#ffffff', M: c };
+  const pal = { L: shade(c, -0.5), M: c };
   cv = mkCanvas(16, m.length);
   const g = cv.getContext('2d');
   m.forEach((row, y) => {
@@ -593,7 +593,7 @@ export class FX {
       const v = speed * (0.5 + Math.random() * 0.9);
       this.spawn('spark', x, y, Math.cos(a) * v, Math.sin(a) * v - 25, 0.22 + Math.random() * 0.28, i % 3 === 0 ? '#ffffff' : i % 3 === 1 ? c : pick(sp), { g: 150, drag: 2.2, s: Math.random() < 0.5 ? 3 : 2, add: true });
     }
-    this.spawn('glow', x, y, 0, 0, 0.12, glowCol(c, el), { s: 4 + Math.min(10, n * 0.5), s1: 2, a: 0.85, add: true });
+    this.spawn('glow', x, y, 0, 0, 0.12, glowCol(c, el), { s: 4 + Math.min(10, n * 0.5), s1: 2, a: 0.55, add: true });
     if (n >= 10) this.star(x, y, '#ffffff', 6, 0.18);
   }
 
@@ -611,7 +611,7 @@ export class FX {
 
   // ================= CÁC LOẠI HIỆU ỨNG =================
   slash(x, y, dir, c, big) {
-    this.add({ k: 'slash', x, y, dir: dir || 1, c: c || '#ffffff', big: !!big, life: big ? 0.3 : 0.24, el: elemOf(c) });
+    this.add({ k: 'slash', x, y, dir: dir || 1, c: c || '#ffffff', big: !!big, life: big ? 0.26 : 0.2, el: elemOf(c) });
   }
 
   proj(x0, y0, x1, y1, p, c, opts = {}) {
@@ -626,7 +626,7 @@ export class FX {
   burst(x, y, r, c, big) {
     const col = c || '#ffffff';
     const el = elemOf(col);
-    const e = this.add({ k: 'burst', x, y, r: Math.max(16, r), c: col, big: !!big, life: big ? 0.8 : 0.62, el, acc: 0 });
+    const e = this.add({ k: 'burst', x, y, r: Math.max(16, r), c: col, big: !!big, life: big ? 0.6 : 0.48, el, acc: 0 });
     if (el === 'ice') {
       const n = big ? 20 : 13;
       e.spikes = [];
@@ -679,7 +679,7 @@ export class FX {
     for (let i = 0; i < n; i++) {
       deb.push({ a: Math.random() * TAU, h: Math.random(), w: rnd(6, 11), vh: rnd(0.5, 1.1), kind: i % 3 === 0 ? 'rock' : 'leaf', c: i % 3 === 0 ? pick(['#8d6e63', '#6d4c41', '#a1887f']) : pick(EP.wind.leaf) });
     }
-    this.add({ k: 'whirl', x, y, r: Math.max(30, r), c: col, big: !!big, el, life: big ? 1.15 : 0.95, deb, acc: 0 });
+    this.add({ k: 'whirl', x, y, r: Math.max(30, r), c: col, big: !!big, el, life: big ? 0.9 : 0.75, deb, acc: 0 });
   }
 
   aura(get, c) {
@@ -702,7 +702,7 @@ export class FX {
   }
 
   levelUp(get) {
-    this.add({ k: 'level', get, life: 1.9, acc: 0, burst: false });
+    this.add({ k: 'level', get, life: 1.5, acc: 0, burst: false });
   }
 
   // ================= CẬP NHẬT =================
@@ -843,7 +843,7 @@ export class FX {
       const v = rnd(30, e.boom ? 110 : 70);
       this.spawn('spark', x, y, Math.cos(a) * v - e.ux * 20, Math.sin(a) * v - 20, rnd(0.18, 0.35), i % 2 ? '#ffffff' : pick(sp), { g: 140, drag: 2.5, s: 2, add: true });
     }
-    this.spawn('glow', x, y, 0, 0, 0.14, glowCol(c, el), { s: e.boom ? 14 : 6, s1: e.boom ? 22 : 9, a: 0.9, add: true });
+    this.spawn('glow', x, y, 0, 0, 0.14, glowCol(c, el), { s: e.boom ? 14 : 6, s1: e.boom ? 22 : 9, a: 0.6, add: true });
     this.star(x, y, '#ffffff', e.boom ? 7 : 4, 0.16);
     if (el === 'water') for (let i = 0; i < 7; i++) this.drop(x, y, rnd(-50, 50), -rnd(30, 90), pick(EP.water.drop));
     else if (el === 'ice') {
@@ -1660,6 +1660,10 @@ export class FX {
       drawGlow(ctx, x, y, gc, big ? 14 : 10, 0.65 * fade);
       drawGlow(ctx, x, y, '#ffffff', 5, 0.8 * fade);
       ctx.globalCompositeOperation = 'source-over';
+      ctx.globalAlpha = 0.8 * fade;
+      ctx.fillStyle = shade(gc, -0.35);
+      const cl = Math.min(len, 60);
+      ctx.fillRect(e.dir > 0 ? x - cl - 8 : x + 8, y + 1, cl, 1);
       ctx.globalAlpha = fade;
       const L = big ? 18 : 15;
       ctx.fillStyle = '#ffffff';
@@ -1679,7 +1683,7 @@ export class FX {
       return;
     }
     // kiếm khí: lưỡi trăng khuyết lớn bay ngang
-    const B = bladeSprite(e.c, 16, 6, e.dir > 0 ? 0 : 8, 1.25);
+    const B = bladeSprite(e.c, 18, 7, e.dir > 0 ? 0 : 8, 1.25);
     const h = B.S >> 1;
     ctx.globalCompositeOperation = 'lighter';
     drawGlow(ctx, x + e.dir * 8, y, gc, 18, 0.5 * fade, 1.2, 0.7);
@@ -1703,15 +1707,26 @@ export class FX {
     const rx = e.r * (0.85 + 0.15 * env);
     const ry = rx * 0.34;
     const gc = glowCol(e.c, e.el);
+    const rp = ramp(gc);
     ctx.globalCompositeOperation = 'lighter';
-    drawGlow(ctx, x, y, gc, rx, 0.3 * env, 0.34);
-    ctx.globalAlpha = 0.75 * env;
-    ctx.fillStyle = gc;
+    drawGlow(ctx, x, y, gc, rx, 0.22 * env, 0.34);
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.globalAlpha = 0.7 * env;
+    ctx.fillStyle = rp[4];
+    ringPx(ctx, x, y + 1, rx, ry, 2, 1);
+    ctx.globalAlpha = 0.9 * env;
+    ctx.fillStyle = rp[2];
     ringPx(ctx, x, y, rx, ry, 2, 1);
-    ctx.globalAlpha = 0.55 * env;
     ctx.fillStyle = '#ffffff';
+    ringPx(ctx, x, y, rx - 1, ry - 0.5, 1, 1, 0.3, Math.PI - 0.3);
     const rot = e.t * 3;
-    for (let k = 0; k < 8; k++) ringPx(ctx, x, y, rx * 0.72, ry * 0.72, 1, 1, rot + (k * TAU) / 8, rot + (k * TAU) / 8 + 0.35);
+    for (let k = 0; k < 8; k++) {
+      const a0 = rot + (k * TAU) / 8;
+      ctx.fillStyle = rp[4];
+      ringPx(ctx, x, y + 1, rx * 0.7, ry * 0.7, 1, 1, a0, a0 + 0.35);
+      ctx.fillStyle = rp[1];
+      ringPx(ctx, x, y, rx * 0.7, ry * 0.7, 1, 1, a0, a0 + 0.35);
+    }
   }
 
   d_meteor(ctx, e, camX, camY) {
@@ -1800,9 +1815,13 @@ export class FX {
     for (let i = 0; i <= layers; i++) {
       const p = i / layers;
       const r = rad(p);
-      ctx.globalAlpha = 0.24 * env;
+      ctx.globalAlpha = 0.3 * env;
       ctx.fillStyle = rp[2];
       ctx.fillRect(R0(x0 + sway(p) - r), R0(y0 - p * H), R0(r * 2), step);
+      ctx.globalAlpha = 0.55 * env;
+      ctx.fillStyle = rp[5];
+      ctx.fillRect(R0(x0 + sway(p) - r - 1), R0(y0 - p * H), 1, step);
+      ctx.fillRect(R0(x0 + sway(p) + r), R0(y0 - p * H), 1, step);
     }
     this.whirlDebris(ctx, e, x0, y0, H, rad, sway, env, false);
     for (let i = 0; i <= layers; i++) {
@@ -1821,8 +1840,12 @@ export class FX {
         const py = R0(cy + sn * r * 0.3);
         if (front) {
           ctx.globalAlpha = env * (1 - u * 0.5);
-          ctx.fillStyle = u < 0.12 ? '#ffffff' : u < 0.4 ? rp[1] : u < 0.75 ? rp[2] : rp[3];
+          ctx.fillStyle = u < 0.12 ? '#ffffff' : u < 0.35 ? rp[1] : u < 0.7 ? rp[2] : rp[3];
           ctx.fillRect(px, py - 1, 2, 2);
+          if (u > 0.5) {
+            ctx.fillStyle = rp[4];
+            ctx.fillRect(px, py + 1, 2, 1);
+          }
         } else {
           ctx.globalAlpha = env * 0.5 * (1 - u * 0.5);
           ctx.fillStyle = rp[4];
@@ -1872,8 +1895,8 @@ export class FX {
     const gc = glowCol(e.c, e.el);
     ctx.globalCompositeOperation = 'lighter';
     const bw = R0(18 + 6 * Math.sin(e.t * 10));
-    ctx.globalAlpha = 0.6 * env;
-    ctx.drawImage(beamSprite(gc, 24, 72), x - (bw >> 1), y - 70, bw, 72);
+    ctx.globalAlpha = 0.45 * env;
+    ctx.drawImage(beamSprite(gc, 24, 72, false), x - (bw >> 1), y - 70, bw, 72);
     drawGlow(ctx, x, y - 12, gc, 16, 0.35 * env);
     for (let k = 0; k < 3; k++) {
       const p = (e.t * 1.4 + k / 3) % 1;
@@ -1883,10 +1906,30 @@ export class FX {
       ringPx(ctx, x, y, r, r * 0.3, 1, 1);
     }
     // vòng phù văn
-    ctx.globalAlpha = 0.8 * env;
-    ctx.fillStyle = shade(gc, 0.4);
+    ctx.globalCompositeOperation = 'source-over';
+    const rp = ramp(gc);
     const rot = e.t * 4;
-    for (let k = 0; k < 6; k++) ringPx(ctx, x, y, 13, 4, 1, 1, rot + (k * TAU) / 6, rot + (k * TAU) / 6 + 0.5);
+    ctx.globalAlpha = 0.85 * env;
+    for (let k = 0; k < 6; k++) {
+      ctx.fillStyle = rp[4];
+      ringPx(ctx, x, y + 1, 13, 4, 1, 1, rot + (k * TAU) / 6, rot + (k * TAU) / 6 + 0.5);
+      ctx.fillStyle = rp[1];
+      ringPx(ctx, x, y, 13, 4, 1, 1, rot + (k * TAU) / 6, rot + (k * TAU) / 6 + 0.5);
+    }
+    // lưỡi hào quang hai bên thân
+    const T = this.time;
+    for (let k = 0; k < 8; k++) {
+      const side = k < 4 ? -1 : 1;
+      const dx = side * (7 + (k % 4) * 2);
+      const h = R0((20 - (k % 4) * 4) * env * (0.65 + 0.35 * Math.sin(T * 17 + k * 2.1)));
+      for (let j = 0; j < h; j++) {
+        const u = j / Math.max(1, h);
+        ctx.globalAlpha = 0.75 * env * (1 - u * 0.6);
+        ctx.fillStyle = u > 0.75 ? rp[1] : u > 0.35 ? rp[2] : rp[3];
+        const sw = R0(Math.sin(T * 9 + k + j * 0.3) * u * 1.5);
+        ctx.fillRect(x + dx + sw, y - 2 - j, u > 0.6 ? 1 : 2, 1);
+      }
+    }
   }
 
   d_heal(ctx, e, camX, camY) {
@@ -1897,12 +1940,16 @@ export class FX {
     const x = R0(o.x - camX);
     const y = R0(o.y - camY);
     ctx.globalCompositeOperation = 'lighter';
-    ctx.globalAlpha = 0.4 * env;
-    ctx.drawImage(beamSprite(e.c, 20, 60), x - 10, y - 58);
+    ctx.globalAlpha = 0.35 * env;
+    ctx.drawImage(beamSprite(e.c, 20, 60, false), x - 10, y - 58);
     drawGlow(ctx, x, y - 1, e.c, 20, 0.45 * env, 0.35);
-    ctx.globalAlpha = 0.9 * env;
-    ctx.fillStyle = e.c;
+    ctx.globalCompositeOperation = 'source-over';
     const r = 15 + 3 * easeOut(clamp01(f * 3));
+    ctx.globalAlpha = 0.8 * env;
+    ctx.fillStyle = shade(e.c, -0.55);
+    ringPx(ctx, x, y + 1, r, r * 0.32, 2, 1);
+    ctx.globalAlpha = 0.95 * env;
+    ctx.fillStyle = e.c;
     ringPx(ctx, x, y, r, r * 0.32, 2, 1);
     ctx.fillStyle = '#ffffff';
     const rot = -e.t * 3;
@@ -1925,7 +1972,7 @@ export class FX {
     for (let k = 1; k <= 5; k++) {
       const u = k / 6;
       const px = R0(e.x0 + (e.x1 - e.x0) * u - camX);
-      ctx.globalAlpha = fade * (0.1 + u * 0.4);
+      ctx.globalAlpha = fade * (0.18 + u * 0.45);
       if (e.dir > 0) ctx.drawImage(sil, px - 8, y - sil.height);
       else {
         ctx.save();
@@ -1940,8 +1987,10 @@ export class FX {
     for (const l of e.lines) {
       const px = R0(xa + l.u * span + e.dir * f * 20);
       ctx.globalAlpha = 0.85 * fade;
-      ctx.fillStyle = l.c;
       const len = R0(l.len * (1 - f * 0.5));
+      ctx.fillStyle = shade(e.c, -0.45);
+      ctx.fillRect(e.dir > 0 ? px - len : px, y + R0(l.y) + 1, len, 1);
+      ctx.fillStyle = l.c;
       ctx.fillRect(e.dir > 0 ? px - len : px, y + R0(l.y), len, 1);
     }
     for (let k = 0; k < 3; k++) {
@@ -2002,7 +2051,6 @@ export class FX {
 
   // ================= CHỮ (canvas phân giải cao) =================
   renderText(t, scale) {
-    if (!this.fontOK) this.fontOK = !document.fonts || document.fonts.check('16px VT323');
     const base = t.banner ? 30 : t.crit ? 31 : t.miss ? 21 : 23;
     const size = Math.round(base * scale * 1.15);
     const font = `bold ${size}px VT323, monospace`;
@@ -2037,7 +2085,7 @@ export class FX {
       g.shadowBlur = size * 0.35;
     }
     g.lineWidth = Math.max(3, size * 0.24);
-    g.strokeStyle = '#140810';
+    g.strokeStyle = '#1a1020';
     g.strokeText(t.s, cx, cy);
     g.shadowBlur = 0;
     g.shadowColor = 'transparent';
@@ -2051,14 +2099,16 @@ export class FX {
     g.fillStyle = gr;
     g.fillText(t.s, cx, cy);
     t.cv = cv;
-    t.cs = this.fontOK ? scale : -1;
+    t.cs = scale;
+    t.nofont = !this.fontOK;
   }
 
   drawTexts(ctx, toScreen, scale) {
+    if (!this.fontOK && this.texts.length) this.fontOK = !document.fonts || document.fonts.check('16px VT323');
     ctx.save();
     ctx.imageSmoothingEnabled = true;
     for (const t of this.texts) {
-      if (!t.cv || t.cs !== scale) this.renderText(t, scale);
+      if (!t.cv || t.cs !== scale || (t.nofont && this.fontOK)) this.renderText(t, scale);
       const T = t.t;
       let dx = 0;
       let dy;

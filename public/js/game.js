@@ -847,7 +847,7 @@ export class Game {
       const img = iconCanvas(icon, it.r);
       const age = t - it.born;
       const bounce = age < 0.4 ? -Math.sin((age / 0.4) * Math.PI) * 10 : Math.sin(t * 3 + it.id) > 0.9 ? -1 : 0;
-      c.drawImage(img, Math.round(it.x - 6 - camX), Math.round(it.y - 12 - camY + bounce));
+      c.drawImage(img.width === 12 ? img : iconCanvas(icon, it.r, 12), Math.round(it.x - 6 - camX), Math.round(it.y - 12 - camY + bounce));
       if (it.r >= 2 && Math.floor(t * 4 + it.id) % 4 === 0) {
         c.fillStyle = S.G.rarity[it.r].color;
         c.fillRect(Math.round(it.x - camX), Math.round(it.y - 16 - camY), 1, 1);

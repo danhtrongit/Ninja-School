@@ -112,7 +112,8 @@ Các con số dưới đây lấy từ code hiện tại. Nếu cần đổi m�
   - **water / ice**: bọt nước, giọt nước, vòng sóng.
   - **wind**: lá cây và vệt gió (`#7cb342 … #c5e1a5`).
 - Ánh sáng dùng `globalCompositeOperation = 'lighter'`. Giới hạn `MAX_PARTS = 900` hạt và `MAX_TEXTS = 70` chữ. Không tạo gradient mới cho từng hạt.
-- Thời lượng: chém 0.2s, đạn 0.22-0.3s, nổ 0.35-0.45s, lốc xoáy 0.7s, lên cấp 1.4s.
+- Thời lượng hình ảnh (không ảnh hưởng logic hay hồi chiêu): chém 0.2-0.26s, đạn 0.22-0.3s, nổ 0.48-0.6s, lốc xoáy 0.75-0.9s, lướt 0.55s, buff 1.25s, hồi máu 1.35s, thiên thạch 1.3s (chạm đất ở 0.32s), lên cấp 1.5s.
+- Hiệu ứng được vẽ sẵn thành sprite cache: vệt chém 8 khung, phi tiêu xoay 8 khung, lưỡi gió/kiếm khí 16 góc.
 - **Số trên màn hình** (font VT323, viền `#1a1020`):
 
 | Loại | Màu |
