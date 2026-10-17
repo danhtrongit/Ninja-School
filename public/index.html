@@ -21,44 +21,71 @@
 
   <!-- Đăng nhập -->
   <div id="screen-login" class="screen">
-    <div class="logo">
-      <div class="logo-top">NINJA</div>
-      <div class="logo-bot">SCHOOL</div>
-      <div class="logo-sub">~ Pixel Online ~</div>
-    </div>
-    <div class="panel login-box">
-      <div class="tabs">
-        <button class="tab on" data-tab="login">Đăng nhập</button>
-        <button class="tab" data-tab="register">Đăng ký</button>
+    <div class="login-wrap">
+      <div class="logo">
+        <div class="logo-glow"></div>
+        <canvas id="logo-cv" width="160" height="64" role="img" aria-label="Ninja School"></canvas>
+        <div class="logo-sub"><i></i><span>Pixel Online</span><i></i></div>
       </div>
-      <form id="login-form" autocomplete="on">
-        <input id="in-user" class="in" placeholder="Tài khoản" autocomplete="username" maxlength="16">
-        <input id="in-pass" class="in" type="password" placeholder="Mật khẩu" autocomplete="current-password" maxlength="64">
-        <input id="in-pass2" class="in hidden" type="password" placeholder="Nhập lại mật khẩu" autocomplete="new-password" maxlength="64">
-        <button id="btn-login" class="btn primary big" type="submit">VÀO GAME</button>
-      </form>
-      <div id="login-err" class="err"></div>
-      <div id="server-status" class="muted tiny">Đang kết nối máy chủ...</div>
+      <div class="login-box sc-frame">
+        <div class="sc-ribbon"><span>Cổng Làng Ninja</span></div>
+        <div class="tabs lg-tabs">
+          <button class="tab on" type="button" data-tab="login">Đăng nhập</button>
+          <button class="tab" type="button" data-tab="register">Đăng ký</button>
+        </div>
+        <form id="login-form" autocomplete="on">
+          <label class="fld"><span class="fi fi-user"></span><input id="in-user" class="in" placeholder="Tài khoản" autocomplete="username" maxlength="16"></label>
+          <label class="fld"><span class="fi fi-key"></span><input id="in-pass" class="in" type="password" placeholder="Mật khẩu" autocomplete="current-password" maxlength="64"></label>
+          <label id="fld-pass2" class="fld hidden"><span class="fi fi-lock"></span><input id="in-pass2" class="in" type="password" placeholder="Nhập lại mật khẩu" autocomplete="new-password" maxlength="64"></label>
+          <button id="btn-login" class="btn primary big" type="submit">VÀO GAME</button>
+        </form>
+        <div id="login-err" class="err" role="alert"></div>
+        <div id="server-status" class="srv wait"><b class="led"></b><span class="srv-txt">Đang kết nối máy chủ...</span><span class="srv-sig"><i></i><i></i><i></i></span></div>
+      </div>
     </div>
-    <div class="credit muted tiny">Đồ họa pixel tự vẽ bằng code · HTML5 + WebSocket</div>
+    <div class="credit">Đồ họa pixel tự vẽ bằng code · HTML5 + WebSocket<span id="ver"></span></div>
   </div>
 
-  <!-- Chọn nhân vật -->
+  <!-- Chọn / tạo nhân vật -->
   <div id="screen-chars" class="screen hidden">
-    <div class="panel chars-box">
-      <div class="row between"><h2>Chọn Nhân Vật</h2><button id="btn-logout" class="btn small">Đăng xuất</button></div>
+    <div class="chars-box sc-frame">
+      <div class="sc-ribbon"><span id="chars-title">Chọn Nhân Vật</span></div>
+      <div class="sc-acc" title="Tài khoản"><span class="fi fi-user"></span><b id="acc-name"></b></div>
+      <button id="btn-logout" class="btn small sc-logout" type="button"><span class="fi fi-door"></span>Đăng xuất</button>
       <div id="char-list" class="char-list"></div>
       <div id="char-create" class="char-create hidden">
-        <h3>Tạo nhân vật mới</h3>
-        <div class="row">
-          <input id="in-cname" class="in" placeholder="Tên nhân vật (3-12 ký tự, không dấu)" maxlength="12">
-          <select id="in-gender" class="in short"><option value="m">Nam</option><option value="f">Nữ</option></select>
+        <div class="cc-stage">
+          <div class="stage-box"><canvas id="cc-preview" width="46" height="56" style="--cw:46;--ch:56"></canvas><span class="stage-hint">Chạm để ra chiêu</span></div>
+          <div id="cc-badge" class="cc-badge"></div>
         </div>
-        <div id="class-list" class="class-list"></div>
-        <div id="class-desc" class="muted"></div>
-        <div class="row"><button id="btn-create" class="btn primary">Tạo nhân vật</button><button id="btn-cancel-create" class="btn">Hủy</button></div>
+        <div class="cc-form">
+          <div class="cc-row">
+            <label class="fld grow"><span class="fi fi-pen"></span><input id="in-cname" class="in" placeholder="Tên nhân vật (3-12 ký tự, không dấu)" maxlength="12" autocomplete="off" spellcheck="false"></label>
+            <div id="gender-tg" class="gender-tg" role="radiogroup" aria-label="Giới tính">
+              <button type="button" class="g-btn on" data-g="m" role="radio" aria-checked="true"><span class="g-ico">♂</span>Nam</button>
+              <button type="button" class="g-btn" data-g="f" role="radio" aria-checked="false"><span class="g-ico">♀</span>Nữ</button>
+              <select id="in-gender" class="in short" aria-label="Giới tính" tabindex="-1"><option value="m">Nam</option><option value="f">Nữ</option></select>
+            </div>
+          </div>
+          <div id="cname-hint" class="cname-hint">Chữ, số hoặc _ · Ngoại hình (tóc, mắt, da) thay đổi theo tên</div>
+          <div class="cc-label"><span>Chọn môn phái</span></div>
+          <div id="class-list" class="class-list"></div>
+          <div class="cc-detail">
+            <div class="cd-text"><div id="class-desc"></div><div id="class-tip" class="cd-tip"></div></div>
+            <div id="class-stats" class="cd-stats"></div>
+          </div>
+        </div>
+        <div class="cc-btns"><button id="btn-cancel-create" class="btn" type="button">Hủy</button><button id="btn-create" class="btn primary" type="button">Tạo nhân vật</button></div>
       </div>
-      <div id="chars-err" class="err"></div>
+      <div id="chars-err" class="err" role="alert"></div>
+    </div>
+    <div id="del-dlg" class="sc-modal hidden">
+      <div class="sc-modal-box sc-frame">
+        <div class="sc-ribbon red"><span>Xóa nhân vật</span></div>
+        <p>Nhập <b id="del-name"></b> để xác nhận <span class="bad">XÓA vĩnh viễn</span>:</p>
+        <input id="in-del" class="in" maxlength="12" autocomplete="off" spellcheck="false">
+        <div class="row center"><button id="btn-del-no" class="btn" type="button">Hủy</button><button id="btn-del-yes" class="btn danger" type="button">Xóa vĩnh viễn</button></div>
+      </div>
     </div>
   </div>
 
@@ -119,8 +146,8 @@
   <div id="dialogs"></div>
   <div id="invites"></div>
   <div id="toasts"></div>
-  <div id="overlay-conn" class="overlay hidden"><div class="panel">Mất kết nối, đang kết nối lại...</div></div>
-  <div id="rotate-hint" class="overlay"><div class="panel">Hãy xoay ngang màn hình để chơi tốt nhất ↻</div></div>
+  <div id="overlay-conn" class="overlay hidden"><div class="conn-box sc-frame"><span class="conn-spin"></span><div class="conn-txt"><b>Mất kết nối</b><span>Đang kết nối lại máy chủ...</span></div></div></div>
+  <div id="rotate-hint" class="overlay"><div class="rot-box sc-frame"><span class="rot-phone"></span><b>Hãy xoay ngang màn hình</b><span>để chơi tốt nhất ↻</span></div></div>
 
   <script type="module" src="js/main.js"></script>
 </body>
