@@ -61,6 +61,8 @@ Khi phát triển thêm, xem **[DESIGN_RULES.md](DESIGN_RULES.md)** (quy chuẩn
 
 ## Đưa game lên mạng (online)
 
+**Hướng dẫn chi tiết từng bước (Render, VPS + Docker + HTTPS, sao lưu, xử lý sự cố): xem [DEPLOY.md](DEPLOY.md).**
+
 Server là một tiến trình Node.js duy nhất phục vụ cả web lẫn WebSocket, nên chạy được trên mọi host hỗ trợ Node hoặc Docker. Dữ liệu người chơi nằm trong `DATA_DIR`, vì vậy cần **ổ đĩa lưu trữ bền vững**.
 
 **Render.com**: bấm nút dưới (hoặc *New → Blueprint* rồi chọn repo này). File `render.yaml` đã cấu hình sẵn web service, ổ đĩa `/var/data` và health check.

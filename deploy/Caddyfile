@@ -1,0 +1,5 @@
+# Đổi game.tenmien.vn thành tên miền của bạn (bản ghi A trỏ về IP VPS).
+# Caddy tự xin chứng chỉ HTTPS và tự chuyển tiếp WebSocket (/ws).
+game.tenmien.vn {
+	reverse_proxy ninja:3000
+}

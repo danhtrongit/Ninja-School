@@ -1,0 +1,34 @@
+# Chạy game + Caddy (HTTPS tự động) trên VPS.
+# 1. Sửa tên miền trong deploy/Caddyfile và ADMINS bên dưới
+# 2. docker compose -f deploy/docker-compose.yml up -d
+services:
+  ninja:
+    image: ghcr.io/danhtrongit/ninja-school:latest
+    restart: unless-stopped
+    environment:
+      - PORT=3000
+      - DATA_DIR=/data
+      - ADMINS=tentaikhoan_admin
+      - MOTD=Chào mừng đến với Ninja School!
+    volumes:
+      - ninja-data:/data
+    expose:
+      - "3000"
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    depends_on:
+      - ninja
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+
+volumes:
+  ninja-data:
+  caddy-data:
+  caddy-config:
