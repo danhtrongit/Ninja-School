@@ -1,6 +1,7 @@
 // Giao diện người dùng (DOM): HUD, cửa sổ, hội thoại, chat
 import { S, fmt, skillVal, itemStats, itemName, rarityColor, saveSettings } from './store.js';
-import { iconURL, drawPortrait, ELEMENT_COLORS } from './sprites.js';
+import { drawPortrait, ELEMENT_COLORS } from './sprites.js';
+import { iconURL } from './icons.js';
 import { sfx } from './sound.js';
 
 const $ = (sel, root = document) => root.querySelector(sel);

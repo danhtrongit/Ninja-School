@@ -1,6 +1,8 @@
 // Vòng lặp game phía client: vật lý, đồng bộ mạng, chiến đấu, vẽ
 import { S, skillVal } from './store.js';
-import { drawNinja, drawMonster, monsterHeight, iconCanvas, ELEMENT_COLORS } from './sprites.js';
+import { drawNinja, ELEMENT_COLORS } from './sprites.js';
+import { drawMonster, monsterHeight } from './monsterart.js';
+import { iconCanvas } from './icons.js';
 import { MapRenderer } from './maprender.js';
 import { FX } from './fx.js';
 import { sfx } from './sound.js';
