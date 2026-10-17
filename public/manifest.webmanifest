@@ -1,0 +1,10 @@
+{
+  "name": "Ninja School - Pixel Online",
+  "short_name": "Ninja School",
+  "start_url": "/",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#1a1226",
+  "theme_color": "#1a1226",
+  "icons": [{ "src": "favicon.svg", "sizes": "any", "type": "image/svg+xml" }]
+}

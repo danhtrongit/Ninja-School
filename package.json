@@ -1,0 +1,19 @@
+{
+  "name": "ninja-school",
+  "version": "1.0.0",
+  "description": "Game nhập vai ninja pixel 2D online nhiều người chơi (HTML5 + Node.js WebSocket)",
+  "main": "server/index.js",
+  "private": true,
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node --watch server/index.js",
+    "test": "node test/smoke.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  },
+  "license": "MIT"
+}

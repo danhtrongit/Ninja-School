@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: ninja-school
+    runtime: node
+    plan: starter
+    buildCommand: npm install --omit=dev
+    startCommand: node server/index.js
+    healthCheckPath: /api/status
+    envVars:
+      - key: DATA_DIR
+        value: /var/data
+      - key: ADMINS
+        sync: false
+    disk:
+      name: ninja-data
+      mountPath: /var/data
+      sizeGB: 1

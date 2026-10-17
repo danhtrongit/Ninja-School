@@ -1,0 +1,231 @@
+'use strict';
+
+const { MAPS, GROUND } = require('../data/maps');
+const { CLASSES } = require('../data/classes');
+const { GameMap } = require('./map');
+const { Player, expNeed } = require('./player');
+const { Combat } = require('./combat');
+const { Social } = require('./social');
+const { Actions } = require('./actions');
+
+const TICK = 50;
+
+class World {
+  constructor(db, config) {
+    this.db = db;
+    this.config = config;
+    this.nextPid = 1;
+    this.nextMid = 1;
+    this.nextGid = 1;
+    this.maps = {};
+    this.players = new Map();
+    this.byName = new Map();
+    this.combat = new Combat(this);
+    this.social = new Social(this);
+    this.actions = new Actions(this);
+    this.rankCache = { level: [], clan: [], at: 0 };
+    for (const id in MAPS) this.maps[id] = new GameMap(this, MAPS[id]);
+    this.tickN = 0;
+    this.last = Date.now();
+    this.timer = setInterval(() => this.tick(), TICK);
+    this.saveTimer = setInterval(() => this.saveAll(), 30000);
+    this.computeRank();
+  }
+
+  stop() {
+    clearInterval(this.timer);
+    clearInterval(this.saveTimer);
+    this.saveAll();
+  }
+
+  // ---------- Vòng lặp chính
+  tick() {
+    const now = Date.now();
+    const dt = Math.min(0.2, (now - this.last) / 1000);
+    this.last = now;
+    this.tickN++;
+    for (const id in this.maps) this.maps[id].update(dt, now);
+    if (this.tickN % 2 === 0) for (const id in this.maps) this.maps[id].sendState();
+    if (this.tickN % 20 === 0) this.secondTick(now);
+    if (this.tickN % 1200 === 0) this.computeRank();
+    for (const p of this.players.values()) this.flush(p);
+  }
+
+  secondTick(now) {
+    for (const p of this.players.values()) {
+      p.c.playtime += 1;
+      // Hết hạn buff
+      let changed = false;
+      for (const k in p.buffs) {
+        if (p.buffs[k].until <= now) {
+          delete p.buffs[k];
+          changed = true;
+        }
+      }
+      if (p.c.buffs.exp2 && p.c.buffs.exp2 <= now) {
+        delete p.c.buffs.exp2;
+        changed = true;
+        p.notice('Hiệu lực nhân đôi kinh nghiệm đã hết.');
+      }
+      if (changed) p.recalc();
+      // Hồi phục tự nhiên
+      if (!p.dead && p.map) {
+        const town = p.map.def.town;
+        const idle = now - p.lastCombat > 6000;
+        if ((idle && p.c.playtime % 3 === 0) || town) {
+          const rate = town ? 0.05 : 0.02;
+          if (p.c.hp < p.s.maxHp || p.c.mp < p.s.maxMp) p.heal(p.s.maxHp * rate, p.s.maxMp * rate * 1.5);
+        }
+      }
+      // Giảm điểm hiếu chiến mỗi 10 phút
+      if (p.c.pk > 0 && p.c.playtime % 600 === 0) {
+        p.c.pk--;
+        p.markMe();
+      }
+    }
+  }
+
+  flush(p) {
+    if (p.dirtyMe) {
+      p.dirtyMe = false;
+      p.send('me', p.selfData());
+    }
+    if (p.dirtyInv) {
+      p.dirtyInv = false;
+      p.send('inv', p.invData());
+    }
+  }
+
+  // ---------- Vào / rời game
+  join(conn, c) {
+    const old = this.byName.get(c.name.toLowerCase());
+    if (old) this.leave(old, 'Nhân vật đăng nhập từ nơi khác.');
+    const p = new Player(this, conn, c);
+    c.lastLogin = Date.now();
+    if (c.hp <= 0) c.hp = Math.round(p.s.maxHp * 0.5);
+    if (c.hp > p.s.maxHp) c.hp = p.s.maxHp;
+    if (c.mp > p.s.maxMp) c.mp = p.s.maxMp;
+    if (c.clan && !this.db.clans[c.clan]) c.clan = null;
+    this.players.set(p.id, p);
+    this.byName.set(c.name.toLowerCase(), p);
+    this.enterMap(p, c.map, c.x, c.y);
+    p.send('inv', p.invData());
+    p.send('chat', { ch: 'sys', msg: `Chào mừng ${c.name} đến với thế giới Ninja! Hiện có ${this.players.size} người đang online.` });
+    if (c.clan) this.social.clanBroadcast(c.clan, 'chat', { ch: 'clan', from: 'Hệ thống', msg: `${c.name} đã online.` }, p);
+    if (this.config.motd) p.send('chat', { ch: 'sys', msg: this.config.motd });
+    return p;
+  }
+
+  leave(p, reason) {
+    if (!this.players.has(p.id)) return;
+    this.social.onLeave(p);
+    if (p.map) {
+      p.c.map = p.map.id;
+      p.c.x = Math.round(p.x);
+      p.c.y = Math.round(p.y);
+      p.map.remove(p);
+    }
+    if (p.dead) {
+      p.c.hp = 1;
+      p.c.map = CLASSES[p.c.cls].village;
+      p.c.x = MAPS[p.c.map].spawnX;
+      p.c.y = GROUND;
+    }
+    this.db.putChar(p.c);
+    this.players.delete(p.id);
+    if (this.byName.get(p.name.toLowerCase()) === p) this.byName.delete(p.name.toLowerCase());
+    if (reason) p.send('kicked', { msg: reason });
+    p.conn.player = null;
+  }
+
+  enterMap(p, mapId, x, y) {
+    const map = this.maps[mapId] || this.maps[CLASSES[p.c.cls].village];
+    if (p.map) p.map.remove(p);
+    p.x = Math.max(20, Math.min(map.def.w - 20, x == null ? map.def.spawnX : x));
+    p.y = y == null ? GROUND : Math.max(0, Math.min(GROUND, y));
+    p.c.map = map.id;
+    p.moveGrace = Date.now() + 1500;
+    p.lastMoveAt = Date.now();
+    if (p.duel) this.social.cancelDuel(p, 'Rời bản đồ, trận thách đấu bị hủy.');
+    if (p.trade) this.social.cancelTrade(p, 'Giao dịch bị hủy.');
+    if (map.def.town && p.pkMode) p.pkMode = false;
+    map.add(p);
+    const snap = map.snapshot();
+    p.send('enterMap', { map: map.id, x: Math.round(p.x), y: Math.round(p.y), me: p.selfData(), ...snap });
+    this.social.sendParty(p);
+  }
+
+  changeMap(p, mapId, x) {
+    if (!this.maps[mapId]) return;
+    this.enterMap(p, mapId, x, GROUND);
+  }
+
+  // ---------- Tiện ích
+  broadcastAll(t, d) {
+    const msg = JSON.stringify({ t, ...d });
+    for (const p of this.players.values()) p.conn.sendRaw(msg);
+  }
+
+  announce(msg, kind) {
+    this.broadcastAll('notice', { msg, kind: kind || 'world' });
+    this.broadcastAll('chat', { ch: 'sys', msg });
+  }
+
+  onLevelUp(p) {
+    if (p.map) p.map.broadcast('levelUp', { id: p.id, lv: p.lv });
+    p.notice(`Chúc mừng! Bạn đã đạt cấp ${p.lv}. Nhận 5 điểm tiềm năng và 1 điểm kỹ năng.`, 'level');
+    if (p.lv % 10 === 0) this.announce(`${p.name} đã đạt cấp ${p.lv}!`, 'world');
+  }
+
+  clanView(id, charName) {
+    const cl = this.db.clans[id];
+    if (!cl) return null;
+    const me = charName ? cl.members[charName.toLowerCase()] : null;
+    return { id, name: cl.name, leader: cl.leader, rank: me ? me.rank : 'member', count: Object.keys(cl.members).length, notice: cl.notice || '' };
+  }
+
+  computeRank() {
+    const all = Object.values(this.db.chars);
+    for (const p of this.players.values()) {
+      const i = all.findIndex((c) => c.name === p.c.name);
+      if (i >= 0) all[i] = p.c;
+    }
+    const total = (c) => {
+      let t = 0;
+      for (let l = 1; l < c.level; l++) t += expNeed(l);
+      return t + c.exp;
+    };
+    const level = all
+      .map((c) => ({ name: c.name, cls: c.cls, level: c.level, exp: total(c), clan: c.clan && this.db.clans[c.clan] ? this.db.clans[c.clan].name : '' }))
+      .sort((a, b) => b.exp - a.exp)
+      .slice(0, 30);
+    const clans = Object.entries(this.db.clans).map(([id, cl]) => {
+      const names = Object.keys(cl.members);
+      const lv = names.reduce((s, n) => {
+        const c = this.byName.get(n) ? this.byName.get(n).c : this.db.getChar(n);
+        return s + (c ? c.level : 0);
+      }, 0);
+      return { name: cl.name, leader: cl.leader, members: names.length, power: lv };
+    }).sort((a, b) => b.power - a.power).slice(0, 20);
+    const pk = all.filter((c) => (c.kills || 0) > 0).map((c) => ({ name: c.name, cls: c.cls, level: c.level, kills: c.kills })).sort((a, b) => b.kills - a.kills).slice(0, 20);
+    this.rankCache = { level, clan: clans, kills: pk, at: Date.now() };
+  }
+
+  saveAll() {
+    for (const p of this.players.values()) {
+      if (p.map) {
+        p.c.map = p.map.id;
+        p.c.x = Math.round(p.x);
+        p.c.y = Math.round(p.y);
+      }
+      this.db.putChar(p.c);
+    }
+    this.db.save();
+  }
+
+  handle(p, msg) {
+    this.actions.handle(p, msg);
+  }
+}
+
+module.exports = { World };

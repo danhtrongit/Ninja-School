@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#1a1226">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="description" content="Game nhập vai ninja pixel 2D online nhiều người chơi ngay trên trình duyệt.">
+  <title>Ninja School - Pixel Online</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <canvas id="game"></canvas>
+
+  <!-- Đăng nhập -->
+  <div id="screen-login" class="screen">
+    <div class="logo">
+      <div class="logo-top">NINJA</div>
+      <div class="logo-bot">SCHOOL</div>
+      <div class="logo-sub">~ Pixel Online ~</div>
+    </div>
+    <div class="panel login-box">
+      <div class="tabs">
+        <button class="tab on" data-tab="login">Đăng nhập</button>
+        <button class="tab" data-tab="register">Đăng ký</button>
+      </div>
+      <form id="login-form" autocomplete="on">
+        <input id="in-user" class="in" placeholder="Tài khoản" autocomplete="username" maxlength="16">
+        <input id="in-pass" class="in" type="password" placeholder="Mật khẩu" autocomplete="current-password" maxlength="64">
+        <input id="in-pass2" class="in hidden" type="password" placeholder="Nhập lại mật khẩu" autocomplete="new-password" maxlength="64">
+        <button id="btn-login" class="btn primary big" type="submit">VÀO GAME</button>
+      </form>
+      <div id="login-err" class="err"></div>
+      <div id="server-status" class="muted tiny">Đang kết nối máy chủ...</div>
+    </div>
+    <div class="credit muted tiny">Đồ họa pixel tự vẽ bằng code · HTML5 + WebSocket</div>
+  </div>
+
+  <!-- Chọn nhân vật -->
+  <div id="screen-chars" class="screen hidden">
+    <div class="panel chars-box">
+      <div class="row between"><h2>Chọn Nhân Vật</h2><button id="btn-logout" class="btn small">Đăng xuất</button></div>
+      <div id="char-list" class="char-list"></div>
+      <div id="char-create" class="char-create hidden">
+        <h3>Tạo nhân vật mới</h3>
+        <div class="row">
+          <input id="in-cname" class="in" placeholder="Tên nhân vật (3-12 ký tự, không dấu)" maxlength="12">
+          <select id="in-gender" class="in short"><option value="m">Nam</option><option value="f">Nữ</option></select>
+        </div>
+        <div id="class-list" class="class-list"></div>
+        <div id="class-desc" class="muted"></div>
+        <div class="row"><button id="btn-create" class="btn primary">Tạo nhân vật</button><button id="btn-cancel-create" class="btn">Hủy</button></div>
+      </div>
+      <div id="chars-err" class="err"></div>
+    </div>
+  </div>
+
+  <!-- HUD trong game -->
+  <div id="hud" class="hidden">
+    <div id="hud-status" class="panel">
+      <canvas id="avatar" width="16" height="16"></canvas>
+      <div class="st-info">
+        <div class="st-name"><span id="st-name"></span> <span id="st-lv" class="lv"></span></div>
+        <div id="st-cls" class="muted tiny"></div>
+        <div id="bar-hp" class="bar hp"><i></i><span></span></div>
+        <div id="bar-mp" class="bar mp"><i></i><span></span></div>
+        <div id="bar-exp" class="bar exp"><i></i><span></span></div>
+        <div class="st-money"><span class="xu">💰 <b id="st-xu"></b></span> <span class="luong">💎 <b id="st-luong"></b></span></div>
+      </div>
+    </div>
+    <div id="hud-buffs"></div>
+    <div id="hud-party"></div>
+    <div id="hud-target" class="panel hidden">
+      <div><b id="tg-name"></b> <span id="tg-lv" class="muted"></span></div>
+      <div id="tg-bar" class="bar hp"><i></i><span></span></div>
+    </div>
+    <div id="hud-map" class="panel">
+      <div class="row between"><b id="map-name"></b><span id="map-ping" class="muted tiny"></span></div>
+      <canvas id="minimap" width="168" height="36"></canvas>
+      <div id="map-info" class="muted tiny"></div>
+    </div>
+    <div id="hud-quest" class="panel"></div>
+    <div id="hud-menu"></div>
+    <div id="hud-chat" class="panel">
+      <div class="row between chat-top"><div id="chat-tabs"></div><button id="chat-toggle" class="btn tiny-btn">💬</button></div>
+      <div id="chat-log"></div>
+      <div class="row chat-in">
+        <select id="chat-ch" class="in short">
+          <option value="map">Bản đồ</option><option value="world">Thế giới</option><option value="party">Nhóm</option>
+          <option value="clan">Gia tộc</option><option value="pm">Mật</option>
+        </select>
+        <input id="chat-input" class="in" placeholder="Nhập tin nhắn..." maxlength="140">
+        <button id="chat-send" class="btn small">Gửi</button>
+      </div>
+    </div>
+    <div id="hud-skills"></div>
+    <div id="hud-dpad">
+      <button data-act="left" class="dp">◀</button>
+      <button data-act="right" class="dp">▶</button>
+      <button data-act="down" class="dp small">▼</button>
+      <button data-act="jump" class="dp jump">▲</button>
+      <button data-act="talk" class="dp small">💬</button>
+      <button data-act="pick" class="dp small">✋</button>
+      <button data-act="target" class="dp small">◎</button>
+    </div>
+  </div>
+
+  <div id="windows"></div>
+  <div id="dialogs"></div>
+  <div id="invites"></div>
+  <div id="toasts"></div>
+  <div id="overlay-conn" class="overlay hidden"><div class="panel">Mất kết nối, đang kết nối lại...</div></div>
+  <div id="rotate-hint" class="overlay"><div class="panel">Hãy xoay ngang màn hình để chơi tốt nhất ↻</div></div>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
