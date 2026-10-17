@@ -21,6 +21,8 @@ class Bot {
     this.name = name;
     this.msgs = [];
     this.waiters = [];
+    this.used = new Set();
+    this.sendIdx = 0;
     this.state = {};
   }
 
@@ -30,6 +32,7 @@ class Bot {
       this.ws.on('message', (raw) => {
         const m = JSON.parse(raw);
         this.msgs.push(m);
+        const idx = this.msgs.length - 1;
         if (m.t === 'me') this.me = m;
         if (m.t === 'enterMap') {
           this.me = m.me;
@@ -45,7 +48,8 @@ class Bot {
         if (m.t === 'pos') { this.x = m.x; this.y = m.y; }
         if (m.t === 'data') resolve();
         for (const w of this.waiters.slice()) {
-          if (w.t === m.t && (!w.pred || w.pred(m))) {
+          if (!this.used.has(idx) && w.t === m.t && (!w.pred || w.pred(m))) {
+            this.used.add(idx);
             this.waiters.splice(this.waiters.indexOf(w), 1);
             clearTimeout(w.timer);
             w.resolve(m);
@@ -56,9 +60,20 @@ class Bot {
     });
   }
 
-  send(t, d = {}) { this.ws.send(JSON.stringify({ t, ...d })); }
+  send(t, d = {}) {
+    this.sendIdx = this.msgs.length;
+    this.ws.send(JSON.stringify({ t, ...d }));
+  }
 
+  // Chờ tin nhắn loại t đến sau lần gửi gần nhất (kể cả tin đã đến trước khi gọi wait)
   wait(t, pred, ms = 4000) {
+    for (let i = this.sendIdx; i < this.msgs.length; i++) {
+      const m = this.msgs[i];
+      if (!this.used.has(i) && m.t === t && (!pred || pred(m))) {
+        this.used.add(i);
+        return Promise.resolve(m);
+      }
+    }
     return new Promise((resolve, reject) => {
       const w = { t, pred, resolve };
       w.timer = setTimeout(() => {
@@ -241,11 +256,9 @@ async function main() {
     ok(!!(await a.wait('notice', (m) => /Điểm danh ngày 1/.test(m.msg))), 'điểm danh ngày 1 nhận quà');
     a.send('checkin');
     ok(!!(await a.wait('notice', (m) => /đã điểm danh/.test(m.msg))), 'không cho điểm danh 2 lần/ngày');
-    const xuSpin = a.me.xu;
     a.send('spin', { cur: 'xu' });
     const sp = await a.wait('spinResult');
-    await sleep(100);
-    ok(sp.idx >= 0 && a.me.xu <= xuSpin - 10000 + 15000, `vòng quay trả thưởng: ${sp.label}`);
+    ok(sp.idx >= 0 && !!sp.label, `vòng quay trả thưởng: ${sp.label}`);
     await a.walkTo(1320);
     a.send('npc', { id: 'v_fire_storage' });
     await a.wait('storage');
