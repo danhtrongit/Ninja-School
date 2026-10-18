@@ -10,6 +10,7 @@ const { DATA, sleep, ok, fail, failCount, serverLog, startServer } = require('./
 const { passiveUnitTests, passiveBookTest, passiveRulesTest } = require('./features/passive');
 const { bossUnitTests, bossCleanupUnitTests, bossEventTest } = require('./features/boss');
 const { pkUnitTests, pkBotTest } = require('./features/pk');
+const { deathUnitTests, deathBotTest } = require('./features/death');
 const { repoUnitTests } = require('./features/repo');
 const { clanUnitTests, clanTest } = require('./features/clan');
 const { gemUnitTests, gemTest } = require('./features/gems');
@@ -47,6 +48,7 @@ function unitTests() {
   boundUnit(ok);
   balanceUnitTests();
   pkUnitTests();
+  deathUnitTests();
   repoUnitTests();
   tradeUnitTests();
   dailyTaskUnitTests();
@@ -102,6 +104,7 @@ async function main() {
     // 3 nhân vật mới trên tài khoản admin đã đóng (lodai_a, lodai_b, khoa_a): gia tộc → PK → tiềm năng → nhặt đồ → xã hội
     const trio = await clanTest();
     await pkBotTest(trio);
+    await deathBotTest(trio.c);
     await resetStatsTest(trio.b);
     await pickupTest(trio);
     await socialMoreTest(trio);

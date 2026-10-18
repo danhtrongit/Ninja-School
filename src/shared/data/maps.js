@@ -162,6 +162,15 @@ reg({
   portals: [{ x: 16, to: '@home', tx: 750 }], npcs: [], spawns: [],
 });
 
+// Điểm hồi sinh "Về làng" (trường rv): làng gần nhất theo số cổng phải đi. Bản đồ cách đều hai làng (Rừng Trúc, Vườn Anh Đào)
+// và phó bản không có rv nên về làng phái. npm run check kiểm rv là làng có thật
+const RV = {
+  fire_field: 'v_fire', arena: 'v_fire', water_lake: 'v_water', coast: 'v_water', wind_hill: 'v_wind', bat_cave: 'v_wind',
+  wasteland: 'v_wind', ancient_ruins: 'v_wind', misty_valley: 'v_wind', snow_mountain: 'v_wind', ice_peak: 'v_wind', crystal_cave: 'v_wind',
+  demon_forest: 'v_wind', demon_cave: 'v_wind', hell_gate: 'v_wind', heaven: 'v_wind', abyss: 'v_wind', dragon_palace: 'v_wind',
+};
+for (const id in RV) MAPS[id].rv = RV[id];
+
 // Danh sách quái thường của bản đồ: mỗi loại một lần, cấp thấp trước (để chỉ đường săn quái)
 function mapMobs(m) {
   const ids = [];

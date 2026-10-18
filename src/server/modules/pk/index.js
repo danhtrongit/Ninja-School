@@ -2,6 +2,8 @@
 
 // PK & thách đấu: bật/tắt chế độ PK, điểm hiếu chiến giảm dần, thách đấu 1-1, hồi sinh khi trọng thương
 const { CLASSES } = require('../../../shared/data/classes');
+const { MAPS } = require('../../../shared/data/maps');
+const { REVIVE, reviveLuong } = require('../../../shared/constants');
 const { refreshInfo } = require('../../core/util');
 const { find, invite, takeInvite } = require('../invites');
 
@@ -20,27 +22,41 @@ class Pk {
     p.notice(on ? 'Đã BẬT chế độ PK - có thể tấn công người chơi khác (ngoài làng).' : 'Đã TẮT chế độ PK.', on ? 'warn' : 'info');
   }
 
+  // Hồi sinh: 'here' tại chỗ (1 Thẻ Hồi Sinh hoặc lượng leo thang 1/2/3 trong 10 phút, bảo hộ 3 giây), mọi mode khác là về làng
   revive(p, m) {
     if (!p.dead) return;
-    if (m.mode === 'here') {
+    const now = Date.now();
+    if (m && m.mode === 'here') {
+      const log = (p.reviveLog || []).filter((t) => now - t < REVIVE.win);
       if (p.countItem('revive_card') > 0) p.removeItem('revive_card', 1);
-      else if (p.c.luong >= 1) p.c.luong -= 1;
-      else return p.notice('Cần 1 lượng hoặc Thẻ Hồi Sinh.', 'warn');
+      else {
+        const cost = reviveLuong(log, now);
+        if (p.c.luong < cost) return p.notice(`Cần ${cost} lượng hoặc Thẻ Hồi Sinh.`, 'warn');
+        p.c.luong -= cost;
+      }
+      // chỉ ở RAM: thoát game là đếm lại từ đầu (GDD 05 B5)
+      log.push(now);
+      p.reviveLog = log.slice(-REVIVE.cost.length);
       p.dead = false;
       p.airAt = 0;
       p.baseY = p.y;
       p.c.hp = Math.round(p.s.maxHp * 0.6);
       p.c.mp = Math.max(p.c.mp, Math.round(p.s.maxMp * 0.3));
+      // lôi đài không có chết thật nên không cần bảo hộ; ra chiêu là hết bảo hộ (so lastSkillAt)
+      p.guard = p.match ? null : { until: now + REVIVE.guard, skill: p.lastSkillAt };
       p.markMe();
-      p.send('revived', {});
+      p.send('revived', { guard: p.guard ? REVIVE.guard : 0 });
       refreshInfo(p);
       return;
     }
     p.dead = false;
+    p.guard = null;
     p.c.hp = p.s.maxHp;
     p.c.mp = p.s.maxMp;
     p.send('revived', {});
-    this.world.changeMap(p, CLASSES[p.c.cls].village, null);
+    // bản đồ có điểm hồi sinh rv (làng gần nhất) thì về đó, không thì về làng phái
+    const rv = p.map && p.map.def.rv;
+    this.world.changeMap(p, rv && MAPS[rv] && MAPS[rv].town ? rv : CLASSES[p.c.cls].village, null);
     p.markMe();
     refreshInfo(p);
   }
@@ -105,7 +121,10 @@ module.exports = {
     },
     mapLeft: {
       order: 1,
-      fn(p) { if (p.duel) this.cancelDuel(p, 'Rời bản đồ, trận thách đấu bị hủy.'); },
+      fn(p) {
+        p.guard = null;
+        if (p.duel) this.cancelDuel(p, 'Rời bản đồ, trận thách đấu bị hủy.');
+      },
     },
     // Giảm điểm hiếu chiến mỗi 10 phút
     playerSecond: {

@@ -2,6 +2,7 @@
 
 const { MONSTERS, RAGE } = require('../../shared/data/monsters');
 const { GROUND } = require('../../shared/data/maps');
+const { reviveGuarded } = require('../../shared/constants');
 
 const rand = (a, b) => a + Math.random() * (b - a);
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
@@ -172,7 +173,8 @@ class Monster {
       let bd = 120;
       const [lo, hi] = this.bounds();
       for (const p of players.values()) {
-        if (p.dead || p.x < lo - 60 || p.x > hi + 60) continue;
+        // vừa hồi sinh tại chỗ (bảo hộ): quái không chủ động nhắm tới
+        if (p.dead || p.x < lo - 60 || p.x > hi + 60 || reviveGuarded(p, now)) continue;
         const dx = Math.abs(p.x - this.x);
         if (dx < bd && Math.abs(p.y - this.y) < 50 + d.h * 0.5) {
           bd = dx;
