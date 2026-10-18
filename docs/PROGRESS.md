@@ -2,6 +2,19 @@
 
 Ghi sau mỗi tính năng / mỗi lần đổi mốc ảnh. Mới nhất ở trên.
 
+## 2026-10-19
+
+### Gia tộc cơ bản (`clan-core`) và phủ kiểm thử hành động (`dev-test-coverage`)
+
+- Sửa chèn prototype ở `modules/clan`: `clanKick`/`clanPromote`/`clanInfo`/`myClan` tra thành viên bằng `own(cl.members, clean(name, 16).toLowerCase())`. Trước khi sửa, `clanPromote { name: '__proto__', rank: 'leader' }` đặt `Object.prototype.rank = 'leader'` và xóa `cl.leader`.
+- `cleanClans(db)` chạy trong `init` (có export để kiểm thử): bỏ khóa thành viên lạ, chức lạ về `member`, chọn lại tộc trưởng khi `leader` không còn trong tộc, chỉ một `leader`, tối đa 4 trưởng lão, kẹp `level` 1-10 và `exp`/`fund` (quỹ tối đa 2e12), bỏ tộc rỗng, nhân vật trỏ tới tộc không còn mình thì `c.clan = null`.
+- `clanDonate`: dùng `int()`, góp tối thiểu 1.000 xu, tối đa 2 tỷ. Tối đa 4 trưởng lão; thăng người thứ 5 báo "Gia tộc đã đủ 4 trưởng lão.". Nhường chức khi tộc đã đủ trưởng lão thì tộc trưởng cũ về thành viên. Trường chữ là object (vd `{ toString: 1 }`) không còn làm `clean()`/`int()` ném lỗi trong module này.
+- `tests/features/clan.js`: 16 kiểm tra đơn vị (có kịch bản tương đương `proto-clan`: dội gói `clan*` rác từ cả 3 chức) và 37 kiểm tra với 3 bot (lập qua NPC, mời, từ chối, nhận, thông báo, thăng chức, nhường, đuổi, rời, giải tán, quyền sai).
+- Kiểm thử mới cho các hành động chưa có bot: `pk`, `duelReq/duelAccept`, `revive` về làng (`pk.js`), `resetStats` (`skills.js`), `pickup`, `ping` (`movement.js`), `partyLeave/partyKick`, `friendList/friendDel`, `inspect`, `mailRead`, ngắt kết nối giữa giao dịch (`social.js`), Thợ Rèn `upgrade/sellui` (`gems.js`).
+- `scripts/lib/coverage.js` (chạy riêng `node scripts/lib/coverage.js`, hoặc bước "6b" trong `scripts/verify.js`): router 70/70 hành động có kiểm thử. Thao tác NPC còn thiếu chỉ in cảnh báo (`--strict-coverage` thì tính là hỏng): Tiểu Nhị `task:accept/finish/cancel` (`quest-daily-task` làm ở `daily.js`), `elder:finish`, `arena:cancel/rank`.
+- Ca "Thỏ Ngọc tự nhặt đồ rơi gần chủ" thỉnh thoảng hỏng vì quái chết sát chủ (< 18 px) nên chủ tự nhặt xu trước thú. Đã đổi thành đánh tiếp (tối đa 8 con) tới khi thấy thú nhặt. Đo riêng đoạn này 10 lần trên cùng server: logic cũ 8/10, logic mới 10/10.
+- `npm test` đạt, 213-247 giây khi máy chạy song song các agent khác (tải 6-8).
+
 ## 2026-10-18
 
 ### Smoke test production (`npm run test:prod`)

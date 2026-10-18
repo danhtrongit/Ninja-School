@@ -184,6 +184,11 @@ async function gemTest(a) {
   a.send('npcAct', { id: npc, a: 'gem' });
   const ou = await a.wait('openUi');
   ok(ou.ui === 'upgrade' && ou.tab === 'gem', 'Thợ Rèn mở thẳng tab Khảm ngọc');
+  a.send('npcAct', { id: npc, a: 'upgrade' });
+  const ou2 = await a.wait('openUi');
+  a.send('npcAct', { id: npc, a: 'sellui' });
+  const sh2 = await a.wait('shop');
+  ok(ou2.ui === 'upgrade' && !ou2.tab && ou2.npc === npc && sh2.items.length > 0, 'Thợ Rèn: mục Cường hóa mở cửa sổ cường hóa, mục Bán vật phẩm mở cửa hàng');
   // (bot có thể đã nhặt ngọc rơi ngẫu nhiên ở các phần trước: so theo số lượng trước/sau)
   const t0 = a.me.xu + (a.me.xuk || 0);
   const h1 = cnt('gem_hoa_1');

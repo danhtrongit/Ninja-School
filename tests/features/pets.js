@@ -146,9 +146,14 @@ async function petTest(a) {
   let killed = await hunt(26);
   const pm = killed ? await seek(a, 'pet', (m) => m.id === 'pet_bunny' && m.pexp > pexp0, from, 3000).catch(() => null) : null;
   ok(!!pm, `diệt quái: thú nhận một phần EXP (gói pet, EXP thú ${pm ? pm.m.pexp : '?'})`);
-  // rơi đồ là ngẫu nhiên: diệt thêm (tối đa 5 con) tới khi có món rơi (gAdd) để thú nhặt
-  for (let k = 0; k < 4 && killed && !a.msgs.slice(from).some((m) => m.t === 'gAdd'); k++) killed = await hunt(26);
-  const pick = killed ? await seek(a, 'petAct', (m) => m.id === a.me.id && m.k === 'pick', from, 4000).catch(() => null) : null;
+  // mỗi con quái luôn rơi xu, nhưng quái chết sát chủ (< 18px) thì chủ tự nhặt trước khi thú kịp (petTick ~4 lần/giây):
+  // diệt thêm (tối đa 8 con) tới khi thấy thú nhặt
+  const picked = () => seek(a, 'petAct', (m) => m.id === a.me.id && m.k === 'pick', from, 1600).catch(() => null);
+  let pick = killed ? await picked() : null;
+  for (let k = 0; k < 7 && !pick; k++) {
+    killed = await hunt(26);
+    if (killed) pick = await picked();
+  }
   ok(!!pick && a.msgs.slice(from).some((m) => m.t === 'loot'), 'Thỏ Ngọc tự nhặt đồ rơi gần chủ (petAct pick + loot)');
   // thân mật thấp: thú dỗi, không nhặt
   a.send('chat', { ch: 'map', msg: '/thu 1 10' });
