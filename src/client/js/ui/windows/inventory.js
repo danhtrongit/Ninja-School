@@ -270,6 +270,19 @@ export default {
       gs.length ? h('b', null, `: ${gs.map(gemText).join(', ')}`) : h('span', { class: 'muted' }, ' · khảm ở tab Khảm ngọc'));
   },
 
+  // Hỏi số lượng rồi gửi useItem { slot, n }; server tự chặn theo số món có và trần cộng dồn
+  async useMany(it, slot) {
+    const max = Math.min(it.q, (S.G.useMany && S.G.useMany.max) || 50);
+    const inp = h('input', { type: 'number', min: 1, max, value: max, class: 'in qty-in', 'data-act': 'use-n', 'aria-label': 'Số lượng' });
+    const steps = [5, 10, 20].filter((v) => v < max);
+    const quick = h('div', { class: 'row use-n-quick' }, ...[...steps, max].map((v) => h('button', { class: 'btn small', 'data-n': v, onclick: () => { inp.value = v; } }, v === max ? `Tất cả (${max})` : `×${v}`)));
+    const yes = await this.ask({ title: 'Dùng nhiều', ok: 'Dùng',
+      text: [h('div', null, `${itemName(it)}: đang có ${it.q}.`), h('label', { class: 'use-n-row' }, h('span', null, 'Số lượng'), inp), quick] });
+    if (!yes) return;
+    const n = Math.max(1, Math.min(max, Math.floor(+inp.value) || 1));
+    this.net.send('useItem', { slot, n });
+  },
+
   showItem(it, ctx) {
     this.hideItem();
     const def = S.G.items[it.id];
@@ -283,7 +296,12 @@ export default {
         if (why) btns.appendChild(h('button', { class: 'btn', disabled: true }, why));
         else add('Đọc sách', () => this.net.send('useItem', { slot: ctx.slot }), 'primary');
       }
-      else if (['potion', 'scroll', 'chest', 'food'].includes(def.type)) add('Sử dụng', () => this.net.send('useItem', { slot: ctx.slot }), 'primary');
+      else if (['potion', 'scroll', 'chest', 'food'].includes(def.type)) {
+        add('Sử dụng', () => this.net.send('useItem', { slot: ctx.slot }), 'primary');
+        // cùng loại server cho dùng nhiều (rương, đồ ăn, bí kíp nhân đôi)
+        const many = def.type === 'chest' || def.type === 'food' || (def.type === 'scroll' && def.effect && def.effect.buff);
+        if (many && it.q > 1) add('Dùng nhiều', () => this.useMany(it, ctx.slot));
+      }
       else if (def.type === 'petfood') add('Cho thú ăn', () => this.feedPet(ctx.slot), 'primary');
       const socketed = Array.isArray(it.gems) && it.gems.some(Boolean);
       add('Hủy', async () => {

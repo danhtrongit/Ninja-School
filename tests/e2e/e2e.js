@@ -1,7 +1,7 @@
 // Kiểm thử tích hợp end-to-end: tìm đường, bản đồ thế giới, bộ kỹ năng + hệ thống mới (mục 7). Cần Playwright + Chromium.
 // Dùng: BASE_URL=http://localhost:3000 ACC=<tk admin> MOBILE=1 OUT=/tmp/e2e NODE_PATH=$(npm root -g) npm run test:e2e
 // ACC phải nằm trong biến ADMINS của server (dùng /lv, /tp, /item, /event). OUT: tiền tố đường dẫn ảnh chụp.
-// ONLY=new: chỉ chạy mục 7. DBG=1: in trạng thái lúc chờ boss. Không chạy song song 2 lượt trên cùng server (lệnh /event là toàn server).
+// ONLY=new: chỉ chạy mục 7, ONLY=auto: chỉ chạy mục 8. DBG=1: in trạng thái lúc chờ boss. Không chạy song song 2 lượt trên cùng server (lệnh /event là toàn server).
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
@@ -334,9 +334,56 @@ const ok = (c, msg) => { console.log((c ? '  ✔ ' : '  ✘ ') + msg); if (!c) f
     await closeWin();
   };
 
+  // ---- 8. Tự động nâng cao (tự hồi sinh về làng rồi quay lại bãi, hồi sinh bằng thẻ) và Dùng nhiều trong hành trang
+  const autoPlus = async () => {
+    const S = (fn, a) => ev(fn, a);
+    await closeWin();
+    await cmd('/tp fire_field');
+    await page.waitForTimeout(1000);
+    await S(() => Object.assign(window.ninja.S.settings, { autoRevive: 'town', autoReviveDelay: 1, autoBack: true }));
+    await S(() => window.ninja.game.toggleAuto(true));
+    await page.waitForTimeout(600);
+    await cmd('/chet');
+    ok(await waitFor(() => window.ninja.S.me.dead, 3000), '/chet: nhân vật gục khi đang tự động đánh');
+    const vil = await S(() => window.ninja.S.G.classes[window.ninja.S.me.cls].village);
+    ok(await waitFor((v) => window.ninja.game.map.id === v && !window.ninja.S.me.dead && !document.querySelector('.death'), 8000, vil), 'tự hồi sinh về làng sau thời gian chờ, khung Trọng Thương đóng');
+    ok(await waitFor(() => !!window.ninja.game.travel, 4000), 'về làng xong tự tìm đường quay lại bãi cũ');
+    await shot('auto-back');
+    ok(await waitFor(() => window.ninja.game.map.id === 'fire_field' && !window.ninja.game.travel && window.ninja.game.auto, 90000), 'tới lại bãi cũ, tự động đánh vẫn bật');
+    await cmd('/item revive_card 1');
+    await S(() => { window.ninja.S.settings.autoRevive = 'card'; });
+    await cmd('/chet');
+    ok(await waitFor(() => window.ninja.S.me.dead, 3000), '/chet lần 2');
+    ok(await waitFor(() => !window.ninja.S.me.dead, 6000) && (await mapId()) === 'fire_field' && (await S(() => !window.ninja.S.inv.some((it) => it && it.id === 'revive_card'))), 'chế độ Thẻ: hồi sinh tại chỗ bằng Thẻ Hồi Sinh, không về làng');
+    await S(() => { window.ninja.game.toggleAuto(false); window.ninja.S.settings.autoRevive = 'off'; });
+    // cửa sổ Cài đặt có mục Tự động nâng cao
+    await closeWin();
+    await S(() => window.ninja.ui.open('settings'));
+    await page.waitForTimeout(400);
+    ok(await S(() => !!document.querySelector('[data-sec="auto-plus"]') && document.querySelectorAll('[data-sec="auto-plus"] .set-seg .btn').length === 4), 'Cài đặt: mục Tự động nâng cao có 4 chế độ hồi sinh');
+    await S(() => { const el = document.querySelector('[data-sec="auto-plus"]'); el.scrollIntoView(); });
+    await shot('auto-settings');
+    // Dùng nhiều: 6 rương, chọn ×5
+    await cmd('/item chest 6');
+    const c0 = await S(() => window.ninja.S.inv.reduce((n, it) => n + (it && it.id === 'chest' ? it.q : 0), 0));
+    ok(await useInv('chest', 'Dùng nhiều'), 'hành trang: rương có nút Dùng nhiều');
+    ok(await waitFor(() => !!document.querySelector('[data-act=use-n]'), 2000), 'hộp Dùng nhiều có ô số lượng');
+    await shot('use-many');
+    await tapLoc(page.locator('.use-n-quick button[data-n="5"]'));
+    await tapLoc(page.locator('[data-act=ask-ok]'));
+    ok(await waitFor((c) => window.ninja.S.inv.reduce((n, it) => n + (it && it.id === 'chest' ? it.q : 0), 0) === c - 5, 3000, c0), `Dùng nhiều ×5: mở đúng 5 rương (còn ${c0 - 5})`);
+    await closeWin();
+  };
+
   await login();
   console.log(`Đăng nhập ${ACC} (${MOBILE ? 'mobile' : 'desktop'}) ở ${await mapId()}, cấp ${await ev(() => window.ninja.S.me.level)}`);
   await shot('hud');
+  if (process.env.ONLY === 'auto') {
+    await autoPlus();
+    console.log(fails ? `${fails} KIỂM TRA HỎNG` : 'E2E ĐẠT');
+    console.log(errors.join('\n') || 'OK no console errors');
+    return browser.close();
+  }
   if (process.env.ONLY === 'new') {
     await newSystems();
     console.log(fails ? `${fails} KIỂM TRA HỎNG` : 'E2E ĐẠT');
@@ -516,6 +563,7 @@ const ok = (c, msg) => { console.log((c ? '  ✔ ' : '  ✘ ') + msg); if (!c) f
   await ev(() => window.ninja.game.toggleAuto(false));
   void k0;
 
+  await autoPlus();
   await newSystems();
 
   console.log(fails ? `${fails} KIỂM TRA HỎNG` : 'E2E ĐẠT');

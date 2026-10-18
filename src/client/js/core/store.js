@@ -13,11 +13,18 @@ export const S = {
 
 function loadSettings() {
   // daynight: mức lớp ngày/đêm 0 (tắt) / 0.5 (nhẹ) / 1 (đầy đủ); shake: rung màn hình
-  const def = { autoHp: 40, autoMp: 25, names: true, autoPick: true, autoRange: 600, chatTab: 'all', sound: true, musicVol: 60, sfxVol: 80, daynight: 1, shake: true };
+  // autoRevive: tự hồi sinh khi đang auto: 'off' / 'town' về làng / 'card' thẻ (hết thẻ thì về làng) / 'luong' thẻ hoặc 1 lượng
+  // autoBack: về làng rồi tự quay lại chỗ cũ đánh tiếp; autoSkip: kỹ năng auto không dùng
+  const def = { autoHp: 40, autoMp: 25, names: true, autoPick: true, autoRange: 600, chatTab: 'all', sound: true, musicVol: 60, sfxVol: 80, daynight: 1, shake: true,
+    autoRevive: 'off', autoReviveDelay: 3, autoBack: true, autoBoss: true, autoLock: false, autoFood: false, autoSkip: [] };
   try {
     const st = { ...def, ...JSON.parse(localStorage.getItem('ns_settings') || '{}') };
     if (![0, 0.5, 1].includes(st.daynight)) st.daynight = def.daynight;
     st.shake = st.shake !== false;
+    if (!['off', 'town', 'card', 'luong'].includes(st.autoRevive)) st.autoRevive = def.autoRevive;
+    st.autoReviveDelay = Number.isFinite(st.autoReviveDelay) ? Math.max(1, Math.min(30, Math.round(st.autoReviveDelay))) : def.autoReviveDelay;
+    for (const k of ['autoBack', 'autoBoss', 'autoLock', 'autoFood']) if (typeof st[k] !== 'boolean') st[k] = def[k];
+    st.autoSkip = Array.isArray(st.autoSkip) ? st.autoSkip.filter((x) => typeof x === 'string').slice(0, 30) : [];
     return st;
   } catch (e) {
     return def;

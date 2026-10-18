@@ -25,5 +25,7 @@ function invSize(c) {
 
 // Hồi chiêu bình thuốc (ms), chung mọi cỡ bình. Ngắn quá thì uống liên tục, sát thương boss mất ý nghĩa
 const POTION_CD = { hp: 4000, mp: 1500 };
+// Dùng nhiều một lần (rương, đồ ăn, bí kíp): tối đa max món, buff cộng dồn không quá buffCap ms
+const USE_MANY = { max: 50, buffCap: 24 * 3600 * 1000 };
 
-module.exports = { MAX_LEVEL, INV_SIZE, INV_EXPAND, invSize, STORAGE_SIZE, HOTBAR, HOTBAR_SETS, PERSIST_BUFFS, POTION_CD };
+module.exports = { MAX_LEVEL, INV_SIZE, INV_EXPAND, invSize, STORAGE_SIZE, HOTBAR, HOTBAR_SETS, PERSIST_BUFFS, POTION_CD, USE_MANY };

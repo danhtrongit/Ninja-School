@@ -223,6 +223,7 @@ export class Game {
       this.chase = null;
       this.walkTo = null;
       this.cancelTravel();
+      this.planRevive();
     });
     n.on('chat', (m) => {
       if (m.ch === 'map' && m.id) this.bubbles.set(m.id, { msg: m.msg, until: this.t + 5 });
@@ -311,6 +312,7 @@ export class Game {
     this.navJump = null;
     this.navCache.key = '';
     if (this.hunt && this.hunt.map !== m.map) this.hunt = null;
+    if (this.autoBack && !m.me.dead && m.map !== this.autoBack.map) this.backAt = this.t + 1;
     this.ui.onEnterMap(this.map);
     this.updateMusic();
     this.prewarm();
@@ -588,6 +590,8 @@ export class Game {
         const bl = this.autoBlack.get(m.id);
         if (bl && bl > now) continue;
         if (m.def.lv > S.me.level + 8 && !m.def.boss) continue;
+        if (m.def.boss && !S.settings.autoBoss) continue;
+        if (S.settings.autoLock && this.autoMob && m.k !== this.autoMob) continue;
       }
       const dx = Math.abs(m.x - me.x);
       const dy = Math.abs(m.y - me.y);
@@ -890,12 +894,61 @@ export class Game {
   toggleAuto(v) {
     this.auto = v === undefined ? !this.auto : v;
     this.autoBlack.clear();
+    this.autoMob = null;
     this.ui.setAuto(this.auto);
     if (!this.auto) {
       this.chase = null;
       this.walkTo = null;
       this.hunt = null;
+      this.reviveAt = 0;
+      this.autoBack = null;
+      this.backAt = 0;
     }
+  }
+
+  // Tự hồi sinh (Cài đặt → Tự động nâng cao): chỉ khi đang auto, không ở lôi đài; nhớ chỗ cũ để quay lại sau khi về làng
+  planRevive() {
+    const set = S.settings;
+    this.reviveAt = 0;
+    this.autoBack = null;
+    if (!this.auto || set.autoRevive === 'off' || !this.map || this.map.arena) return;
+    this.reviveAt = this.t + set.autoReviveDelay;
+    if (set.autoBack && !this.map.instance && !this.map.town) {
+      const h = this.hunt;
+      this.autoBack = { map: this.map.id, x: Math.round(this.me.x), mob: h ? h.mob : null, src: h ? h.src : null };
+    }
+    this.ui.toast(`Tự hồi sinh sau ${set.autoReviveDelay} giây`, 'info');
+  }
+
+  autoRevive() {
+    this.reviveAt = 0;
+    const mode = S.settings.autoRevive;
+    const cards = countInv('revive_card');
+    const here = (mode === 'card' && cards > 0) || (mode === 'luong' && (cards > 0 || S.me.luong >= 1));
+    if (here) this.autoBack = null;
+    this.net.send('revive', { mode: here ? 'here' : 'town' });
+  }
+
+  // Tự ăn đồ ăn tăng sức khi hiệu ứng đã hết: mỗi lần một món, 3 giây kiểm một lần
+  autoEat() {
+    this.foodT = this.t + 3;
+    const has = new Set(S.me.buffs.map((b) => b.k));
+    const i = S.inv.findIndex((it) => {
+      const d = it && S.G.items[it.id];
+      return !!d && d.type === 'food' && d.lv <= S.me.level && !has.has(d.effect.buff);
+    });
+    if (i >= 0) this.net.send('useItem', { slot: i });
+  }
+
+  // Về làng xong: tìm đường lại chỗ cũ, tới nơi thì bật auto (và săn tiếp quái nhiệm vụ nếu đang săn)
+  autoReturn() {
+    const b = this.autoBack;
+    this.backAt = 0;
+    this.autoBack = null;
+    if (!b || !this.auto || S.me.dead || this.map.id === b.map) return;
+    const dest = { map: b.map, x: b.x, auto: true, label: `Quay lại ${S.G.maps[b.map].name}` };
+    if (b.mob) Object.assign(dest, { mob: b.mob, src: b.src });
+    if (this.travelTo(dest)) this.ui.toast(dest.label, 'info');
   }
 
   // ---------------- Tìm đường tự động giữa các bản đồ
@@ -1105,6 +1158,8 @@ export class Game {
     this.handleInput();
     const me = this.me;
     const dead = S.me.dead;
+    if (dead && this.reviveAt && this.t >= this.reviveAt) this.autoRevive();
+    if (!dead && this.backAt && this.t >= this.backAt) this.autoReturn();
     let dirX = 0;
     if (!dead) {
       if (this.input.has('left')) dirX -= 1;
@@ -1316,6 +1371,7 @@ export class Game {
       if (me.mp < (me.s.maxMp * set.autoMp) / 100) this.usePotion('mp', true);
     }
     this.checkHunt();
+    if (set.autoFood && !this.map.arena && this.t >= (this.foodT || 0)) this.autoEat();
     if (this.chase) return;
     // nhặt đồ của mình
     if (set.autoPick && S.inv.some((x) => !x)) {
@@ -1338,15 +1394,15 @@ export class Game {
     }
     // buff
     for (const sid of me.hotbar) {
-      if (!sid) continue;
+      if (!sid || set.autoSkip.includes(sid)) continue;
       const sk = S.G.skills[sid];
       if ((sk.type === 'buff' || (sk.type === 'heal' && me.hp < me.s.maxHp * 0.6)) && this.skillReady(sid) && !me.buffs.some((b) => b.k === sid)) {
         if (this.useSkill(sid, true)) return;
       }
     }
     let t = this.getTarget();
-    // auto chỉ đánh quái, hoặc đối thủ lôi đài khi đang trong trận
-    const okT = (x) => !!x && (x.kind === 'm' || this.isArenaOpp(x.e));
+    // auto chỉ đánh quái (trừ loại bị tắt trong Cài đặt: boss, khác loại đang khóa), hoặc đối thủ lôi đài khi đang trong trận
+    const okT = (x) => !!x && (x.kind === 'm' ? (set.autoBoss || !x.e.def.boss) && !(set.autoLock && this.autoMob && x.e.k !== this.autoMob) : this.isArenaOpp(x.e));
     if (!okT(t) || (this.hunt && t.kind === 'm' && t.e.k !== this.hunt.mob)) {
       const nt = this.autoTarget(set.autoRange, true, true);
       // mục tiêu là người chơi thì bỏ (auto không tự đánh người); đang đánh quái khác thì chỉ đổi khi thấy quái cần săn
@@ -1354,6 +1410,8 @@ export class Game {
       else if (nt && nt.kind === 'm' && nt.e.k === this.hunt.mob) t = nt;
       if (t) this.setTarget(t);
     }
+    // "Chỉ đánh loại quái đầu tiên": nhớ loại quái của mục tiêu đầu
+    if (set.autoLock && t && t.kind === 'm' && !this.autoMob) this.autoMob = t.e.k;
     if (!t) {
       // boss chưa hồi sinh: đứng chờ ở chỗ boss xuất hiện
       const hx = this.hunt && this.hunt.x;
@@ -1364,7 +1422,7 @@ export class Game {
     const order = me.hotbar.filter(Boolean).slice().reverse();
     for (const sid of order) {
       const sk = S.G.skills[sid];
-      if (!this.skillReady(sid) || sk.type === 'buff' || sk.type === 'heal') continue;
+      if (!this.skillReady(sid) || sk.type === 'buff' || sk.type === 'heal' || set.autoSkip.includes(sid)) continue;
       if (sk.type === 'aoe' && sk.center === 'self' && !this.inRange(t, sk.radius * 0.8)) continue;
       if ((sk.type === 'line' || sk.type === 'dash') && !this.inRange(t, sk.range * 0.8)) continue;
       if (this.useSkill(sid, true)) return;

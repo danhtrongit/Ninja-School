@@ -19,7 +19,7 @@ const { skillsTest } = require('./features/skills');
 const { socialTest } = require('./features/social');
 const { dailyTest } = require('./features/daily');
 const { endgameTest } = require('./features/endgame');
-const { bagUnitTests, bagTest } = require('./features/inventory');
+const { bagUnitTests, bagTest, useManyTest } = require('./features/inventory');
 const { audioUnitTests, audioHttpTest } = require('./features/audio');
 const { airTest } = require('./features/movement');
 const { fashionTest } = require('./features/fashion');
@@ -69,6 +69,7 @@ async function main() {
     await mailTest(ctx.a, ctx.b);
     await arenaTest();
     await bagTest(ctx.a);
+    await useManyTest(ctx.a);
     await audioHttpTest();
     await devtoolsTest();
 

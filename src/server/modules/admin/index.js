@@ -150,6 +150,10 @@ class Admin {
       case 'boss':
         for (const map of Object.values(this.world.maps)) for (const m of map.monsters.values()) if (m.boss && m.dead) m.respawnAt = 0;
         return sys('Đã gọi boss.');
+      case 'chet':
+        // kiểm thử: gục ngay (thử hồi sinh, tự hồi sinh)
+        if (!p.dead && p.map && !p.match) this.world.combat.killPlayer(p, {});
+        return;
       case 'bosshp': {
         // kiểm thử: đặt máu boss trên bản đồ hiện tại còn n% (dưới 30% thì vào cuồng nộ)
         if (!p.map) return;

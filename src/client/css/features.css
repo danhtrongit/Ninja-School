@@ -332,3 +332,16 @@ body.touch .char-foot .btn { min-height: 44px; }
   body.touch #hud-arena .ar-ico, body.touch #hud-arena .ar-title { display: none; }
   body.touch #hud-arena { padding-left: 12px; gap: 6px; }
 }
+
+/* Tự động nâng cao (Cài đặt) và hộp Dùng nhiều */
+.set-row.col { flex-direction: column; align-items: stretch; cursor: default; }
+.auto-skills { display: flex; flex-wrap: wrap; gap: 4px; }
+.auto-sk { display: flex; align-items: center; gap: 4px; padding: 2px 8px 2px 2px; font: inherit; font-size: 16px; color: var(--muted); background: rgba(0, 0, 0, 0.35); border: 1px solid var(--gold3); border-radius: 3px; cursor: pointer; opacity: 0.55; }
+.auto-sk .sk-img { width: 24px; height: 24px; filter: grayscale(1); }
+.auto-sk.on { color: var(--text); border-color: var(--gold); opacity: 1; }
+.auto-sk.on .sk-img { filter: none; }
+body.touch .auto-sk { min-height: 44px; }
+[data-sec="auto-plus"] .set-seg { flex-wrap: wrap; justify-content: flex-end; }
+.use-n-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 8px 0 4px; }
+.use-n-quick { gap: 4px; flex-wrap: wrap; }
+body.touch .use-n-quick .btn { min-height: 44px; }

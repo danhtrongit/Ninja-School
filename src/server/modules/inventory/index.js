@@ -3,7 +3,7 @@
 // Hành trang & trang bị: dùng vật phẩm, mặc/tháo, hủy, sắp xếp, mở rương. Cộng chỉ số trang bị vào Player.recalc
 const { CLASSES } = require('../../../shared/data/classes');
 const { ITEMS, SLOTS, GEAR_SLOTS, TIERS, itemStats } = require('../../../shared/data/items');
-const { INV_SIZE, INV_EXPAND, invSize, POTION_CD } = require('../../../shared/constants');
+const { INV_SIZE, INV_EXPAND, invSize, POTION_CD, USE_MANY } = require('../../../shared/constants');
 const { int, own, refreshInfo } = require('../../core/util');
 const { sameStack } = require('../../../shared/bound');
 
@@ -46,66 +46,82 @@ class Inventory {
       if (p.map) p.map.broadcast('heal', { list: e.hp ? [[`p${p.id}`, e.hp]] : [], pot: p.id, pk: kind });
       return;
     }
-    if (def.type === 'scroll') {
-      if (e.home) {
-        p.removeAt(slot, 1);
-        this.world.changeMap(p, CLASSES[p.c.cls].village, null);
-        return;
-      }
-      if (e.buff === 'exp2') {
-        p.c.buffs.exp2 = Math.max(now, p.c.buffs.exp2 || 0) + e.dur;
-        p.removeAt(slot, 1);
-        p.recalc();
-        p.notice('Kinh nghiệm nhận được tăng gấp đôi trong 30 phút!', 'reward');
-        return;
-      }
-    }
-    if (def.type === 'petfood') return this.world.mods.pets.feedPet(p, slot, def, now);
-    if (def.type === 'food') {
-      p.c.buffs[e.buff] = Math.max(now, p.c.buffs[e.buff] || 0) + e.dur;
+    // dùng nhiều một lần (m.n): chỉ rương, đồ ăn và bí kíp nhân đôi, chỉ lấy từ chồng ở ô đã chọn
+    const want = Math.max(1, Math.min(int(m.n, 1), USE_MANY.max));
+    if (def.type === 'scroll' && e.home) {
       p.removeAt(slot, 1);
-      p.recalc();
-      p.notice(`${def.name}: ${def.desc}`, 'reward');
+      this.world.changeMap(p, CLASSES[p.c.cls].village, null);
       return;
     }
+    if ((def.type === 'scroll' && e.buff === 'exp2') || def.type === 'food') {
+      const left = Math.max(0, (p.c.buffs[e.buff] || 0) - now);
+      // một món luôn dùng được như trước; dùng nhiều thì dừng khi buff chạm trần
+      const cap = Math.min(want, it.q);
+      const k = Math.min(cap, Math.max(1, Math.floor((USE_MANY.buffCap - left) / e.dur)));
+      p.c.buffs[e.buff] = Math.max(now, p.c.buffs[e.buff] || 0) + e.dur * k;
+      p.removeAt(slot, k);
+      p.recalc();
+      const mins = Math.round((p.c.buffs[e.buff] - now) / 60000);
+      if (def.type === 'scroll') p.notice(k > 1 ? `Dùng ${k} ${def.name}: kinh nghiệm nhân đôi trong ${mins} phút!` : 'Kinh nghiệm nhận được tăng gấp đôi trong 30 phút!', 'reward');
+      else p.notice(k > 1 ? `Dùng ${k} ${def.name}: hiệu ứng còn ${mins} phút.` : `${def.name}: ${def.desc}`, 'reward');
+      if (k < cap) p.notice(`Hiệu ứng chỉ cộng dồn tối đa ${USE_MANY.buffCap / 3600000} giờ.`, 'warn');
+      return;
+    }
+    if (def.type === 'petfood') return this.world.mods.pets.feedPet(p, slot, def, now);
     if (def.type === 'chest') {
       if (p.freeSlots() < 1) return p.notice('Hành trang đã đầy!', 'warn');
       const bound = !!it.b;
-      p.removeAt(slot, 1);
-      this.openChest(p, bound);
+      const sum = { xu: 0, luong: 0, items: new Map() };
+      let k = 0;
+      // removeAt bỏ trống ô khi hết chồng: dừng khi ô không còn đúng chồng rương này
+      while (k < want && p.c.inv[slot] === it && p.freeSlots() >= 1) {
+        p.removeAt(slot, 1);
+        this.openChest(p, bound, sum);
+        k++;
+      }
+      const parts = [];
+      if (sum.xu) parts.push(`${sum.xu.toLocaleString('vi-VN')} ${bound ? 'xu khóa' : 'xu'}`);
+      if (sum.luong) parts.push(`${sum.luong} lượng`);
+      for (const [name, q] of sum.items) parts.push(q > 1 ? `${q} ${name}` : name);
+      const got = parts.join(', ') || 'không có gì';
+      p.notice(k > 1 ? `Mở ${k} ${def.name} nhận: ${got}.` : `Mở rương nhận ${got}!`, 'reward');
+      if (k < want && p.c.inv[slot] === it) p.notice(`Hành trang đã đầy, mới mở ${k}/${want} rương.`, 'warn');
     }
   }
 
-  openChest(p, bound) {
+  // Một lần mở rương, cộng phần thưởng vào sum (mở nhiều rương chỉ báo một dòng)
+  openChest(p, bound, sum) {
     const lv = p.lv;
     const r = Math.random();
     const tier = Math.min(TIERS - 1, Math.floor(lv / 10));
+    const add = (name, q) => sum.items.set(name, (sum.items.get(name) || 0) + q);
     if (r < 0.3) {
       const xu = 500 + lv * 200 + Math.floor(Math.random() * lv * 200);
       if (bound) p.gainXuk(xu);
       else p.gainXu(xu);
-      p.notice(`Mở rương nhận ${xu} ${bound ? 'xu khóa' : 'xu'}!`, 'reward');
+      sum.xu += xu;
     } else if (r < 0.5) {
       const st = lv < 30 ? 'stone1' : lv < 60 ? 'stone2' : lv < 90 ? 'stone3' : 'stone4';
       const q = 2 + Math.floor(Math.random() * 4);
       p.addItem(st, q, 0, 0, bound ? 1 : 0);
-      p.notice(`Mở rương nhận ${q} ${ITEMS[st].name}!`, 'reward');
+      add(ITEMS[st].name, q);
     } else if (r < 0.75) {
       const slot = GEAR_SLOTS[Math.floor(Math.random() * GEAR_SLOTS.length)];
       const id = slot === 'weapon' ? `w_${p.c.cls}_${tier}` : `${slot}_${tier}`;
       const rar = Math.random() < 0.1 ? 3 : Math.random() < 0.4 ? 2 : 1;
       p.addItem(id, 1, rar, 0, bound ? 1 : 0);
-      p.notice(`Mở rương nhận ${ITEMS[id].name}!`, 'reward');
+      add(ITEMS[id].name, 1);
     } else if (r < 0.88) {
       p.addItem('exp2', 1, 0, 0, bound ? 1 : 0);
-      p.notice('Mở rương nhận Bí Kíp Nhân Đôi!', 'reward');
+      add(ITEMS.exp2.name, 1);
     } else if (r < 0.93) {
-      this.world.mods.fashion.giveFashion(p, 'Mở rương');
+      const f = this.world.mods.fashion.giveFashion(p);
+      if (f) add(f.name, 1);
     } else {
       const l = 2 + Math.floor(Math.random() * 8);
       p.c.luong += l;
       p.markMe();
-      p.notice(`Mở rương nhận ${l} lượng!`, 'reward');
+      sum.luong += l;
     }
   }
 
@@ -234,6 +250,7 @@ module.exports = {
     clientData(out) {
       out.invExpand = { base: INV_SIZE, ...INV_EXPAND };
       out.potCd = POTION_CD;
+      out.useMany = USE_MANY;
     },
     // chỉ số trang bị đang mặc (gồm ngọc khảm, thú cưng theo cấp, thời trang)
     stats(t) {

@@ -4,6 +4,18 @@ Ghi sau mỗi tính năng / mỗi lần đổi mốc ảnh. Mới nhất ở tr�
 
 ## 2026-10-18
 
+### Dùng nhiều và Tự động nâng cao (yêu cầu của chủ dự án)
+
+- `item-use-many`: gói `useItem { slot, n }` (n tối đa `USE_MANY.max` = 50, chỉ lấy từ chồng ở ô đã chọn). Rương mở n lần, gộp phần thưởng vào một thông báo, dừng khi túi đầy. Đồ ăn và Bí Kíp Nhân Đôi cộng dồn thời gian, trần 24 giờ. Bình thuốc, sách, thức ăn thú vẫn dùng từng món. Hành trang có nút "Dùng nhiều" với hộp chọn số lượng (×5/×10/×20/Tất cả).
+- `cmb-auto-plus` (chỉ chạy trên máy khách, lưu trong `S.settings`), gồm các tùy chọn:
+  - tự hồi sinh: Tắt / Về làng / Thẻ / Thẻ hoặc lượng, có thời gian chờ 1-30 giây;
+  - về làng xong tự tìm đường lại chỗ cũ, tới nơi bật lại auto và săn tiếp quái nhiệm vụ;
+  - bỏ qua boss;
+  - chỉ đánh loại quái đầu tiên;
+  - tự ăn đồ ăn tăng sức;
+  - chọn kỹ năng auto được dùng.
+- Lệnh admin `/chet` (gục ngay) dùng cho test hồi sinh. `test:e2e` có mục 8 (`ONLY=auto`), đạt cả desktop lẫn 844×390. `npm test` đạt.
+
 ### Sửa: hồi sinh về làng không hồi máu
 
 - Máy chủ đã hồi đầy máu nhưng nhánh về làng không gửi lại gói `me`. Máy khách thay `S.me` theo `enterMap` mà không vẽ lại HUD, nên thanh máu vẫn hiện 0. Đã sửa cả hai phía: `Pk.revive` gọi `markMe()`, còn `ui.onEnterMap` gọi `updateStatus()`.

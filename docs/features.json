@@ -1000,6 +1000,103 @@
     "depends": []
   },
   {
+    "id": "item-use-many",
+    "phase": 1,
+    "title": "Dùng nhiều vật phẩm một lần (rương, đồ ăn, bí kíp nhân đôi)",
+    "priority": "Should",
+    "status": "done",
+    "acceptance": [
+      "useItem { slot, n }: mở n rương trừ đúng n, gộp phần thưởng vào một thông báo",
+      "n không phải số hoặc âm thì dùng 1; n lớn bị chặn ở USE_MANY.max và số món đang có",
+      "đồ ăn và bí kíp nhân đôi cộng dồn thời gian, không vượt trần 24 giờ",
+      "hành trang có nút Dùng nhiều, hộp chọn số lượng chạy được trên desktop và MOBILE=1"
+    ],
+    "proof": [
+      [
+        "tests/features/inventory.js :: dùng nhiều 5 rương: trừ đúng 5, gộp thành một thông báo"
+      ],
+      [
+        "tests/features/inventory.js :: số lượng không phải số thì chỉ dùng 1",
+        "tests/features/inventory.js :: số lượng âm thì chỉ dùng 1",
+        "tests/features/inventory.js :: số lượng quá lớn bị chặn ở"
+      ],
+      [
+        "tests/features/inventory.js :: đồ ăn dùng nhiều cộng dồn thời gian hiệu ứng",
+        "tests/features/inventory.js :: bí kíp nhân đôi dừng ở trần 24 giờ",
+        "tests/features/inventory.js :: thời gian nhân đôi không vượt trần"
+      ],
+      [
+        "tests/e2e/e2e.js :: hành trang: rương có nút Dùng nhiều",
+        "tests/e2e/e2e.js :: Dùng nhiều ×5: mở đúng 5 rương"
+      ]
+    ],
+    "tests": [
+      "tests/features/inventory.js",
+      "tests/e2e/e2e.js"
+    ],
+    "files": [
+      "src/server/modules/inventory/index.js",
+      "src/shared/constants.js",
+      "src/client/js/ui/windows/inventory.js",
+      "src/client/css/features.css"
+    ],
+    "pillars": [
+      "P2"
+    ],
+    "section": "docs/gdd/05-he-thong-trang-bi.md",
+    "size": "S",
+    "depends": []
+  },
+  {
+    "id": "cmb-auto-plus",
+    "phase": 1,
+    "title": "Tự động nâng cao: tự hồi sinh, quay lại bãi, chọn kỹ năng, bỏ boss, khóa loại quái, tự ăn",
+    "priority": "Should",
+    "status": "done",
+    "acceptance": [
+      "bật tự hồi sinh 'Về làng': gục khi đang auto thì tự hồi sinh sau thời gian chờ, về làng rồi tự tìm đường lại bãi cũ và đánh tiếp",
+      "chế độ 'Thẻ': hồi sinh tại chỗ bằng Thẻ Hồi Sinh, không về làng",
+      "Cài đặt có mục Tự động nâng cao (4 chế độ hồi sinh, kỹ năng auto được dùng), desktop và MOBILE=1 in 'OK no console errors'",
+      "hồi sinh về làng gửi lại chỉ số (thanh máu đầy)"
+    ],
+    "proof": [
+      [
+        "tests/e2e/e2e.js :: tự hồi sinh về làng sau thời gian chờ",
+        "tests/e2e/e2e.js :: về làng xong tự tìm đường quay lại bãi cũ",
+        "tests/e2e/e2e.js :: tới lại bãi cũ, tự động đánh vẫn bật"
+      ],
+      [
+        "tests/e2e/e2e.js :: chế độ Thẻ: hồi sinh tại chỗ bằng Thẻ Hồi Sinh"
+      ],
+      [
+        "tests/e2e/e2e.js :: Cài đặt: mục Tự động nâng cao có 4 chế độ hồi sinh"
+      ],
+      [
+        "tests/features/pk.js :: hồi sinh về làng: đánh dấu gửi lại gói me",
+        "tests/e2e/e2e.js :: đổi bản đồ: thanh máu vẽ lại theo gói enterMap"
+      ]
+    ],
+    "tests": [
+      "tests/e2e/e2e.js",
+      "tests/features/pk.js"
+    ],
+    "files": [
+      "src/client/js/game/game.js",
+      "src/client/js/core/store.js",
+      "src/client/js/ui/windows/settings.js",
+      "src/server/modules/admin/index.js",
+      "src/server/modules/pk/index.js"
+    ],
+    "pillars": [
+      "P2"
+    ],
+    "section": "docs/gdd/05-he-thong-chien-dau.md",
+    "size": "M",
+    "depends": [
+      "cmb-auto"
+    ]
+  },
+  {
     "id": "cmb-balance",
     "phase": 1,
     "title": "Cân bằng boss, Tà Thú, quái theo người chơi trung bình (cấp 1-120)",

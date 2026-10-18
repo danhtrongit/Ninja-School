@@ -143,9 +143,11 @@ async function petTest(a) {
   };
   let from = a.msgs.length;
   const pexp0 = pet().pexp;
-  const killed = await hunt(26);
+  let killed = await hunt(26);
   const pm = killed ? await seek(a, 'pet', (m) => m.id === 'pet_bunny' && m.pexp > pexp0, from, 3000).catch(() => null) : null;
   ok(!!pm, `diệt quái: thú nhận một phần EXP (gói pet, EXP thú ${pm ? pm.m.pexp : '?'})`);
+  // rơi đồ là ngẫu nhiên: diệt thêm (tối đa 5 con) tới khi có món rơi (gAdd) để thú nhặt
+  for (let k = 0; k < 4 && killed && !a.msgs.slice(from).some((m) => m.t === 'gAdd'); k++) killed = await hunt(26);
   const pick = killed ? await seek(a, 'petAct', (m) => m.id === a.me.id && m.k === 'pick', from, 4000).catch(() => null) : null;
   ok(!!pick && a.msgs.slice(from).some((m) => m.t === 'loot'), 'Thỏ Ngọc tự nhặt đồ rơi gần chủ (petAct pick + loot)');
   // thân mật thấp: thú dỗi, không nhặt
