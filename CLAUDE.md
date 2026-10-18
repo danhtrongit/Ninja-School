@@ -90,7 +90,7 @@ tools/                     check-data.js (npm run check), shot.js (chụp ảnh)
 | Tính năng | Server | Cửa sổ | Kiểm thử |
 |---|---|---|---|
 | Di chuyển, cổng, nhặt đồ, dịch chuyển | `modules/movement` | | `features/movement.js` |
-| Hành trang, trang bị, buff | `modules/inventory`, `modules/buffs` | `windows/inventory.js`, `windows/character.js` | `features/endgame.js` |
+| Hành trang, trang bị, buff, mở rộng túi, hủy nhanh | `modules/inventory`, `modules/buffs` | `windows/inventory.js`, `windows/character.js` | `features/endgame.js`, `features/inventory.js` |
 | Kỹ năng, tiềm năng, nội tại | `modules/skills` | `windows/skills.js` | `features/skills.js`, `features/passive.js` |
 | Thời trang, thú cưỡi | `modules/fashion` | `windows/inventory.js` (ô thời trang) | `features/fashion.js` |
 | Thú cưng | `modules/pets` | `windows/pet.js` | `features/pets.js` |
@@ -183,7 +183,8 @@ Cách giao:
 - Comment ngắn, **bằng tiếng Việt**, chỉ viết khi giải thích *tại sao*. Không comment kể lại thay đổi.
 - Chữ hiển thị cho người chơi là tiếng Việt có dấu. Tên định danh trong code bằng tiếng Anh hoặc không dấu.
 - Không thêm thư viện npm mới trừ khi thật cần thiết (hiện chỉ có `ws`). Client không thêm thư viện hay CDN nào ngoài font VT323.
-- Bảo mật: mọi chuỗi từ người chơi đưa vào DOM qua text node (hàm `h()`), **không** dùng `innerHTML` với dữ liệu người chơi. Server kiểm tra kiểu và giới hạn mọi trường nhận được (xem `int()`, `clean()`).
+- Bảo mật: mọi chuỗi từ người chơi đưa vào DOM qua text node (hàm `h()`), **không** dùng `innerHTML` với dữ liệu người chơi.
+- Không dùng `alert/confirm/prompt` của trình duyệt. Hỏi xác nhận bằng `await this.ask({ title, text, ok, cancel, danger, icon })` (`ui/windows/dialog.js`, trả về `true/false`, `text` là chuỗi hoặc mảng nút `h()`). Server kiểm tra kiểu và giới hạn mọi trường nhận được (xem `int()`, `clean()`).
 
 ## Thêm nội dung (checklist)
 

@@ -3,6 +3,7 @@
 // Hành trang & trang bị: dùng vật phẩm, mặc/tháo, hủy, sắp xếp, mở rương. Cộng chỉ số trang bị vào Player.recalc
 const { CLASSES } = require('../../../shared/data/classes');
 const { ITEMS, SLOTS, GEAR_SLOTS, TIERS, itemStats } = require('../../../shared/data/items');
+const { INV_SIZE, INV_EXPAND, invSize } = require('../../../shared/constants');
 const { int, own, refreshInfo } = require('../../core/util');
 
 class Inventory {
@@ -138,6 +139,40 @@ class Inventory {
     p.notice(`Đã hủy ${ITEMS[it.id].name}.`);
   }
 
+  // Hủy nhanh nhiều món: m.items = [[ô, id], ...]; id phải khớp món đang ở ô (túi có thể vừa đổi chỗ)
+  discardMany(p, m) {
+    if (p.trade || !Array.isArray(m.items)) return;
+    const seen = new Set();
+    const names = [];
+    for (const e of m.items.slice(0, p.c.inv.length)) {
+      if (!Array.isArray(e)) continue;
+      const slot = int(e[0], -1);
+      const it = p.c.inv[slot];
+      if (!it || seen.has(slot) || it.id !== String(e[1])) continue;
+      seen.add(slot);
+      p.c.inv[slot] = null;
+      names.push(ITEMS[it.id].name);
+    }
+    if (!names.length) return p.notice('Không có món nào để hủy (túi vừa thay đổi?).', 'warn');
+    p.markInv();
+    p.onInventoryChanged();
+    p.notice(names.length === 1 ? `Đã hủy ${names[0]}.` : `Đã hủy ${names.length} món.`);
+  }
+
+  invExpand(p) {
+    if (p.trade) return;
+    const n = p.c.invExt || 0;
+    const cost = INV_EXPAND.cost[n];
+    if (cost == null) return p.notice('Hành trang đã mở rộng tối đa.', 'warn');
+    if (p.c.luong < cost) return p.notice(`Mở rộng hành trang cần ${cost} lượng.`, 'warn');
+    p.c.luong -= cost;
+    p.c.invExt = n + 1;
+    while (p.c.inv.length < invSize(p.c)) p.c.inv.push(null);
+    p.markInv();
+    p.markMe();
+    p.notice(`Hành trang mở rộng thành ${p.c.inv.length} ô.`);
+  }
+
   sortInv(p) {
     if (p.trade) return;
     const order = { equip: 0, potion: 1, food: 2, petfood: 3, scroll: 4, book: 5, stone: 6, gem: 7, chest: 8, event: 9, misc: 10, quest: 11 };
@@ -177,9 +212,14 @@ module.exports = {
     equip: Inventory.prototype.equip,
     unequip: Inventory.prototype.unequip,
     discard: Inventory.prototype.discard,
+    discardMany: Inventory.prototype.discardMany,
+    invExpand: Inventory.prototype.invExpand,
     sortInv: Inventory.prototype.sortInv,
   },
   hooks: {
+    clientData(out) {
+      out.invExpand = { base: INV_SIZE, ...INV_EXPAND };
+    },
     // chỉ số trang bị đang mặc (gồm ngọc khảm, thú cưng theo cấp, thời trang)
     stats(t) {
       const { c, eq } = t;

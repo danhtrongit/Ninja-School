@@ -110,4 +110,38 @@ export default {
     if (this.deathEl) this.deathEl.remove();
     this.deathEl = null;
   },
+
+  // ---------------- Hộp xác nhận (thay confirm() của trình duyệt: cùng khung gỗ, chạy được trên điện thoại)
+  // text: chuỗi hoặc mảng nút DOM; trả về Promise<boolean>. Enter = đồng ý, Esc / bấm ra ngoài = hủy
+  ask({ title = 'Xác nhận', text = '', ok = 'Đồng ý', cancel = 'Thôi', danger = false, icon } = {}) {
+    this.closeAsk(false);
+    return new Promise((resolve) => {
+      const done = (v) => this.closeAsk(v);
+      const okBtn = h('button', { class: `btn ${danger ? 'danger' : 'primary'}`, 'data-act': 'ask-ok', onclick: () => done(true) }, ok);
+      const box = h('div', { class: `ask-box${danger ? ' danger' : ''}`, role: 'alertdialog', 'aria-modal': 'true', 'aria-label': title },
+        h('div', { class: 'ask-head' }, icon ? ico(icon) : null, h('span', null, title)),
+        h('div', { class: 'ask-text' }, ...[].concat(text)),
+        h('div', { class: 'ask-btns' }, h('button', { class: 'btn', 'data-act': 'ask-cancel', onclick: () => done(false) }, cancel), okBtn));
+      const back = h('div', { class: 'ask-back' }, box);
+      back.addEventListener('pointerdown', (e) => { if (e.target === back) done(false); });
+      // chặn phím tới vòng lặp game khi hộp đang mở (bắt ở pha capture của window)
+      const key = (e) => {
+        if (e.key === 'Escape') { e.preventDefault(); done(false); } else if (e.key === 'Enter' && !(e.target.tagName === 'BUTTON' && box.contains(e.target))) { e.preventDefault(); done(true); }
+        if (e.key !== 'Tab') e.stopPropagation();
+      };
+      window.addEventListener('keydown', key, true);
+      document.body.appendChild(back);
+      this.askEl = { back, key, resolve };
+      okBtn.focus();
+    });
+  },
+
+  closeAsk(v) {
+    const a = this.askEl;
+    if (!a) return;
+    this.askEl = null;
+    window.removeEventListener('keydown', a.key, true);
+    a.back.remove();
+    a.resolve(!!v);
+  },
 };

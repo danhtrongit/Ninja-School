@@ -4,6 +4,8 @@
 const MAX_LEVEL = 120;
 const INV_SIZE = 40;
 const STORAGE_SIZE = 60;
+// Mở rộng hành trang bằng lượng: lần thứ i thêm `step` ô với giá cost[i], tối đa INV_SIZE + step × cost.length ô
+const INV_EXPAND = { step: 10, cost: [50, 100, 150, 200, 300, 400] };
 // số ô mỗi bộ kỹ năng và số bộ
 const HOTBAR = 6;
 const HOTBAR_SETS = 3;
@@ -15,4 +17,10 @@ const PERSIST_BUFFS = {
   food_hp: ['hpPct', 10, 'Canh Nhân Sâm'],
 };
 
-module.exports = { MAX_LEVEL, INV_SIZE, STORAGE_SIZE, HOTBAR, HOTBAR_SETS, PERSIST_BUFFS };
+// Số ô hành trang của nhân vật theo số lần đã mở rộng (c.invExt)
+function invSize(c) {
+  const n = Number.isInteger(c && c.invExt) ? Math.max(0, Math.min(c.invExt, INV_EXPAND.cost.length)) : 0;
+  return INV_SIZE + n * INV_EXPAND.step;
+}
+
+module.exports = { MAX_LEVEL, INV_SIZE, INV_EXPAND, invSize, STORAGE_SIZE, HOTBAR, HOTBAR_SETS, PERSIST_BUFFS };

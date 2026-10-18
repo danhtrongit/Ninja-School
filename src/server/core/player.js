@@ -6,7 +6,7 @@ const { ITEMS, GEM, makeItem, cleanGems, cleanPet, SLOTS } = require('../../shar
 const { PET, PET_SKILLS } = require('../../shared/data/pets');
 const { MAPS, GROUND } = require('../../shared/data/maps');
 const { MAIN_QUESTS } = require('../../shared/data/quests');
-const { INV_SIZE, STORAGE_SIZE, MAX_LEVEL, HOTBAR, HOTBAR_SETS, PERSIST_BUFFS } = require('../../shared/constants');
+const { INV_SIZE, invSize, STORAGE_SIZE, MAX_LEVEL, HOTBAR, HOTBAR_SETS, PERSIST_BUFFS } = require('../../shared/constants');
 const { expNeed } = require('../../shared/formulas');
 const hooks = require('./modules');
 
@@ -137,8 +137,13 @@ class Player {
   sanitize() {
     const c = this.c;
     if (!Array.isArray(c.inv)) c.inv = [];
-    while (c.inv.length < INV_SIZE) c.inv.push(null);
-    c.inv = c.inv.slice(0, INV_SIZE).map((it) => (it && ITEMS[it.id] ? it : null));
+    if (!Number.isInteger(c.invExt) || c.invExt < 0) c.invExt = 0;
+    c.inv = c.inv.map((it) => (it && ITEMS[it.id] ? it : null));
+    // bảng giá mở rộng có đổi bớt thì vẫn giữ các ô đang có đồ, không làm mất vật phẩm
+    let size = invSize(c);
+    for (let i = c.inv.length - 1; i >= size; i--) if (c.inv[i]) { size = i + 1; break; }
+    while (c.inv.length < size) c.inv.push(null);
+    c.inv = c.inv.slice(0, size);
     c.equip = c.equip && typeof c.equip === 'object' ? c.equip : {};
     for (const s of Object.keys(c.equip)) if (!SLOT_SET.has(s) || !c.equip[s] || !ITEMS[c.equip[s].id]) delete c.equip[s];
     c.skills = c.skills || {};

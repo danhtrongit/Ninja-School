@@ -61,7 +61,7 @@ export default {
     h('div', { class: 'row between char-foot' },
       h('button', { class: 'btn small pet-open', onclick: () => this.open('pet') }, ico('pet'), ' Thú cưng'),
       h('button', { class: 'btn small', onclick: () => {
-        if (confirm('Tẩy toàn bộ điểm tiềm năng với giá 20 lượng?')) this.net.send('resetStats');
+        this.ask({ title: 'Tẩy tiềm năng', text: 'Tẩy toàn bộ điểm tiềm năng với giá 20 lượng?', ok: 'Tẩy điểm', icon: 'luong' }).then((y) => y && this.net.send('resetStats'));
       } }, 'Tẩy điểm (20 lượng)')));
   },
 };

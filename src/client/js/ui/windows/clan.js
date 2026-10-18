@@ -20,8 +20,8 @@ export default {
       h('span', { class: `dot-on${m.online ? ' on' : ''}` }),
       h('span', { class: 'lr-main' }, h('b', { class: m.online ? '' : 'muted' }, m.name), h('span', { class: `rank-tag r-${m.rank}` }, RANK_NAMES[m.rank]), h('span', { class: 'muted' }, ` Lv${m.lv} ${m.cls ? S.G.classes[m.cls].name : ''}`)),
       c.myRank === 'leader' && m.rank !== 'leader' ? h('button', { class: 'btn small', onclick: () => this.net.send('clanPromote', { name: m.name }) }, m.rank === 'elder' ? 'Giáng' : 'Thăng') : null,
-      c.myRank === 'leader' && m.rank !== 'leader' ? h('button', { class: 'btn small', onclick: () => confirm(`Nhường chức tộc trưởng cho ${m.name}?`) && this.net.send('clanPromote', { name: m.name, rank: 'leader' }) }, 'Nhường') : null,
-      canManage && m.rank !== 'leader' && m.name !== S.me.name ? h('button', { class: 'btn small danger', onclick: () => confirm(`Mời ${m.name} rời gia tộc?`) && this.net.send('clanKick', { name: m.name }) }, 'Đuổi') : null));
+      c.myRank === 'leader' && m.rank !== 'leader' ? h('button', { class: 'btn small', onclick: async () => (await this.ask({ title: 'Nhường chức', text: `Nhường chức tộc trưởng cho ${m.name}? Bạn sẽ trở thành thành viên thường.`, ok: 'Nhường', danger: true })) && this.net.send('clanPromote', { name: m.name, rank: 'leader' }) }, 'Nhường') : null,
+      canManage && m.rank !== 'leader' && m.name !== S.me.name ? h('button', { class: 'btn small danger', onclick: async () => (await this.ask({ title: 'Đuổi khỏi gia tộc', text: `Mời ${m.name} rời gia tộc?`, ok: 'Đuổi', danger: true })) && this.net.send('clanKick', { name: m.name }) }, 'Đuổi') : null));
     this.frameWin(`Gia Tộc ${c.name}`, h('div', null,
       h('div', { class: 'sec clan-head' }, h('div', { class: 'clan-crest' }, ico('clan')), h('div', { class: 'grow' }, h('div', null, 'Tộc trưởng: ', h('b', { class: 'gold' }, c.leader), ` · Thành viên: ${c.members.length}/${c.max}`),
         h('div', null, h('b', { class: 'gold' }, `Cấp ${c.level || 1}`), c.need ? ` · Kinh nghiệm ${fmt(c.exp)}/${fmt(c.need)}` : ' · Cấp tối đa', ` · Thành viên +${c.bonus || 1}% EXP · Quỹ ${fmt(c.fund || 0)} xu`),
@@ -35,6 +35,6 @@ export default {
           h('button', { class: 'btn primary', onclick: () => this.net.send('clanDonate', { xu: +xuIn.value || 0 }) }, 'Góp'));
       })(),
       h('div', { class: 'muted tiny' }, 'Chat gia tộc: chọn kênh "Gia tộc" hoặc gõ /g tin nhắn')),
-    h('button', { class: 'btn danger', onclick: () => confirm('Rời khỏi gia tộc?') && this.net.send('clanLeave') }, 'Rời gia tộc'));
+    h('button', { class: 'btn danger', onclick: async () => (await this.ask({ title: 'Rời gia tộc', text: 'Rời khỏi gia tộc?', ok: 'Rời', danger: true })) && this.net.send('clanLeave') }, 'Rời gia tộc'));
   },
 };

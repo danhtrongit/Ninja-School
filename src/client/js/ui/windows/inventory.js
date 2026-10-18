@@ -87,12 +87,81 @@ export default {
     const free = S.inv.filter((x) => !x).length;
     const cls = S.G.classes[me.cls];
     const fig = { cls: me.cls, gender: me.gender, look: me.look, name: me.name, el: cls.element, weaponType: cls.weapon, live: true };
+    const pick = this.invPick;
+    if (pick) {
+      // túi vừa đổi (dùng, sắp xếp, nhận đồ): bỏ các ô không còn đúng món đã chọn
+      for (const [i, id] of pick) if (!S.inv[i] || S.inv[i].id !== id) pick.delete(i);
+    }
+    const top = pick
+      ? h('div', { class: 'row between inv-top inv-pick' },
+        h('span', { class: 'sub-title', title: 'Bấm vào món để chọn / bỏ chọn' }, `Đã chọn ${pick.size}`),
+        h('span', { class: 'row' },
+          h('button', { class: 'btn small', 'data-act': 'pick-plain', onclick: () => this.pickPlain() }, 'Chọn đồ thường'),
+          h('button', { class: 'btn small danger', 'data-act': 'pick-discard', disabled: !pick.size, onclick: () => this.discardPicked() }, `Hủy ${pick.size || ''} món`),
+          h('button', { class: 'btn small', 'data-act': 'pick-done', onclick: () => { this.invPick = null; this.refresh(); } }, 'Xong')))
+      : h('div', { class: 'row between inv-top' }, h('span', { class: 'sub-title' }, `Hành trang ${S.inv.length - free}/${S.inv.length}`),
+        h('span', { class: 'row' }, this.invExpandBtn(),
+          h('button', { class: 'btn small', 'data-act': 'pick-start', title: 'Chọn nhiều món rồi hủy một lần', onclick: () => { this.hideItem(); this.invPick = new Map(); this.refresh(); } }, 'Hủy nhanh'),
+          h('button', { class: 'btn small', onclick: () => this.net.send('sortInv') }, 'Sắp xếp')));
+    const onItem = pick
+      ? (it, i) => { if (pick.has(i)) pick.delete(i); else pick.set(i, it.id); this.refresh(); }
+      : (it, i) => this.showItem(it, { from: 'inv', slot: i });
     this.frameWin('Hành Trang', h('div', { class: 'inv-wrap' },
       h('div', { class: 'inv-left' }, this.eqTabs(), this.equipGrid(S.equip, true, fig)),
-      h('div', { class: 'inv-right' },
-        h('div', { class: 'row between inv-top' }, h('span', { class: 'sub-title' }, `Hành trang ${S.inv.length - free}/${S.inv.length}`), h('button', { class: 'btn small', onclick: () => this.net.send('sortInv') }, 'Sắp xếp')),
-        this.invGrid((it, i) => this.showItem(it, { from: 'inv', slot: i })))),
+      h('div', { class: 'inv-right' }, top, this.invGrid(onItem, pick ? new Set(pick.keys()) : null))),
     moneyLine());
+  },
+
+  // Nút mở rộng hành trang bằng lượng (ẩn khi đã tối đa)
+  invExpandBtn() {
+    const E = S.G.invExpand;
+    if (!E) return null;
+    const n = Math.round((S.inv.length - E.base) / E.step);
+    const cost = E.cost[n];
+    if (cost == null) return null;
+    return h('button', { class: 'btn small', 'data-act': 'inv-expand', title: `Thêm ${E.step} ô: ${cost} lượng`, onclick: async () => {
+      const ok = await this.ask({ title: 'Mở rộng hành trang', icon: 'luong', ok: `Mở rộng (${cost} lượng)`,
+        text: [h('div', null, `Thêm ${E.step} ô hành trang: ${S.inv.length} → ${S.inv.length + E.step} ô.`),
+          h('div', { class: S.me.luong < cost ? 'bad' : 'muted' }, `Giá ${fmt(cost)} lượng · đang có ${fmt(S.me.luong)} lượng`),
+          h('div', { class: 'muted tiny' }, `Còn mở rộng được ${E.cost.length - n} lần (tối đa ${E.base + E.step * E.cost.length} ô).`)] });
+      if (ok) this.net.send('invExpand');
+    } }, '+ Mở rộng');
+  },
+
+  // Chọn nhanh trang bị trắng chưa cường hóa, không khảm ngọc (đồ nhặt dọc đường)
+  pickPlain() {
+    S.inv.forEach((it, i) => {
+      const def = it && S.G.items[it.id];
+      if (def && def.type === 'equip' && !def.fashion && def.slot !== 'pet' && !it.r && !it.p && !(it.gems || []).some(Boolean)) this.invPick.set(i, it.id);
+    });
+    this.refresh();
+  },
+
+  async discardPicked() {
+    const pick = this.invPick;
+    if (!pick || !pick.size) return;
+    const list = [...pick].map(([i, id]) => [i, id, S.inv[i]]).filter((e) => e[2] && e[2].id === e[1]);
+    // món giá trị (hiếm, cường hóa cao, có ngọc) đưa lên đầu và tô đỏ để khó hủy nhầm
+    const rare = (it) => (it.r || 0) >= 2 || (it.p || 0) >= 5 || (it.gems || []).some(Boolean) || !!S.G.items[it.id].priceLuong;
+    list.sort((a, b) => rare(b[2]) - rare(a[2]));
+    const nRare = list.filter((e) => rare(e[2])).length;
+    // gộp món trùng tên: "Kiếm Gỗ ×3"
+    const rows = [];
+    for (const e of list) {
+      const name = itemName(e[2]);
+      const r = rows.find((x) => x.name === name);
+      if (r) r.q += e[2].q || 1;
+      else rows.push({ name, q: e[2].q || 1, rare: rare(e[2]) });
+    }
+    const shown = rows.slice(0, 8);
+    const ok = await this.ask({ title: 'Hủy vật phẩm', danger: true, ok: `Hủy ${list.length} món`,
+      text: [h('div', null, `Hủy vĩnh viễn ${list.length} món sau? Không thể khôi phục.`),
+        h('ul', { class: 'ask-list' }, ...shown.map((r) => h('li', { class: r.rare ? 'bad' : '' }, r.name, r.q > 1 ? ` ×${r.q}` : ''))),
+        rows.length > shown.length ? h('div', { class: 'muted tiny' }, `... và ${rows.length - shown.length} loại khác`) : null,
+        nRare ? h('div', { class: 'warn tiny' }, `Có ${nRare} món giá trị (hiếm, cường hóa cao, có ngọc hoặc mua bằng lượng).`) : null] });
+    if (!ok) return;
+    this.net.send('discardMany', { items: list.map((e) => [e[0], e[1]]) });
+    this.invPick = new Map();
   },
 
   // opt.gems === 'short': ngọc khảm gói trong một dòng (tab Cường hóa chật chỗ, chi tiết xem ở tab Khảm ngọc)
@@ -183,8 +252,10 @@ export default {
       else if (['potion', 'scroll', 'chest', 'food'].includes(def.type)) add('Sử dụng', () => this.net.send('useItem', { slot: ctx.slot }), 'primary');
       else if (def.type === 'petfood') add('Cho thú ăn', () => this.feedPet(ctx.slot), 'primary');
       const socketed = Array.isArray(it.gems) && it.gems.some(Boolean);
-      add('Hủy', () => {
-        if (confirm(`Hủy ${itemName(it)}${socketed ? ' (cả ngọc đang khảm)' : ''}? Không thể khôi phục.`)) this.net.send('discard', { slot: ctx.slot });
+      add('Hủy', async () => {
+        const ok = await this.ask({ title: 'Hủy vật phẩm', danger: true, ok: 'Hủy',
+          text: [h('div', null, `Hủy ${itemName(it)}${it.q > 1 ? ` ×${it.q}` : ''}? Không thể khôi phục.`), socketed ? h('div', { class: 'warn tiny' }, 'Ngọc đang khảm cũng mất theo.') : null] });
+        if (ok) this.net.send('discard', { slot: ctx.slot });
       }, 'danger');
     }
     if (ctx.from === 'eq' && ctx.slot === 'pet') add('Chăm sóc', () => this.open('pet'), 'primary');
@@ -195,10 +266,12 @@ export default {
       if (it.q > 1) btns.appendChild(qty);
       if (Array.isArray(it.gems) && it.gems.some(Boolean)) btns.appendChild(h('div', { class: 'tiny warn sell-gem' }, 'Ngọc đang khảm sẽ bán kèm (đã cộng vào giá).'));
       const gemN = (it.gems || []).filter((id) => gemDef(id)).length;
-      btns.appendChild(h('button', { class: 'btn primary', onclick: () => {
+      btns.appendChild(h('button', { class: 'btn primary', onclick: async () => {
+        const n = +qty.value || 1;
         // ngọc khảm có thể đáng giá hơn cả món đồ: hỏi lại, gợi ý gỡ ra trước
-        if (gemN && !confirm(`Bán ${itemName(it)} kèm ${gemN} viên ngọc đang khảm? Ngọc sẽ mất, chỉ nhận thêm 25% giá ngọc. Có thể gỡ ngọc ở Thợ Rèn trước khi bán.`)) return;
-        this.net.send('sell', { npc: this.shop.npc, slot: ctx.slot, qty: +qty.value || 1 });
+        if (gemN && !(await this.ask({ title: 'Bán kèm ngọc', danger: true, ok: 'Vẫn bán',
+          text: `Bán ${itemName(it)} kèm ${gemN} viên ngọc đang khảm? Ngọc sẽ mất, chỉ nhận thêm 25% giá ngọc. Có thể gỡ ngọc ở Thợ Rèn trước khi bán.` }))) return;
+        this.net.send('sell', { npc: this.shop.npc, slot: ctx.slot, qty: n });
         this.hideItem();
       } }, `Bán (${fmt(price)} xu/cái)`));
     }

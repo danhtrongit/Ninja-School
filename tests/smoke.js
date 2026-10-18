@@ -18,6 +18,7 @@ const { skillsTest } = require('./features/skills');
 const { socialTest } = require('./features/social');
 const { dailyTest } = require('./features/daily');
 const { endgameTest } = require('./features/endgame');
+const { bagUnitTests, bagTest } = require('./features/inventory');
 const { airTest } = require('./features/movement');
 const { fashionTest } = require('./features/fashion');
 const { saveTest, reloadTest } = require('./features/persistence');
@@ -31,6 +32,7 @@ function unitTests() {
   petUnitTests();
   mailUnitTests();
   arenaUnitTests();
+  bagUnitTests();
 }
 
 async function main() {
@@ -57,6 +59,7 @@ async function main() {
     await petTest(ctx.a);
     await mailTest(ctx.a, ctx.b);
     await arenaTest();
+    await bagTest(ctx.a);
 
     await saveTest(ctx);
   } catch (e) {
