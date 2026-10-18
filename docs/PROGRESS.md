@@ -4,6 +4,12 @@ Ghi sau mỗi tính năng / mỗi lần đổi mốc ảnh. Mới nhất ở tr�
 
 ## 2026-10-19
 
+### Gắn bằng chứng (`proof`) cho mọi mục done trong docs/features.json
+
+- 60 mục done: 7 mục đã có proof (kiểm lại vẫn đạt) + 22 mục mới gắn proof đủ mọi dòng acceptance → còn 29 mục done.
+- 31 mục trả về todo vì có dòng acceptance không test nào chứng minh (đo tay, grep mã, gddwork/lab, tools/shot.js); `notes` mỗi mục ghi "Thiếu bằng chứng (2026-10-19): acceptance #k ...".
+- Nhãn lấy từ log thật: npm test, check-data, verify-self, test:ui, test:e2e (máy tính + điện thoại), test:perf (2 cỡ), test:visual, test:audit trên server riêng; `VERIFY_SKIP=load.log,prod.log node scripts/check-features.js` in 'SỔ TÍNH NĂNG ĐẠT'.
+
 ### GĐ0: ui-ask-dialog, ui-bag-expand, ui-bag-bulkdrop, ops-commit-restructure, core-restructure → done
 
 - Khung `tests/e2e/ui-audit.js` (`npm run test:audit`, bước 8h của verify) kiểm từng cảnh ở 4 cỡ màn: 1280×720, 844×390, 740×360, 667×375. Có 4 cảnh: `ask`, `ask-danger`, `bag-pages`, `bag-pick`.

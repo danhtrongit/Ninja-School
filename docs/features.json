@@ -35,7 +35,7 @@
     "phase": 0,
     "title": "Tài khoản: đăng ký, đăng nhập, nhớ phiên bằng token, giới hạn thử sai và tạo theo IP",
     "priority": "Must",
-    "status": "done",
+    "status": "todo",
     "acceptance": [
       "npm test đạt phần tài khoản (tests/features/account.js): đăng ký, đăng nhập, token 30 ngày, tối đa 6 token",
       "8 lần sai mật khẩu cùng IP → bị khóa 1 phút; quá REG_LIMIT tài khoản/giờ/IP → từ chối đăng ký",
@@ -43,7 +43,8 @@
     ],
     "tests": [
       "tests/features/account.js",
-      "tests/features/persistence.js"
+      "tests/features/persistence.js",
+      "tests/features/mail.js"
     ],
     "files": [
       "src/server/core/gateway.js",
@@ -55,14 +56,20 @@
     ],
     "section": "docs/gdd/10-ky-thuat-van-hanh.md",
     "size": "M",
-    "depends": []
+    "depends": [],
+    "proof": [
+      [],
+      [],
+      []
+    ],
+    "notes": "Thiếu bằng chứng (2026-10-19): acceptance #1 \"npm test đạt phần tài khoản (tests/features/account.js): đăng ký, đăng nhập, token 30 ngày, tối đa 6 token\"; acceptance #2 \"8 lần sai mật khẩu cùng IP → bị khóa 1 phút; quá REG_LIMIT tài khoản/giờ/IP → từ chối đăng ký\"; acceptance #3 \"IP lấy phần tử cuối X-Forwarded-For chỉ khi TRUST_PROXY đặt\"."
   },
   {
     "id": "core-characters",
     "phase": 0,
     "title": "Nhân vật: tạo 6 phái × 2 giới, tối đa 3 mỗi tài khoản, xóa phải gõ lại tên",
     "priority": "Must",
-    "status": "done",
+    "status": "todo",
     "acceptance": [
       "npm test đạt phần tạo/chọn/xóa nhân vật (tests/features/account.js)",
       "nhân vật thứ 4 cùng tài khoản bị từ chối; xóa sai tên bị từ chối; móc charDeleted chạy khi xóa",
@@ -70,7 +77,8 @@
     ],
     "tests": [
       "tests/features/account.js",
-      "tests/e2e/e2e.js"
+      "tests/e2e/e2e.js",
+      "tests/features/mail.js"
     ],
     "files": [
       "src/server/core/gateway.js",
@@ -82,14 +90,25 @@
     ],
     "section": "docs/gdd/10-ky-thuat-van-hanh.md",
     "size": "S",
-    "depends": []
+    "depends": [],
+    "proof": [
+      [
+        "tests/features/account.js :: tạo nhân vật phái Kiếm",
+        "tests/features/account.js :: không cho trùng tên nhân vật",
+        "tests/features/account.js :: vào Làng Hỏa Vân, cấp 1",
+        "tests/features/mail.js :: xóa nhân vật rồi tạo lại cùng tên"
+      ],
+      [],
+      []
+    ],
+    "notes": "Thiếu bằng chứng (2026-10-19): acceptance #2 \"nhân vật thứ 4 cùng tài khoản bị từ chối; xóa sai tên bị từ chối; móc charDeleted chạy khi xóa\"; acceptance #3 \"tools/shot.js màn #screen-chars desktop và mobile: true in 'OK no console errors'\"."
   },
   {
     "id": "core-modules",
     "phase": 0,
     "title": "Khung module server: bảng hành động không prototype, điểm móc, gói data, cổng WebSocket",
     "priority": "Must",
-    "status": "done",
+    "status": "todo",
     "acceptance": [
       "npm test in 'TẤT CẢ KIỂM TRA ĐỀU ĐẠT' (chạy lại 18/10/2026: 376 kiểm tra đạt)",
       "node -e dựng Router với hai module trùng tên hành động → ném lỗi lúc khởi động; gói t='constructor' / '__proto__' / 'toString' không gọi handler nào (đã kiểm 18/10/2026)",
@@ -97,7 +116,9 @@
     ],
     "tests": [
       "tests/smoke.js",
-      "tests/features/account.js"
+      "tests/features/account.js",
+      "tests/features/skills.js",
+      "tests/features/persistence.js"
     ],
     "files": [
       "src/server/core/router.js",
@@ -111,7 +132,17 @@
     ],
     "section": "docs/gdd/10-ky-thuat-van-hanh.md",
     "size": "L",
-    "depends": []
+    "depends": [],
+    "proof": [
+      [
+        "tests/features/account.js :: đăng ký thành công, nhận token",
+        "tests/smoke.js :: ghi file dữ liệu khi tắt server",
+        "tests/features/skills.js :: bỏ qua sid độc hại/không hợp lệ"
+      ],
+      [],
+      []
+    ],
+    "notes": "Thiếu bằng chứng (2026-10-19): acceptance #2 \"node -e dựng Router với hai module trùng tên hành động → ném lỗi lúc khởi động; gói t='constructor' / '__proto__' / 'toString' không gọi handler nào (đã kiểm 18/10/2026)\"; acceptance #3 \"gateway giới hạn gói ≤ 16 KB và ≤ 80 gói/giây/kết nối (src/server/core/gateway.js)\"."
   },
   {
     "id": "core-restructure",
@@ -168,7 +199,7 @@
     "phase": 0,
     "title": "Lưu và tải lại tiến trình bằng JSON (4 file, ghi tmp rồi rename, sao lưu 12 mốc)",
     "priority": "Must",
-    "status": "done",
+    "status": "todo",
     "acceptance": [
       "npm test đạt tests/features/persistence.js: đăng nhập lại và khởi động lại server từ file giữ vị trí, máu, túi, thư, điểm lôi đài",
       "ghi file bằng tmp + renameSync (src/server/services/db.js)"
@@ -187,7 +218,17 @@
     "section": "docs/gdd/10-ky-thuat-van-hanh.md",
     "size": "M",
     "depends": [],
-    "notes": "Rủi ro quy mô xử lý ở ops-persist-shard"
+    "notes": "Rủi ro quy mô xử lý ở ops-persist-shard Thiếu bằng chứng (2026-10-19): acceptance #2 \"ghi file bằng tmp + renameSync (src/server/services/db.js)\".",
+    "proof": [
+      [
+        "tests/features/persistence.js :: đăng nhập lại bằng token, dữ liệu được giữ",
+        "tests/features/persistence.js :: bộ kỹ năng giữ nguyên sau khi khởi động lại server",
+        "tests/features/persistence.js :: hộp thư giữ đủ",
+        "tests/features/persistence.js :: điểm lôi đài giữ nguyên",
+        "tests/features/persistence.js :: trang bị & thú cưng vẫn còn sau khi đăng nhập lại"
+      ],
+      []
+    ]
   },
   {
     "id": "dev-test-coverage",
@@ -241,7 +282,10 @@
       "tools/check-data.js",
       "tests/e2e/e2e.js",
       "tests/e2e/ui-multiplayer.js",
-      "tests/e2e/perf.js"
+      "tests/e2e/perf.js",
+      "tests/features/repo.js",
+      "tests/features/account.js",
+      "tests/features/persistence.js"
     ],
     "files": [
       "vùng Hạ tầng kiểm thử",
@@ -255,7 +299,20 @@
     ],
     "section": "docs/gdd/10-ky-thuat-van-hanh.md",
     "size": "L",
-    "depends": []
+    "depends": [],
+    "proof": [
+      [
+        "tests/smoke.js :: ghi file dữ liệu khi tắt server",
+        "tests/features/account.js :: đăng ký thành công, nhận token",
+        "tests/features/persistence.js :: đăng nhập lại bằng token, dữ liệu được giữ"
+      ],
+      [
+        "tools/check-data.js :: Dữ liệu hợp lệ"
+      ],
+      [
+        "tests/features/repo.js :: CI chạy npm run verify với node 24"
+      ]
+    ]
   },
   {
     "id": "dev-verify",
@@ -298,7 +355,7 @@
     "phase": 0,
     "title": "Lệnh quản trị qua chat (/lv, /item, /xu, /tp, /boss, /event, /mail, /code, /sukien, /arena)",
     "priority": "Must",
-    "status": "done",
+    "status": "todo",
     "acceptance": [
       "npm test đạt; các phần kiểm thử dùng /lv, /item, /xu, /tp, /boss, /mail, /code, /sukien, /arena với ADMINS do harness đặt",
       "tài khoản không có trong ADMINS gõ /xu 100 → không đổi số xu"
@@ -307,7 +364,9 @@
       "tests/smoke.js",
       "tests/features/mail.js",
       "tests/features/boss.js",
-      "tests/features/arena.js"
+      "tests/features/arena.js",
+      "tests/features/skills.js",
+      "tests/features/endgame.js"
     ],
     "files": [
       "src/server/modules/admin/index.js",
@@ -318,7 +377,20 @@
     ],
     "section": "docs/gdd/10-ky-thuat-van-hanh.md",
     "size": "M",
-    "depends": []
+    "depends": [],
+    "proof": [
+      [
+        "tests/features/skills.js :: lên cấp 25, có 120 điểm tiềm năng",
+        "tests/features/endgame.js :: lệnh admin /plus đặt cấp cường hóa vũ khí",
+        "tests/features/mail.js :: admin /mail gửi quà cho người đang offline",
+        "tests/features/mail.js :: admin /code tạo giftcode tạm thời",
+        "tests/features/mail.js :: admin /sukien ép bật lễ hội",
+        "tests/features/arena.js :: admin /arena: hàng chờ và phòng đấu đã dọn sạch",
+        "tests/features/boss.js :: /event tathu: thông báo toàn máy chủ kèm tên bản đồ"
+      ],
+      []
+    ],
+    "notes": "Thiếu bằng chứng (2026-10-19): acceptance #2 \"tài khoản không có trong ADMINS gõ /xu 100 → không đổi số xu\"."
   },
   {
     "id": "ops-admin-guard",
@@ -824,7 +896,7 @@
     "phase": 1,
     "title": "Hiệu ứng kỹ năng, chữ sát thương, rung màn hình, hiệu ứng rèn/khảm",
     "priority": "Must",
-    "status": "done",
+    "status": "todo",
     "acceptance": [
       "mọi fx.k trong skills.js có hàm trong fx.js (npm run check)",
       "MAX_PARTS = 900, MAX_TEXTS = 70 giữ nguyên",
@@ -844,7 +916,17 @@
     ],
     "section": "docs/gdd/09-my-thuat-am-thanh.md mục 3.3",
     "size": "M",
-    "depends": []
+    "depends": [],
+    "proof": [
+      [
+        "tools/check-data.js :: Dữ liệu hợp lệ"
+      ],
+      [],
+      [
+        "tests/e2e/perf.js :: khung/giây (≥"
+      ]
+    ],
+    "notes": "Thiếu bằng chứng (2026-10-19): acceptance #2 \"MAX_PARTS = 900, MAX_TEXTS = 70 giữ nguyên\"."
   },
   {
     "id": "art-hitstop",
@@ -886,7 +968,8 @@
       "npm run check: mọi icon.k của ITEMS có hình (31 kiểu), mọi kỹ năng vẽ được skillIconURL"
     ],
     "tests": [
-      "tools/check-data.js"
+      "tools/check-data.js",
+      "tests/e2e/gallery.js"
     ],
     "files": [
       "src/client/js/render/icons.js",
@@ -897,21 +980,30 @@
     ],
     "section": "docs/gdd/09-my-thuat-am-thanh.md mục 3.5",
     "size": "M",
-    "depends": []
+    "depends": [],
+    "proof": [
+      [
+        "tools/check-data.js :: Dữ liệu hợp lệ",
+        "tests/e2e/gallery.js :: mục icon:",
+        "tests/e2e/gallery.js :: mục skill:",
+        "tests/e2e/gallery.js :: mọi ô có điểm ảnh khác nền"
+      ]
+    ]
   },
   {
     "id": "art-maps",
     "phase": 1,
     "title": "Bản đồ 23 theme, ngày/đêm theo giờ Việt Nam, hạt môi trường",
     "priority": "Must",
-    "status": "done",
+    "status": "todo",
     "acceptance": [
       "npm run check: 23 theme có THEMES + SCENES + REGION + THEME_GLYPH + MUSIC_THEME",
       "ảnh forceHour = 12 và 22 node tools/shot.js desktop 1280x720 và mobile:true in \"OK no console errors\""
     ],
     "tests": [
       "tools/check-data.js",
-      "tests/e2e/perf.js"
+      "tests/e2e/perf.js",
+      "tests/e2e/gallery.js"
     ],
     "files": [
       "src/client/js/render/maprender.js",
@@ -922,14 +1014,23 @@
     ],
     "section": "docs/gdd/09-my-thuat-am-thanh.md mục 3.4",
     "size": "M",
-    "depends": []
+    "depends": [],
+    "proof": [
+      [],
+      [
+        "tests/e2e/gallery.js :: mục theme:",
+        "tests/e2e/gallery.js :: mọi ô có điểm ảnh khác nền",
+        "tests/e2e/perf.js :: khung/giây (≥"
+      ]
+    ],
+    "notes": "Thiếu bằng chứng (2026-10-19): acceptance #1 \"npm run check: 23 theme có THEMES + SCENES + REGION + THEME_GLYPH + MUSIC_THEME\"."
   },
   {
     "id": "art-monsters",
     "phase": 1,
     "title": "Quái vẽ bằng code (11 kiểu sprite, biến thể boss)",
     "priority": "Must",
-    "status": "done",
+    "status": "todo",
     "acceptance": [
       "npm run check không có dòng lỗi (65 quái có kiểu sprite, VARIANT/AURA2 cho boss sự kiện)",
       "node tools/shot.js desktop 1280x720 và mobile:true in \"OK no console errors\"",
@@ -937,7 +1038,8 @@
     ],
     "tests": [
       "tools/check-data.js",
-      "tests/e2e/perf.js"
+      "tests/e2e/perf.js",
+      "tests/e2e/gallery.js"
     ],
     "files": [
       "src/client/js/render/monsterart.js",
@@ -948,7 +1050,19 @@
     ],
     "section": "docs/gdd/09-my-thuat-am-thanh.md mục 3.2",
     "size": "M",
-    "depends": []
+    "depends": [],
+    "proof": [
+      [
+        "tools/check-data.js :: Dữ liệu hợp lệ"
+      ],
+      [
+        "tests/e2e/gallery.js :: mục monster:",
+        "tests/e2e/gallery.js :: mọi ô có điểm ảnh khác nền",
+        "tests/e2e/perf.js :: khung/giây (≥"
+      ],
+      []
+    ],
+    "notes": "Thiếu bằng chứng (2026-10-19): acceptance #3 \"prewarmMonsters khi vào bản đồ không khung nào > 16 ms\"."
   },
   {
     "id": "art-weapon-trail",
@@ -1038,7 +1152,8 @@
     ],
     "tests": [
       "tools/check-data.js",
-      "tests/e2e/perf.js"
+      "tests/e2e/perf.js",
+      "tests/e2e/gallery.js"
     ],
     "files": [
       "src/client/js/render/sprites.js",
@@ -1049,7 +1164,23 @@
     ],
     "section": "docs/gdd/09-my-thuat-am-thanh.md mục 3.1",
     "size": "M",
-    "depends": []
+    "depends": [],
+    "proof": [
+      [
+        "tools/check-data.js :: Dữ liệu hợp lệ",
+        "tests/e2e/gallery.js :: mục npc:"
+      ],
+      [
+        "tests/e2e/gallery.js :: mục char:",
+        "tests/e2e/gallery.js :: mục npc:",
+        "tests/e2e/gallery.js :: mọi ô có điểm ảnh khác nền",
+        "tests/e2e/perf.js :: khung/giây (≥"
+      ],
+      [
+        "tests/e2e/perf.js :: khung/giây (≥",
+        "tests/e2e/perf.js :: CPU mỗi khung trung bình"
+      ]
+    ]
   },
   {
     "id": "char-tier-outfit",
@@ -1088,7 +1219,7 @@
     "phase": 1,
     "title": "Tự động đánh, tự uống thuốc, tự nhặt, săn đúng quái nhiệm vụ (chỉ máy khách)",
     "priority": "Must",
-    "status": "done",
+    "status": "todo",
     "acceptance": [
       "e2e bật auto hạ được Slime, desktop và MOBILE=1 in 'E2E ĐẠT'",
       "auto không nhắm người chơi ngoài đối thủ lôi đài, không uống bình trong lôi đài",
@@ -1107,7 +1238,18 @@
     ],
     "section": "docs/gdd/05-he-thong-chien-dau.md",
     "size": "M",
-    "depends": []
+    "depends": [],
+    "proof": [
+      [
+        "tests/e2e/e2e.js :: tới nơi: bật auto, săn ưu tiên Slime",
+        "tests/e2e/e2e.js :: auto đánh hạ Slime, tiến độ nhiệm vụ tăng"
+      ],
+      [],
+      [
+        "tests/e2e/perf.js :: khung/giây (≥"
+      ]
+    ],
+    "notes": "Thiếu bằng chứng (2026-10-19): acceptance #2 \"auto không nhắm người chơi ngoài đối thủ lôi đài, không uống bình trong lôi đài\"."
   },
   {
     "id": "item-use-many",
@@ -1252,7 +1394,7 @@
     "phase": 1,
     "title": "Buff kỹ năng tạm thời và buff lưu khi thoát (Bí Kíp Nhân Đôi, món ăn)",
     "priority": "Must",
-    "status": "done",
+    "status": "todo",
     "acceptance": [
       "món ăn cộng đúng % chỉ số, hết hạn tự gỡ ở playerSecond",
       "buff PERSIST_BUFFS giữ qua đăng nhập lại (tests/features/persistence.js)",
@@ -1272,14 +1414,25 @@
     ],
     "section": "docs/gdd/05-he-thong-chien-dau.md",
     "size": "S",
-    "depends": []
+    "depends": [],
+    "proof": [
+      [],
+      [
+        "tests/features/persistence.js :: buff đồ ăn được giữ qua đăng nhập lại"
+      ],
+      [
+        "tests/features/endgame.js :: đồ ăn tăng % tấn công",
+        "tests/features/persistence.js :: buff đồ ăn được giữ qua đăng nhập lại"
+      ]
+    ],
+    "notes": "Thiếu bằng chứng (2026-10-19): acceptance #1 \"món ăn cộng đúng % chỉ số, hết hạn tự gỡ ở playerSecond\"."
   },
   {
     "id": "cmb-classes",
     "phase": 1,
     "title": "6 phái, 3 hệ khắc vòng Hỏa-Thủy-Phong, 3 làng phái",
     "priority": "Must",
-    "status": "done",
+    "status": "todo",
     "acceptance": [
       "tạo được nhân vật cả 6 phái qua createChar; cls lạ bị từ chối",
       "kiểm thử đơn vị: 1000 sát thương gốc thành 1150 khi khắc hệ, kháng 20 kéo về 920",
@@ -1300,7 +1453,18 @@
     ],
     "section": "docs/gdd/05-he-thong-chien-dau.md",
     "size": "S",
-    "depends": []
+    "depends": [],
+    "proof": [
+      [],
+      [
+        "tests/features/passive.js :: kháng hệ khắc giảm 20% đòn từ hệ Thủy lên hệ Hỏa"
+      ],
+      [
+        "tests/features/passive.js :: passiveBonus: chỉ tính nội tại đúng phái",
+        "tests/features/passive.js :: kháng hệ khắc không giảm đòn từ hệ khác"
+      ]
+    ],
+    "notes": "Thiếu bằng chứng (2026-10-19): acceptance #1 \"tạo được nhân vật cả 6 phái qua createChar; cls lạ bị từ chối\"."
   },
   {
     "id": "cmb-clone",
@@ -1404,14 +1568,26 @@
     ],
     "section": "docs/gdd/05-he-thong-chien-dau.md",
     "size": "S",
-    "depends": []
+    "depends": [],
+    "proof": [
+      [
+        "tests/features/combat.js :: tự nhặt xu rơi ra"
+      ],
+      [
+        "tests/features/pets.js :: Tha Đồ bỏ qua món ngoài bán kính và món đang thuộc người khác"
+      ],
+      [
+        "tests/features/boss.js :: top 10 được 5 lượng, hạng 11 (>= 1%) 1 lượng, dưới 1% chỉ có EXP",
+        "tests/features/boss.js :: xếp hạng theo sát thương, người gây nhiều nhất hạng 1"
+      ]
+    ]
   },
   {
     "id": "cmb-monster-ai",
     "phase": 1,
     "title": "AI quái: đi tuần, chủ động, kéo về chỗ, đánh xa, bay, làm chậm",
     "priority": "Must",
-    "status": "done",
+    "status": "todo",
     "acceptance": [
       "bot hạ quái và nhận đòn quái (tests/features/combat.js)",
       "boss niệm chiêu (bossCast), trúng theo inBossZone, cuồng nộ dưới 30% máu (tests/features/boss.js)",
@@ -1432,21 +1608,34 @@
     ],
     "section": "docs/gdd/05-he-thong-chien-dau.md",
     "size": "M",
-    "depends": []
+    "depends": [],
+    "proof": [
+      [],
+      [
+        "tests/features/boss.js :: đến trước bossHit sau thời gian niệm",
+        "tests/features/boss.js :: đứng trong vùng thì trúng chiêu boss",
+        "tests/features/boss.js :: máu dưới 30%: Tà Thú nổi cuồng nộ"
+      ],
+      [
+        "tests/e2e/perf.js :: khung/giây (≥"
+      ]
+    ],
+    "notes": "Thiếu bằng chứng (2026-10-19): acceptance #1 \"bot hạ quái và nhận đòn quái (tests/features/combat.js)\"."
   },
   {
     "id": "cmb-passive",
     "phase": 1,
     "title": "Kỹ năng nội tại học bằng sách, 10 chỉ số nội tại",
     "priority": "Should",
-    "status": "done",
+    "status": "todo",
     "acceptance": [
       "sách nội tại rơi từ boss qua books(req, ch) và mua ở Tiệm Thuốc 30/60/100 lượng",
       "học nội tại ST chí mạng cho critDmg 170, nội tại chakra hồi mỗi giây (tests/features/passive.js)",
       "npm run check không lỗi (PASSIVE_STATS, icon khung lục giác, sách có boss rơi)"
     ],
     "tests": [
-      "tests/features/passive.js"
+      "tests/features/passive.js",
+      "tools/check-data.js"
     ],
     "files": [
       "src/shared/data/skills.js",
@@ -1460,14 +1649,25 @@
     "section": "docs/gdd/05-he-thong-chien-dau.md",
     "size": "S",
     "depends": [],
-    "signature": true
+    "signature": true,
+    "proof": [
+      [],
+      [
+        "tests/features/passive.js :: Bạo Viêm Kiếm Ý: sát thương chí mạng 160% → 170%",
+        "tests/features/passive.js :: nội tại hồi chakra mỗi giây khi đang giao chiến"
+      ],
+      [
+        "tools/check-data.js :: Dữ liệu hợp lệ"
+      ]
+    ],
+    "notes": "Thiếu bằng chứng (2026-10-19): acceptance #1 \"sách nội tại rơi từ boss qua books(req, ch) và mua ở Tiệm Thuốc 30/60/100 lượng\"."
   },
   {
     "id": "cmb-potential",
     "phase": 1,
     "title": "Tiềm năng 4 chỉ số, tẩy điểm bằng lượng",
     "priority": "Must",
-    "status": "done",
+    "status": "todo",
     "acceptance": [
       "addStat cộng đúng điểm vào str/agi/int/vit, không vượt số điểm còn, khóa lạ bị bỏ qua (tests/features/skills.js đạt)",
       "mỗi cấp +5 tiềm năng (gainExp)",
@@ -1486,14 +1686,21 @@
     "section": "docs/gdd/05-he-thong-chien-dau.md",
     "size": "S",
     "depends": [],
-    "notes": "resetStats chưa có kiểm thử (dev-test-coverage)"
+    "notes": "resetStats chưa có kiểm thử (dev-test-coverage) Thiếu bằng chứng (2026-10-19): acceptance #1 \"addStat cộng đúng điểm vào str/agi/int/vit, không vượt số điểm còn, khóa lạ bị bỏ qua (tests/features/skills.js đạt)\"; acceptance #3 \"resetStats có trong mã (20 lượng); kiểm thử bot của resetStats thuộc dev-test-coverage\".",
+    "proof": [
+      [],
+      [
+        "tests/features/skills.js :: lên cấp 25, có 120 điểm tiềm năng"
+      ],
+      []
+    ]
   },
   {
     "id": "cmb-skills",
     "phase": 1,
     "title": "Kỹ năng chủ động cấp 1-60 (nâng tới cấp 15) và thanh kỹ năng 3 bộ × 6 ô",
     "priority": "Must",
-    "status": "done",
+    "status": "todo",
     "acceptance": [
       "useSkill kiểm phái, đã học, hồi chiêu (dung sai 60 ms), cách 180 ms, chakra ở máy chủ",
       "learnSkill cần nhân vật đạt req + 3·cấp hiện tại; hotbar/hotbarSet đạt trong tests/features/skills.js",
@@ -1516,7 +1723,24 @@
     ],
     "section": "docs/gdd/05-he-thong-chien-dau.md",
     "size": "M",
-    "depends": []
+    "depends": [],
+    "proof": [
+      [],
+      [
+        "tests/features/skills.js :: học Liệt Hỏa Hoàn và gán vào thanh kỹ năng",
+        "tests/features/skills.js :: có 3 bộ kỹ năng, bộ 0 đang dùng",
+        "tests/features/skills.js :: gán kỹ năng ghi vào đúng bộ đang dùng"
+      ],
+      [
+        "tests/features/endgame.js :: học tuyệt kỹ cấp 60 Hỏa Long Thần Kiếm"
+      ],
+      [
+        "tests/e2e/e2e.js :: học kỹ năng:",
+        "tests/e2e/e2e.js :: đổi sang bộ 2",
+        "tests/e2e/e2e.js :: đổi lại bộ 1 bằng HUD"
+      ]
+    ],
+    "notes": "Thiếu bằng chứng (2026-10-19): acceptance #1 \"useSkill kiểm phái, đã học, hồi chiêu (dung sai 60 ms), cách 180 ms, chakra ở máy chủ\"."
   },
   {
     "id": "cmb-skills-199",
@@ -1562,7 +1786,7 @@
     "phase": 1,
     "title": "Công thức chỉ số nhân vật (recalc qua móc stats, trần chí mạng/né/kháng/tốc)",
     "priority": "Must",
-    "status": "done",
+    "status": "todo",
     "acceptance": [
       "Player.recalc cộng trang bị, ngọc, thú, thời trang, nội tại, buff, gia tộc qua móc stats; kiểm thử nội tại, ngọc, thú cho đúng số",
       "trần chí mạng 60, né 45, kháng 50, tốc chạy 100, hút máu GEM.lifestealCap không vượt khi cộng mọi nguồn",
@@ -1571,7 +1795,8 @@
     "tests": [
       "tests/features/passive.js",
       "tests/features/gems.js",
-      "tests/features/pets.js"
+      "tests/features/pets.js",
+      "tests/features/fashion.js"
     ],
     "files": [
       "src/server/core/player.js",
@@ -1583,7 +1808,23 @@
     ],
     "section": "docs/gdd/05-he-thong-chien-dau.md",
     "size": "M",
-    "depends": []
+    "depends": [],
+    "proof": [
+      [
+        "tests/features/passive.js :: nội tại +4% sinh lực tối đa",
+        "tests/features/gems.js :: itemStats cộng chỉ số ngọc",
+        "tests/features/gems.js :: chí mạng cộng đúng +0.6%",
+        "tests/features/pets.js :: thú lên cấp tăng chỉ số chủ",
+        "tests/features/fashion.js :: thú cưỡi cộng tốc chạy vào s.spd",
+        "tests/features/passive.js :: góp quỹ: gia tộc lên cấp 2, tăng chỗ và % EXP"
+      ],
+      [],
+      [
+        "tests/features/gems.js :: trần hút máu chung là 10%",
+        "tests/features/passive.js :: nội tại +4% sinh lực tối đa"
+      ]
+    ],
+    "notes": "Thiếu bằng chứng (2026-10-19): acceptance #2 \"trần chí mạng 60, né 45, kháng 50, tốc chạy 100, hút máu GEM.lifestealCap không vượt khi cộng mọi nguồn\"."
   },
   {
     "id": "cmb-status",
@@ -1810,7 +2051,8 @@
       "npm test in 'TẤT CẢ KIỂM TRA ĐỀU ĐẠT'"
     ],
     "tests": [
-      "tests/features/boss.js"
+      "tests/features/boss.js",
+      "tools/check-data.js"
     ],
     "files": [
       "src/server/core/monster.js",
@@ -1824,7 +2066,23 @@
     ],
     "section": "docs/gdd/05-he-thong-pve.md",
     "size": "L",
-    "depends": []
+    "depends": [],
+    "proof": [
+      [
+        "tests/features/boss.js :: mọi boss có 2-3 chiêu riêng",
+        "tests/features/boss.js :: chiêu triệu hồi: quái con có chủ (master)",
+        "tests/features/boss.js :: túi và kho đều đầy: đồ thưởng được giữ hộ",
+        "tests/features/boss.js :: đến trước bossHit sau thời gian niệm",
+        "tests/features/boss.js :: đứng trong vùng thì trúng chiêu boss"
+      ],
+      [
+        "tools/check-data.js :: Dữ liệu hợp lệ"
+      ],
+      [
+        "tests/features/boss.js :: mọi boss có 2-3 chiêu riêng",
+        "tests/features/boss.js :: bản đồ không còn ai: chiêu đang niệm bị hủy"
+      ]
+    ]
   },
   {
     "id": "ui-hud",
@@ -1837,7 +2095,8 @@
       "grep -c 'id=\"hud-' src/client/index.html ≥ 13 (đo = 13)"
     ],
     "tests": [
-      "tests/e2e/e2e.js"
+      "tests/e2e/e2e.js",
+      "tests/features/verify.js"
     ],
     "files": [
       "src/client/js/ui/ui.js",
@@ -1850,14 +2109,28 @@
     ],
     "section": "docs/gdd/05-he-thong-giao-dien.md",
     "size": "M",
-    "depends": []
+    "depends": [],
+    "proof": [
+      [
+        "tests/e2e/e2e.js :: bấm dòng nhiệm vụ: game.travel khác null và #hud-travel hiện",
+        "tests/e2e/e2e.js :: biểu ngữ Tà Thú hiện trên HUD",
+        "tests/e2e/e2e.js :: đăng ký lôi đài: khung chờ ghép trận hiện"
+      ],
+      [
+        "tests/features/verify.js :: --quick trên cây hiện tại: mã 0",
+        "tests/features/verify.js :: xóa id=\"hud-map\" khỏi index.html → mã 1",
+        "tests/e2e/e2e.js :: #hud-travel hiện",
+        "tests/e2e/e2e.js :: biểu ngữ Tà Thú hiện trên HUD",
+        "tests/e2e/e2e.js :: đăng ký lôi đài: khung chờ ghép trận hiện"
+      ]
+    ]
   },
   {
     "id": "ui-touch",
     "phase": 1,
     "title": "Điều khiển cảm ứng: D-pad, cụm kỹ năng, nút tự đánh, gợi ý xoay ngang",
     "priority": "Must",
-    "status": "done",
+    "status": "todo",
     "acceptance": [
       "npm run test:e2e với MOBILE=1 in 'E2E ĐẠT' và 'OK no console errors' (55/55)",
       "Nút .dp lớn 64px, nhỏ 46px: không nút .dp nào < 44px trong gddwork/lab/ui05/mobile.json"
@@ -1874,14 +2147,22 @@
     ],
     "section": "docs/gdd/05-he-thong-giao-dien.md",
     "size": "M",
-    "depends": []
+    "depends": [],
+    "proof": [
+      [
+        "tests/e2e/e2e.js :: tới Trưởng Làng, mở hội thoại",
+        "tests/e2e/e2e.js :: auto đánh hạ quái (EXP tăng)"
+      ],
+      []
+    ],
+    "notes": "Thiếu bằng chứng (2026-10-19): acceptance #2 \"Nút .dp lớn 64px, nhỏ 46px: không nút .dp nào < 44px trong gddwork/lab/ui05/mobile.json\"."
   },
   {
     "id": "ui-windows",
     "phase": 1,
     "title": "Khung cửa sổ và 23 tệp cửa sổ (22 khóa refresh() + hội thoại)",
     "priority": "Must",
-    "status": "done",
+    "status": "todo",
     "acceptance": [
       "awk '/^  refresh\\(\\)/,/^  }/' src/client/js/ui/ui.js | grep -o 'this\\.render[A-Za-z]*' | wc -l ≥ 22 (đo = 22)",
       "gddwork/lab/ui05/measure.js mở 16 cửa sổ ở 844×390, 740×360, 667×375, 1280×720: 0 tràn ngang, 0 lòi khung nhìn, 0 lỗi console",
@@ -1902,14 +2183,24 @@
     ],
     "section": "docs/gdd/05-he-thong-giao-dien.md",
     "size": "L",
-    "depends": []
+    "depends": [],
+    "proof": [
+      [],
+      [],
+      [
+        "tests/e2e/e2e.js :: mở cửa sổ Thú Cưng",
+        "tests/e2e/e2e.js :: mở tab Khảm ngọc",
+        "tests/e2e/e2e.js :: mở bản đồ thế giới"
+      ]
+    ],
+    "notes": "Thiếu bằng chứng (2026-10-19): acceptance #1 \"awk '/^  refresh\\(\\)/,/^  }/' src/client/js/ui/ui.js | grep -o 'this\\.render[A-Za-z]*' | wc -l ≥ 22 (đo = 22)\"; acceptance #2 \"gddwork/lab/ui05/measure.js mở 16 cửa sổ ở 844×390, 740×360, 667×375, 1280×720: 0 tràn ngang, 0 lòi khung nhìn, 0 lỗi console\"."
   },
   {
     "id": "world-movement",
     "phase": 1,
     "title": "Di chuyển, nhảy đôi, xuống bục, máy chủ kiểm tốc và độ cao nhảy",
     "priority": "Must",
-    "status": "done",
+    "status": "todo",
     "acceptance": [
       "Hằng JUMP 378, JUMP2 330, GRAV 1000 giống nhau ở game/game.js và modules/movement/index.js; AIR_MAX 2.4, AIR_SLACK 0.3 chỉ có ở server (modules/movement/index.js)",
       "tests/features/movement.js: 'nhảy đôi liên tục đúng vật lý: server không sửa vị trí' đạt",
@@ -1934,7 +2225,23 @@
     "section": "docs/gdd/07-the-gioi.md mục 10.2",
     "size": "S",
     "depends": [],
-    "notes": "Ghép GDD (soát): viết lại tiêu chí theo đúng mã và ca kiểm có thật; ca nhảy đôi lên bục chênh 124px để dev-test-coverage bổ sung nếu cần."
+    "notes": "Ghép GDD (soát): viết lại tiêu chí theo đúng mã và ca kiểm có thật; ca nhảy đôi lên bục chênh 124px để dev-test-coverage bổ sung nếu cần. Thiếu bằng chứng (2026-10-19): acceptance #1 \"Hằng JUMP 378, JUMP2 330, GRAV 1000 giống nhau ở game/game.js và modules/movement/index.js; AIR_MAX 2.4, AIR_SLACK 0.3 chỉ có ở server (modules/movement/index.js)\".",
+    "proof": [
+      [],
+      [
+        "tests/features/movement.js :: nhảy đôi liên tục đúng vật lý: server không sửa vị trí"
+      ],
+      [
+        "tests/features/movement.js :: lơ lửng cao 100px: server hạ độ cao rồi kéo về mặt đất"
+      ],
+      [
+        "tests/features/fashion.js :: không cưỡi thú mà đi bước dài như thế thì bị kéo lại"
+      ],
+      [
+        "tests/features/movement.js :: nhảy đôi liên tục đúng vật lý",
+        "tests/features/fashion.js :: không cưỡi thú mà đi bước dài như thế thì bị kéo lại"
+      ]
+    ]
   },
   {
     "id": "art-monsters-199",
@@ -2280,7 +2587,7 @@
     "phase": 2,
     "title": "Chính tuyến Hạ Giới: 51 nhiệm vụ cấp 1-118, 7 kiểu, thưởng vũ khí đúng phái",
     "priority": "Must",
-    "status": "done",
+    "status": "todo",
     "acceptance": [
       "npm run check in dòng '✔ Dữ liệu hợp lệ' chứa '51 nhiệm vụ' không dòng lỗi (đã chạy 18/10/2026 trên thư mục làm việc)",
       "MAIN_QUESTS có 51 phần tử, req không giảm, đủ 7 kiểu talk/kill/collect/level/visit/upgrade/dungeon (gddwork/lab/q08/build.js)",
@@ -2290,7 +2597,8 @@
     "tests": [
       "tests/features/quest.js",
       "tests/features/combat.js",
-      "tests/e2e/e2e.js"
+      "tests/e2e/e2e.js",
+      "tools/check-data.js"
     ],
     "files": [
       "src/shared/data/quests.js",
@@ -2304,7 +2612,23 @@
     ],
     "section": "docs/gdd/08-cot-truyen.md",
     "size": "M",
-    "depends": []
+    "depends": [],
+    "proof": [
+      [
+        "tools/check-data.js :: 51 nhiệm vụ"
+      ],
+      [],
+      [
+        "tests/features/quest.js :: hoàn thành nhiệm vụ \"Nhập Môn\", chuyển sang nhiệm vụ 2",
+        "tests/features/combat.js :: tiến độ nhiệm vụ diệt Slime"
+      ],
+      [
+        "tests/e2e/e2e.js :: nhận nhiệm vụ diệt Slime",
+        "tests/e2e/e2e.js :: tự đi sang bản đồ kề có Slime gần nhất",
+        "tests/e2e/e2e.js :: tới nơi: bật auto, săn ưu tiên Slime"
+      ]
+    ],
+    "notes": "Thiếu bằng chứng (2026-10-19): acceptance #2 \"MAIN_QUESTS có 51 phần tử, req không giảm, đủ 7 kiểu talk/kill/collect/level/visit/upgrade/dungeon (gddwork/lab/q08/build.js)\"."
   },
   {
     "id": "quest-main-199",
@@ -2477,7 +2801,7 @@
     "phase": 2,
     "title": "Khung bản đồ: 3 làng, 19 bãi luyện, cổng hai chiều, cửa giữa bản đồ",
     "priority": "Must",
-    "status": "done",
+    "status": "todo",
     "acceptance": [
       "npm run check không có dòng lỗi 'cổng một chiều' với 23 bản đồ hiện có",
       "Bot đứng cách cổng 61px gửi portal { i } thì không đổi bản đồ (máy chủ kiểm |p.x − pt.x| ≤ 60)",
@@ -2487,7 +2811,9 @@
     "tests": [
       "tools/check-data.js",
       "tests/features/movement.js",
-      "tests/e2e/e2e.js"
+      "tests/e2e/e2e.js",
+      "tests/features/combat.js",
+      "tests/features/daily.js"
     ],
     "files": [
       "src/shared/data/maps.js",
@@ -2502,7 +2828,19 @@
     ],
     "section": "docs/gdd/07-the-gioi.md mục 10.1, 2, 3",
     "size": "S",
-    "depends": []
+    "depends": [],
+    "proof": [
+      [
+        "tools/check-data.js :: Dữ liệu hợp lệ"
+      ],
+      [],
+      [],
+      [
+        "tests/features/combat.js :: qua cổng sang Đồi Hỏa Diệm",
+        "tests/features/daily.js :: rời hang động về làng"
+      ]
+    ],
+    "notes": "Thiếu bằng chứng (2026-10-19): acceptance #2 \"Bot đứng cách cổng 61px gửi portal { i } thì không đổi bản đồ (máy chủ kiểm |p.x − pt.x| ≤ 60)\"; acceptance #3 \"Nhân vật cấp 9 gửi portal vào arena (pvp) không đổi bản đồ; cấp 10 vào được\"."
   },
   {
     "id": "world-home",
@@ -2987,7 +3325,15 @@
     ],
     "section": "docs/gdd/05-he-thong-pve.md",
     "size": "S",
-    "depends": []
+    "depends": [],
+    "proof": [
+      [
+        "tests/features/social.js :: B dịch chuyển miễn phí sang Làng Hỏa Vân"
+      ],
+      [
+        "tests/features/social.js :: B dịch chuyển miễn phí sang Làng Hỏa Vân"
+      ]
+    ]
   },
   {
     "id": "world-towns",
@@ -3075,7 +3421,8 @@
       "findRoute/routeMaps giữ nguyên chữ ký trong bảng API công khai của CLAUDE.md"
     ],
     "tests": [
-      "tests/e2e/e2e.js"
+      "tests/e2e/e2e.js",
+      "tests/features/verify.js"
     ],
     "files": [
       "ui/worldmap.js",
@@ -3092,7 +3439,23 @@
       "world-base"
     ],
     "signature": true,
-    "notes": "Ghép GDD (soát): nâng Should -> Must vì world-upper (Must) và sàn ≥ 80 bản đồ cần nó (quy tắc 4 mục 5.1 của 01-tam-nhin); đã xong nên không đổi công."
+    "notes": "Ghép GDD (soát): nâng Should -> Must vì world-upper (Must) và sàn ≥ 80 bản đồ cần nó (quy tắc 4 mục 5.1 của 01-tam-nhin); đã xong nên không đổi công.",
+    "proof": [
+      [
+        "tests/e2e/e2e.js :: mở bản đồ thế giới",
+        "tests/e2e/e2e.js :: bấm \"Đi tới\": bắt đầu tìm đường, #hud-travel hiện",
+        "tests/e2e/e2e.js :: cửa sổ bản đồ tự đóng",
+        "tests/e2e/e2e.js :: tới bản đồ xa"
+      ],
+      [
+        "tests/e2e/e2e.js :: tới bản đồ xa",
+        "tests/e2e/e2e.js :: tìm đường tới làng khác (2 bản đồ)"
+      ],
+      [
+        "tests/features/verify.js :: --quick trên cây hiện tại: mã 0",
+        "tests/features/verify.js :: xóa export function drawNinja → mã 1"
+      ]
+    ]
   },
   {
     "id": "art-enhance-aura",
@@ -3229,7 +3592,7 @@
     "phase": 3,
     "title": "Xu (trần 2 tỉ) và lượng",
     "priority": "Must",
-    "status": "done",
+    "status": "todo",
     "acceptance": [
       "features/quest.js mua 5 bình trừ đúng 100 xu",
       "features/social.js giao dịch đổi xu đúng hai bên",
@@ -3250,7 +3613,21 @@
     ],
     "section": "docs/gdd/05-he-thong-trang-bi.md",
     "size": "M",
-    "depends": []
+    "depends": [],
+    "proof": [
+      [
+        "tests/features/quest.js :: mua 5 bình HP trừ đúng 100"
+      ],
+      [
+        "tests/features/social.js :: giao dịch xu + vật phẩm thành công"
+      ],
+      [
+        "tests/features/mail.js :: người offline nhận được thư: xu khóa, lượng, vật phẩm đính kèm",
+        "tests/features/mail.js :: nhận tất cả: lấy quà mọi thư còn quà"
+      ],
+      []
+    ],
+    "notes": "Thiếu bằng chứng (2026-10-19): acceptance #4 \"gainXu kẹp 2e9\"."
   },
   {
     "id": "eco-currency-guard",
@@ -3450,7 +3827,7 @@
     "phase": 3,
     "title": "Cửa hàng NPC: Tiệm Thuốc, Lò Rèn, bán lấy xu",
     "priority": "Must",
-    "status": "done",
+    "status": "todo",
     "acceptance": [
       "features/quest.js mua bình; features/passive.js mua sách đúng phái, mua 10 sách chỉ được 1, bán sách ra xu",
       "features/gems.js mua ngọc cấp 1 ở Lò Rèn, bán món có ngọc cộng 25% giá ngọc",
@@ -3472,7 +3849,22 @@
     ],
     "section": "docs/gdd/05-he-thong-trang-bi.md",
     "size": "M",
-    "depends": []
+    "depends": [],
+    "proof": [
+      [
+        "tests/features/quest.js :: mua 5 bình HP trừ đúng 100",
+        "tests/features/passive.js :: mua sách trừ 100 lượng, sách phái khác không mua được",
+        "tests/features/passive.js :: mua sách luôn chỉ 1 cuốn dù gửi số lượng 10",
+        "tests/features/passive.js :: bán sách cấp 15 được 750 xu"
+      ],
+      [
+        "tests/features/gems.js :: Lò Rèn bán ngọc cấp 1 cả 6 loại",
+        "tests/features/gems.js :: giá bán nón có ngọc gồm giá ngọc",
+        "tests/features/gems.js :: bán món có ngọc: cộng đúng tiền"
+      ],
+      []
+    ],
+    "notes": "Thiếu bằng chứng (2026-10-19): acceptance #3 \"buy kiểm tiền và chỗ trước khi trừ; id ngoài danh sách NPC bị từ chối\"."
   },
   {
     "id": "eco-shop-tabs",
@@ -3578,7 +3970,7 @@
     "phase": 3,
     "title": "Trang bị 9 ô × 12 bậc, 5 độ hiếm có dòng phụ",
     "priority": "Must",
-    "status": "done",
+    "status": "todo",
     "acceptance": [
       "npm run check sạch; ITEMS có đúng 168 trang bị chiến đấu (72 vũ khí + 96 món 8 ô dùng chung)",
       "features/quest.js và features/endgame.js mặc/tháo trang bị đúng; features/fashion.js chặn ô __proto__/constructor không sập server",
@@ -3601,7 +3993,20 @@
     ],
     "section": "docs/gdd/05-he-thong-trang-bi.md",
     "size": "M",
-    "depends": []
+    "depends": [],
+    "proof": [
+      [],
+      [
+        "tests/features/quest.js :: trang bị Nón Gỗ",
+        "tests/features/endgame.js :: mặc vũ khí bậc Thánh cấp 110",
+        "tests/features/fashion.js :: tháo ô \"__proto__\"/\"constructor\": bị bỏ qua"
+      ],
+      [
+        "tests/features/quest.js :: trang bị Nón Gỗ",
+        "tests/features/endgame.js :: mặc vũ khí bậc Thánh cấp 110"
+      ]
+    ],
+    "notes": "Thiếu bằng chứng (2026-10-19): acceptance #1 \"npm run check sạch; ITEMS có đúng 168 trang bị chiến đấu (72 vũ khí + 96 món 8 ô dùng chung)\"."
   },
   {
     "id": "gear-gems",
@@ -3616,7 +4021,8 @@
     ],
     "tests": [
       "tests/features/gems.js",
-      "tests/e2e/e2e.js"
+      "tests/e2e/e2e.js",
+      "tools/check-data.js"
     ],
     "files": [
       "src/shared/data/items/gems.js",
@@ -3629,7 +4035,23 @@
     "section": "docs/gdd/05-he-thong-trang-bi.md",
     "size": "M",
     "depends": [],
-    "signature": true
+    "signature": true,
+    "proof": [
+      [
+        "tests/features/gems.js :: khảm ngọc khi đứng xa Thợ Rèn: bị bỏ qua",
+        "tests/features/gems.js :: gỡ ngọc: chí mạng trở về",
+        "tests/features/gems.js :: giao dịch thành công: ngọc khảm đi theo món sang người nhận",
+        "tests/features/gems.js :: bán món có ngọc: cộng đúng tiền",
+        "tests/features/gems.js :: ngọc cấp 10: không ghép tiếp được"
+      ],
+      [
+        "tests/e2e/e2e.js :: mở tab Khảm ngọc",
+        "tests/e2e/e2e.js :: khảm Hỏa Tâm Ngọc vào vũ khí"
+      ],
+      [
+        "tools/check-data.js :: Dữ liệu hợp lệ"
+      ]
+    ]
   },
   {
     "id": "gear-inventory",
@@ -3645,7 +4067,8 @@
     "tests": [
       "tests/features/passive.js",
       "tests/features/fashion.js",
-      "tests/features/mail.js"
+      "tests/features/mail.js",
+      "tests/features/inventory.js"
     ],
     "files": [
       "src/server/modules/inventory/index.js",
@@ -3657,7 +4080,20 @@
     ],
     "section": "docs/gdd/05-he-thong-trang-bi.md",
     "size": "M",
-    "depends": []
+    "depends": [],
+    "proof": [
+      [
+        "tests/features/passive.js :: sắp xếp hành trang theo loại, sách đứng sau trang bị"
+      ],
+      [
+        "tests/features/mail.js :: dọn 1 ô: nhận đủ",
+        "tests/features/inventory.js :: hủy nhanh đúng các món đã chọn"
+      ],
+      [
+        "tests/features/passive.js :: sắp xếp hành trang theo loại",
+        "tests/features/inventory.js :: hủy nhanh bỏ qua ô có id không khớp"
+      ]
+    ]
   },
   {
     "id": "gear-refine",
@@ -3742,7 +4178,8 @@
     ],
     "tests": [
       "tests/features/daily.js",
-      "tests/features/pets.js"
+      "tests/features/pets.js",
+      "tests/features/bound.js"
     ],
     "files": [
       "src/server/modules/storage/index.js",
@@ -3754,7 +4191,21 @@
     ],
     "section": "docs/gdd/05-he-thong-trang-bi.md",
     "size": "M",
-    "depends": []
+    "depends": [],
+    "proof": [
+      [
+        "tests/features/daily.js :: cất bình HP vào kho",
+        "tests/features/daily.js :: lấy lại từ kho",
+        "tests/features/bound.js :: storePut: kho giữ riêng chồng hp1 khóa (q2) và thường (q5)"
+      ],
+      [
+        "tests/features/pets.js :: cất thú vào kho rồi lấy ra: giữ nguyên cấp 12, EXP và thân mật 70"
+      ],
+      [
+        "tests/features/daily.js :: cất bình HP vào kho",
+        "tests/features/pets.js :: cất thú vào kho rồi lấy ra"
+      ]
+    ]
   },
   {
     "id": "gear-storage-plus",
@@ -3833,7 +4284,7 @@
     "phase": 3,
     "title": "Cường hóa +1 → +16, Bùa Bảo Hộ, báo toàn máy chủ từ +10",
     "priority": "Must",
-    "status": "done",
+    "status": "todo",
     "acceptance": [
       "features/skills.js: cường hóa +0 → +1 trừ đúng đá và xu, có upgradeResult",
       "features/fashion.js: thời trang và ô __proto__/constructor bị từ chối, server không sập",
@@ -3855,7 +4306,18 @@
     ],
     "section": "docs/gdd/05-he-thong-trang-bi.md",
     "size": "M",
-    "depends": []
+    "depends": [],
+    "proof": [
+      [],
+      [
+        "tests/features/fashion.js :: cường hóa ô \"__proto__\"/\"constructor\": bị bỏ qua, server không lỗi"
+      ],
+      [],
+      [
+        "tests/features/skills.js :: cường hóa vũ khí lên +1"
+      ]
+    ],
+    "notes": "Thiếu bằng chứng (2026-10-19): acceptance #1 \"features/skills.js: cường hóa +0 → +1 trừ đúng đá và xu, có upgradeResult\"; acceptance #3 \"DESIGN_RULES.md mục 9 hàng 'Cường hóa' khớp UPGRADE (+16, +8%/cấp, đá theo mốc 4 cấp)\"."
   },
   {
     "id": "gear-upgrade-transfer",
@@ -4405,7 +4867,24 @@
       "soc-mail",
       "soc-rank"
     ],
-    "signature": true
+    "signature": true,
+    "proof": [
+      [
+        "tests/features/arena.js :: Elo: bên thua không xuống dưới 0",
+        "tests/features/arena.js :: ghép cặp ngay (cùng điểm), đếm ngược 5 giây",
+        "tests/features/arena.js :: hạ gục đối thủ: thắng trận",
+        "tests/features/arena.js :: thưởng tuần qua hộp thư",
+        "tests/features/arena.js :: trao thưởng tuần lần 2: không nhận trùng"
+      ],
+      [
+        "tests/e2e/e2e.js :: đăng ký lôi đài: khung chờ ghép trận hiện",
+        "tests/e2e/e2e.js :: hủy đăng ký lôi đài"
+      ],
+      [
+        "tests/features/arena.js :: hạ gục đối thủ: thắng trận",
+        "tests/features/arena.js :: hủy đăng ký: rời hàng chờ"
+      ]
+    ]
   },
   {
     "id": "pvp-arena-bracket",
@@ -4523,6 +5002,15 @@
     "size": "S",
     "depends": [
       "soc-invites"
+    ],
+    "proof": [
+      [
+        "tests/e2e/ui-multiplayer.js :: bắt đầu thách đấu",
+        "tests/e2e/ui-multiplayer.js :: đòn đánh trong thách đấu gây sát thương cho B"
+      ],
+      [
+        "tests/features/arena.js :: lời thách đấu gửi trước trận: không nhận được trong phòng đấu"
+      ]
     ]
   },
   {
@@ -4599,7 +5087,7 @@
     "phase": 4,
     "title": "Chat 5 kênh (bản đồ, thế giới, nhóm, gia tộc, mật) và lệnh nhanh",
     "priority": "Must",
-    "status": "done",
+    "status": "todo",
     "acceptance": [
       "npm test in 'chat nhóm' và 'chat bản đồ' đạt",
       "gõ /help nhận 1 dòng ch: 'sys' (người thường) hoặc 3 dòng (admin)",
@@ -4618,7 +5106,19 @@
     ],
     "section": "docs/gdd/05-he-thong-xa-hoi-pvp.md §1.1",
     "size": "S",
-    "depends": []
+    "depends": [],
+    "proof": [
+      [
+        "tests/features/social.js :: chat nhóm",
+        "tests/features/social.js :: chat bản đồ"
+      ],
+      [],
+      [
+        "tests/features/social.js :: chat nhóm",
+        "tests/features/social.js :: chat bản đồ"
+      ]
+    ],
+    "notes": "Thiếu bằng chứng (2026-10-19): acceptance #2 \"gõ /help nhận 1 dòng ch: 'sys' (người thường) hoặc 3 dòng (admin)\"."
   },
   {
     "id": "soc-chat-safety",
@@ -4690,6 +5190,14 @@
     "size": "S",
     "depends": [
       "soc-invites"
+    ],
+    "proof": [
+      [
+        "tests/features/daily.js :: kết bạn thành công"
+      ],
+      [
+        "tests/features/daily.js :: kết bạn thành công"
+      ]
     ]
   },
   {
@@ -4727,7 +5235,7 @@
     "phase": 4,
     "title": "Menu người chơi và lời mời 30 giây",
     "priority": "Must",
-    "status": "done",
+    "status": "todo",
     "acceptance": [
       "npm run test:ui in 'B nhận lời mời giao dịch', 'lập nhóm 2 người qua menu + lời mời', 'B nhận lời thách đấu'",
       "khóa lời mời luôn có dấu ':' (không chạm prototype)"
@@ -4746,7 +5254,16 @@
     "size": "S",
     "depends": [
       "soc-chat"
-    ]
+    ],
+    "proof": [
+      [
+        "tests/e2e/ui-multiplayer.js :: B nhận lời mời giao dịch",
+        "tests/e2e/ui-multiplayer.js :: lập nhóm 2 người qua menu + lời mời",
+        "tests/e2e/ui-multiplayer.js :: B nhận lời thách đấu"
+      ],
+      []
+    ],
+    "notes": "Thiếu bằng chứng (2026-10-19): acceptance #2 \"khóa lời mời luôn có dấu ':' (không chạm prototype)\"."
   },
   {
     "id": "soc-mail",
@@ -4775,7 +5292,24 @@
     "section": "docs/gdd/05-he-thong-xa-hoi-pvp.md §1.6",
     "size": "M",
     "depends": [],
-    "signature": true
+    "signature": true,
+    "proof": [
+      [
+        "tests/features/mail.js :: hộp thư giữ tối đa",
+        "tests/features/mail.js :: hộp thư đầy thư còn quà: không nhận thêm",
+        "tests/features/mail.js :: admin /mail gửi quà cho người đang offline",
+        "tests/features/mail.js :: nhập sai 5 lần trong 1 phút: tạm khóa nhập mã",
+        "tests/features/mail.js :: xóa thư đã đọc: hộp thư trống"
+      ],
+      [
+        "tests/features/mail.js :: hộp thư đầy thư còn quà: không nhận thêm (không làm mất quà cũ)",
+        "tests/features/mail.js :: Tà Thú, túi đầy và hộp thư đầy quà: chuyển sang thủ kho"
+      ],
+      [
+        "tests/features/mail.js :: thư giftcode có đủ quà",
+        "tests/features/persistence.js :: hộp thư giữ đủ"
+      ]
+    ]
   },
   {
     "id": "soc-party",
@@ -4804,7 +5338,18 @@
     "depends": [
       "soc-invites"
     ],
-    "notes": "partyLeave/partyKick chưa có kiểm thử (dev-test-coverage)"
+    "notes": "partyLeave/partyKick chưa có kiểm thử (dev-test-coverage)",
+    "proof": [
+      [
+        "tests/features/social.js :: lập nhóm 2 người",
+        "tests/features/social.js :: gói nhóm có mapId của từng thành viên",
+        "tests/features/daily.js :: đồng đội nhận cập nhật nhóm khi thành viên đổi bản đồ"
+      ],
+      [
+        "tests/features/social.js :: lập nhóm 2 người",
+        "tests/features/daily.js :: đồng đội nhận cập nhật nhóm khi thành viên đổi bản đồ"
+      ]
+    ]
   },
   {
     "id": "soc-party-plus",
@@ -4865,7 +5410,15 @@
     ],
     "section": "docs/gdd/05-he-thong-xa-hoi-pvp.md §1.7",
     "size": "S",
-    "depends": []
+    "depends": [],
+    "proof": [
+      [
+        "tests/features/arena.js :: bảng xếp hạng có tab lôi đài"
+      ],
+      [
+        "tests/features/arena.js :: bảng xếp hạng có tab lôi đài"
+      ]
+    ]
   },
   {
     "id": "soc-titles",
@@ -5127,7 +5680,7 @@
     "phase": 5,
     "title": "Thời trang 3 ô (mặt nạ, áo choàng, y phục) có chỉ số, bản có hạn 7 ngày",
     "priority": "Should",
-    "status": "done",
+    "status": "todo",
     "acceptance": [
       "npm test in 'TẤT CẢ KIỂM TRA ĐỀU ĐẠT', phần '7f. Thời trang & thú cưỡi' đủ 22 dòng ✔ (đã đạt 18/10/2026, gddwork/lab/test1.log)",
       "npm run check không có dòng lỗi ở khối thời trang: hình MASKS/CLOAKS/COSTUMES, icon, grade 1-4, noUpgrade, expPct ≤ 10, hpPct ≤ 8, crit/dodge ≤ 3, giá ≤ 300 lượng, món Huyền thoại không bán (đã đạt, gddwork/lab/check1.log)",
@@ -5135,7 +5688,8 @@
     ],
     "tests": [
       "tests/features/fashion.js",
-      "tests/e2e/e2e.js"
+      "tests/e2e/e2e.js",
+      "tools/check-data.js"
     ],
     "files": [
       "src/server/modules/fashion/",
@@ -5149,7 +5703,20 @@
     "section": "docs/gdd/05-he-thong-thu-ngoai-hinh.md",
     "size": "M",
     "depends": [],
-    "signature": true
+    "signature": true,
+    "proof": [
+      [
+        "tests/features/fashion.js :: mặc đủ mặt nạ, áo choàng, trang phục, thú cưỡi",
+        "tests/features/fashion.js :: đồ thời trang có hạn 7 ngày (trường exp)",
+        "tests/features/fashion.js :: hết hạn: tự tháo, biến mất khỏi người và thông báo",
+        "tests/features/fashion.js :: tháo hết thời trang: chỉ số trở về như cũ"
+      ],
+      [
+        "tools/check-data.js :: Dữ liệu hợp lệ"
+      ],
+      []
+    ],
+    "notes": "Thiếu bằng chứng (2026-10-19): acceptance #3 \"node -e đếm ITEMS có slot mask/cloak/costume = 11, đồ có hạn không đặt được vào giao dịch và tự gỡ khi hết hạn (ca bot trong tests/features/fashion.js)\"."
   },
   {
     "id": "pet-mount",
@@ -5164,7 +5731,8 @@
     "tests": [
       "tests/features/fashion.js",
       "tests/features/movement.js",
-      "tests/e2e/e2e.js"
+      "tests/e2e/e2e.js",
+      "tools/check-data.js"
     ],
     "files": [
       "src/shared/data/items/fashion.js",
@@ -5178,7 +5746,18 @@
     ],
     "section": "docs/gdd/05-he-thong-thu-ngoai-hinh.md",
     "size": "M",
-    "depends": []
+    "depends": [],
+    "proof": [
+      [
+        "tests/features/fashion.js :: đều cộng tốc chạy",
+        "tests/features/fashion.js :: thú cưỡi cộng tốc chạy vào s.spd",
+        "tests/features/fashion.js :: cưỡi thú chạy nhanh",
+        "tests/features/fashion.js :: vừa tháo thú cưỡi: bước đang chạy dở không bị kéo lại"
+      ],
+      [
+        "tools/check-data.js :: Dữ liệu hợp lệ"
+      ]
+    ]
   },
   {
     "id": "pet-mountup",
@@ -5253,7 +5832,8 @@
     "tests": [
       "tests/features/pets.js",
       "tests/features/endgame.js",
-      "tests/e2e/e2e.js"
+      "tests/e2e/e2e.js",
+      "tools/check-data.js"
     ],
     "files": [
       "src/shared/data/pets.js",
@@ -5271,7 +5851,19 @@
     "size": "M",
     "depends": [],
     "signature": true,
-    "notes": "Kiểm 18-10-2026: chạy npm test 2 lần trên cây hiện tại, kết quả hỏng/đạt; ca hỏng là \"Thỏ Ngọc tự nhặt đồ rơi gần chủ\" (tests/features/pets.js). Ca này phụ thuộc vị trí rơi đồ ngẫu nhiên, phải làm ổn định trong dev-test-coverage."
+    "notes": "Kiểm 18-10-2026: chạy npm test 2 lần trên cây hiện tại, kết quả hỏng/đạt; ca hỏng là \"Thỏ Ngọc tự nhặt đồ rơi gần chủ\" (tests/features/pets.js). Ca này phụ thuộc vị trí rơi đồ ngẫu nhiên, phải làm ổn định trong dev-test-coverage.",
+    "proof": [
+      [
+        "tests/features/pets.js :: thú mới: cấp 1, EXP 0, thân mật mặc định",
+        "tests/features/pets.js :: kỹ năng Hồi Xuân",
+        "tests/features/pets.js :: thân mật dưới 20: thú dỗi, không dùng Tha Đồ",
+        "tests/features/pets.js :: cất thú vào kho rồi lấy ra: giữ nguyên cấp 12",
+        "tests/features/pets.js :: giao dịch thú sang người khác: bên nhận có thú cấp 12, thân mật 70"
+      ],
+      [
+        "tools/check-data.js :: Dữ liệu hợp lệ"
+      ]
+    ]
   },
   {
     "id": "pve-bicanh-phuchu",
@@ -5324,7 +5916,19 @@
     "section": "docs/gdd/05-he-thong-pve.md",
     "size": "M",
     "depends": [],
-    "signature": true
+    "signature": true,
+    "proof": [
+      [
+        "tests/features/daily.js :: Hộ Pháp cho vào Hang Động",
+        "tests/features/daily.js :: vào phó bản Hang Động (B cấp thấp bị loại)",
+        "tests/features/daily.js :: đợt 1 xuất hiện",
+        "tests/features/daily.js :: rời hang động về làng",
+        "tests/features/daily.js :: trừ 1 lượt vào hang"
+      ],
+      [
+        "tests/features/daily.js :: trừ 1 lượt vào hang"
+      ]
+    ]
   },
   {
     "id": "pve-dungeon-multi",
@@ -5976,7 +6580,17 @@
     ],
     "section": "docs/gdd/05-he-thong-pve.md",
     "size": "M",
-    "depends": []
+    "depends": [],
+    "proof": [
+      [
+        "tests/features/daily.js :: điểm danh ngày 1 nhận quà",
+        "tests/features/daily.js :: không cho điểm danh 2 lần/ngày",
+        "tests/features/daily.js :: vòng quay trả thưởng"
+      ],
+      [
+        "tests/features/daily.js :: điểm danh ngày 1 nhận quà"
+      ]
+    ]
   },
   {
     "id": "evt-festival-boss",
@@ -6186,7 +6800,8 @@
       "npm test in 'TẤT CẢ KIỂM TRA ĐỀU ĐẠT'"
     ],
     "tests": [
-      "tests/features/mail.js"
+      "tests/features/mail.js",
+      "tools/check-data.js"
     ],
     "files": [
       "src/server/modules/season/index.js",
@@ -6200,7 +6815,25 @@
     "section": "docs/gdd/05-he-thong-pve.md",
     "size": "M",
     "depends": [],
-    "signature": true
+    "signature": true,
+    "proof": [
+      [
+        "tests/features/mail.js :: SEASON=0: tắt lịch lễ hội ngay từ đầu",
+        "tests/features/mail.js :: admin /sukien ép bật lễ hội",
+        "tests/features/mail.js :: đổi 2 lần 5 bánh lấy 6.000 xu khóa",
+        "tests/features/mail.js :: hết lượt đổi trong mùa: từ chối",
+        "tests/features/mail.js :: thiếu bánh: từ chối, không trừ bánh",
+        "tests/features/mail.js :: mã quà lạ (__proto__, constructor): bỏ qua",
+        "tests/features/mail.js :: đứng xa Sứ Giả Lễ Hội: không đổi được",
+        "tests/features/mail.js :: hết mùa: không đổi quà được nữa"
+      ],
+      [
+        "tools/check-data.js :: Dữ liệu hợp lệ"
+      ],
+      [
+        "tests/features/mail.js :: admin /sukien tat: tắt lễ hội"
+      ]
+    ]
   },
   {
     "id": "evt-season-plus",
@@ -6534,7 +7167,7 @@
     "phase": 6,
     "title": "Tà Thú Xuất Thế mỗi 2 giờ (giờ chẵn :30, 20 phút, thưởng theo hạng)",
     "priority": "Should",
-    "status": "done",
+    "status": "todo",
     "acceptance": [
       "tests/features/boss.js phần 0b, 0c, 7e đạt (biểu ngữ, chiêu niệm, bảng hạng)",
       "npm run check kiểm Tà Thú có bãi hợp cấp, VARIANT, AURA2",
@@ -6555,7 +7188,20 @@
     "section": "docs/gdd/05-he-thong-pve.md",
     "size": "M",
     "depends": [],
-    "signature": true
+    "signature": true,
+    "proof": [
+      [
+        "tests/features/boss.js :: lịch Tà Thú: phút 30 mỗi 2 giờ (giờ VN)",
+        "tests/features/boss.js :: thông báo toàn máy chủ khi Tà Thú bị hạ",
+        "tests/features/boss.js :: gói event: boss, bản đồ, còn 20 phút",
+        "tests/features/boss.js :: Tà Thú bị hạ: gửi bảng kết quả sát thương"
+      ],
+      [],
+      [
+        "tests/features/boss.js :: sự kiện kết thúc sau khi Tà Thú bị hạ"
+      ]
+    ],
+    "notes": "Thiếu bằng chứng (2026-10-19): acceptance #2 \"npm run check kiểm Tà Thú có bãi hợp cấp, VARIANT, AURA2\"."
   },
   {
     "id": "pve-tathu-199",
@@ -7236,7 +7882,7 @@
     "phase": 7,
     "title": "Cài đặt: tự uống thuốc, phạm vi tìm quái, hiện tên, âm thanh, ngày/đêm, rung",
     "priority": "Must",
-    "status": "done",
+    "status": "todo",
     "acceptance": [
       "S.settings có đủ 11 khóa (autoHp 40, autoMp 25, autoRange 600, autoPick, names, sound, musicVol, sfxVol, daynight 1, shake, chatTab) khi localStorage trống",
       "daynight giá trị lạ bị loadSettings() đưa về 1",
@@ -7255,7 +7901,12 @@
     "section": "docs/gdd/05-he-thong-giao-dien.md",
     "size": "S",
     "depends": [],
-    "notes": "Ghi nhận 18-10-2026: thanh âm lượng nhạc nền và hiệu ứng (musicVol, sfxVol) đã có trong cửa sổ Cài đặt."
+    "notes": "Ghi nhận 18-10-2026: thanh âm lượng nhạc nền và hiệu ứng (musicVol, sfxVol) đã có trong cửa sổ Cài đặt. Thiếu bằng chứng (2026-10-19): acceptance #1 \"S.settings có đủ 11 khóa (autoHp 40, autoMp 25, autoRange 600, autoPick, names, sound, musicVol, sfxVol, daynight 1, shake, chatTab) khi localStorage trống\"; acceptance #2 \"daynight giá trị lạ bị loadSettings() đưa về 1\"; acceptance #3 \"Cửa sổ Cài đặt mở ở 844×390, 740×360, 667×375 không tràn (gddwork/lab/ui05/summary.txt)\".",
+    "proof": [
+      [],
+      [],
+      []
+    ]
   },
   {
     "id": "ui-settings-sync",
@@ -7300,7 +7951,7 @@
     "phase": 7,
     "title": "Màn mở đầu: đăng nhập, chọn/tạo nhân vật, thẻ phái, trạng thái máy chủ",
     "priority": "Must",
-    "status": "done",
+    "status": "todo",
     "acceptance": [
       "npm run test:e2e máy tính và MOBILE=1 đăng ký, tạo nhân vật, vào game đạt",
       "node tools/shot.js với screen 'login', 'chars', 'create' in 'OK no console errors'"
@@ -7320,7 +7971,14 @@
     ],
     "section": "docs/gdd/05-he-thong-giao-dien.md",
     "size": "M",
-    "depends": []
+    "depends": [],
+    "proof": [
+      [
+        "tests/e2e/e2e.js :: tới Trưởng Làng, mở hội thoại"
+      ],
+      []
+    ],
+    "notes": "Thiếu bằng chứng (2026-10-19): acceptance #2 \"node tools/shot.js với screen 'login', 'chars', 'create' in 'OK no console errors'\"."
   },
   {
     "id": "char-rename",
