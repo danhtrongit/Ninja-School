@@ -8,6 +8,7 @@ const { MAPS, GROUND } = require('../../shared/data/maps');
 const { MAIN_QUESTS } = require('../../shared/data/quests');
 const { INV_SIZE, invSize, STORAGE_SIZE, MAX_LEVEL, HOTBAR, HOTBAR_SETS, PERSIST_BUFFS } = require('../../shared/constants');
 const { expNeed } = require('../../shared/formulas');
+const { sameStack, bind, XUK_MAX } = require('../../shared/bound');
 const hooks = require('./modules');
 
 const SLOT_SET = new Set(SLOTS);
@@ -60,7 +61,7 @@ function newChar(name, cls, gender) {
   inv[2] = makeItem('scroll_home', 2);
   return initHotbars({
     name, cls, gender: gender === 'f' ? 'f' : 'm',
-    level: 1, exp: 0, xu: 1000, luong: 10,
+    level: 1, exp: 0, xu: 1000, xuk: 0, luong: 10,
     hp: 1e9, mp: 1e9,
     stats: { str: 5, agi: 5, int: 5, vit: 5 }, potential: 0, skillPoints: 0,
     skills: { [basic]: 1, [first]: 1 },
@@ -361,14 +362,14 @@ class Player {
     return n;
   }
 
-  canAdd(id, qty) {
+  canAdd(id, qty, b = 0) {
     const def = ITEMS[id];
     if (!def) return false;
     if (def.stack) {
       let room = 0;
       for (const it of this.c.inv) {
         if (!it) room += def.stack;
-        else if (it.id === id) room += def.stack - it.q;
+        else if (sameStack(it, id, b)) room += def.stack - it.q;
         if (room >= qty) return true;
       }
       return room >= qty;
@@ -379,16 +380,19 @@ class Player {
   // Hành trang chứa nổi cả danh sách món (thử cộng dồn trên bản sao số lượng, không đổi túi thật).
   // minus: [[id, sl]] sẽ bị trừ trước (vd vật phẩm đem đổi), ô trống ra được tính là chỗ trống
   canAddItems(list, minus) {
-    const slots = this.c.inv.map((it) => (it ? { id: it.id, q: it.q } : null));
+    const slots = this.c.inv.map((it) => (it ? { id: it.id, q: it.q, b: it.b ? 1 : 0 } : null));
+    // trừ đúng thứ tự removeItemB (chồng khóa trước) để ô trống dự đoán khớp lúc trừ thật
     for (const [mid, mq] of minus || []) {
       let left = mq;
-      for (let i = 0; i < slots.length && left > 0; i++) {
-        const s = slots[i];
-        if (!s || s.id !== mid) continue;
-        const n = Math.min(left, s.q);
-        s.q -= n;
-        left -= n;
-        if (s.q <= 0) slots[i] = null;
+      for (const pass of [1, 0]) {
+        for (let i = 0; i < slots.length && left > 0; i++) {
+          const s = slots[i];
+          if (!s || s.id !== mid || s.b !== pass) continue;
+          const n = Math.min(left, s.q);
+          s.q -= n;
+          left -= n;
+          if (s.q <= 0) slots[i] = null;
+        }
       }
     }
     for (const it of list) {
@@ -398,7 +402,7 @@ class Player {
       if (def.stack) {
         for (const s of slots) {
           if (left <= 0) break;
-          if (s && s.id === it.id && s.q < def.stack) {
+          if (s && sameStack(s, it.id, it.b) && s.q < def.stack) {
             const n = Math.min(left, def.stack - s.q);
             s.q += n;
             left -= n;
@@ -409,7 +413,7 @@ class Player {
         const i = slots.indexOf(null);
         if (i < 0) return false;
         const n = def.stack ? Math.min(left, def.stack) : 1;
-        slots[i] = { id: it.id, q: n };
+        slots[i] = { id: it.id, q: n, b: it.b ? 1 : 0 };
         left -= n;
       }
     }
@@ -417,15 +421,15 @@ class Player {
   }
 
   // days > 0: vật phẩm có hạn dùng (chỉ áp cho trang bị/thời trang, không cộng dồn)
-  addItem(id, qty = 1, rarity = 0, days = 0) {
+  addItem(id, qty = 1, rarity = 0, days = 0, b = 0) {
     const def = ITEMS[id];
     if (!def) return false;
-    if (!this.canAdd(id, qty)) return false;
+    if (!this.canAdd(id, qty, b)) return false;
     if (def.stack) {
       let left = qty;
       for (const it of this.c.inv) {
         if (left <= 0) break;
-        if (it && it.id === id && it.q < def.stack) {
+        if (it && sameStack(it, id, b) && it.q < def.stack) {
           const n = Math.min(left, def.stack - it.q);
           it.q += n;
           left -= n;
@@ -434,14 +438,14 @@ class Player {
       for (let i = 0; i < this.c.inv.length && left > 0; i++) {
         if (!this.c.inv[i]) {
           const n = Math.min(left, def.stack);
-          this.c.inv[i] = makeItem(id, n);
+          this.c.inv[i] = b ? bind(makeItem(id, n)) : makeItem(id, n);
           left -= n;
         }
       }
     } else {
       for (let k = 0; k < qty; k++) {
         const i = this.c.inv.indexOf(null);
-        this.c.inv[i] = makeItem(id, 1, rarity, days);
+        this.c.inv[i] = b ? bind(makeItem(id, 1, rarity, days)) : makeItem(id, 1, rarity, days);
       }
     }
     this.markInv();
@@ -452,7 +456,7 @@ class Player {
   addItemObj(it) {
     const def = ITEMS[it.id];
     if (!def) return false;
-    if (def.stack) return this.addItem(it.id, it.q);
+    if (def.stack) return this.addItem(it.id, it.q, 0, 0, it.b ? 1 : 0);
     const i = this.c.inv.indexOf(null);
     if (i < 0) return false;
     this.c.inv[i] = it;
@@ -469,7 +473,7 @@ class Player {
     if (def.stack) {
       for (const s of st) {
         if (it.q <= 0) break;
-        if (s && s.id === it.id && s.q < def.stack) {
+        if (s && sameStack(s, it.id, it.b) && s.q < def.stack) {
           const n = Math.min(def.stack - s.q, it.q);
           s.q += n;
           it.q -= n;
@@ -499,21 +503,29 @@ class Player {
     }
   }
 
-  removeItem(id, qty) {
-    if (this.countItem(id) < qty) return false;
+  // Trừ qty món id, ưu tiên chồng khóa trước. Trả về số món khóa đã trừ, hoặc -1 nếu không đủ (không trừ gì)
+  removeItemB(id, qty) {
+    if (this.countItem(id) < qty) return -1;
     let left = qty;
-    for (let i = 0; i < this.c.inv.length && left > 0; i++) {
-      const it = this.c.inv[i];
-      if (it && it.id === id) {
+    let nb = 0;
+    for (const pass of [1, 0]) {
+      for (let i = 0; i < this.c.inv.length && left > 0; i++) {
+        const it = this.c.inv[i];
+        if (!it || it.id !== id || (it.b ? 1 : 0) !== pass) continue;
         const n = Math.min(left, it.q);
         it.q -= n;
         left -= n;
+        if (pass) nb += n;
         if (it.q <= 0) this.c.inv[i] = null;
       }
     }
     this.markInv();
     this.onInventoryChanged();
-    return true;
+    return nb;
+  }
+
+  removeItem(id, qty) {
+    return this.removeItemB(id, qty) >= 0;
   }
 
   removeAt(slot, qty = 1) {
@@ -570,6 +582,27 @@ class Player {
   gainXu(n) {
     this.c.xu = Math.min(2e9, this.c.xu + Math.round(n));
     this.markMe();
+  }
+
+  gainXuk(n) {
+    this.c.xuk = Math.min(XUK_MAX, (this.c.xuk || 0) + Math.max(0, Math.round(n)));
+    this.markMe();
+  }
+
+  // Tổng xu dùng được cho phí NPC
+  xuAll() { return this.c.xu + (this.c.xuk || 0); }
+
+  // Trả phí NPC: trừ xu khóa trước, thiếu mới trừ xu. noBound: chỉ trừ xu thường.
+  // Trả về số xu khóa đã dùng (>= 0), hoặc -1 nếu không đủ (không trừ gì)
+  payXu(cost, noBound) {
+    cost = Math.max(0, Math.round(cost));
+    const c = this.c;
+    const k = noBound ? 0 : Math.min(c.xuk || 0, cost);
+    if (c.xu < cost - k) return -1;
+    c.xuk = (c.xuk || 0) - k;
+    c.xu -= cost - k;
+    this.markMe();
+    return k;
   }
 
   heal(hp, mp) {

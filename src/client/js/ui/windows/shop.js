@@ -23,7 +23,7 @@ export default {
     } else {
       const kind = (e) => (isFashion(e) ? 'fashion' : isPet(e) ? 'pet' : 'buy');
       const list = sh.items.filter((e) => kind(e) === this.shopTab);
-      body = h('div', { class: 'shop-list' }, ...list.map((e) => {
+      const rows = h('div', { class: 'shop-list' }, ...list.map((e) => {
         const def = S.G.items[e.id];
         // sách nội tại chỉ đọc 1 lần nên không cho chọn số lượng (server cũng chỉ bán 1 cuốn mỗi lần)
         const multi = def.stack && def.type !== 'book';
@@ -35,8 +35,15 @@ export default {
           h('div', { class: 'sh-info' }, h('div', { class: def.lv > S.me.level ? 'bad' : 'sh-name' }, def.name.replace(/ (?=\S+$)/, '\u00a0'), def.lv > 1 ? h('span', { class: 'muted' }, ` Lv${def.lv}`) : ''),
             h('div', { class: `price ${luong ? 'luong' : 'xu'}` }, ico(luong ? 'luong' : 'xu'), h('b', null, fmt(e.price)), luong ? ' lượng' : ' xu')),
           multi ? qty : null,
-          h('button', { class: 'btn small primary', onclick: () => this.net.send('buy', { npc: sh.npc, id: e.id, qty: multi ? +qty.value || 1 : 1 }) }, 'Mua'));
+          h('button', { class: 'btn small primary', onclick: () => this.net.send('buy', { npc: sh.npc, id: e.id, qty: multi ? +qty.value || 1 : 1, nb: !!this.shopNoBound }) }, 'Mua'));
       }));
+      // ô "Không dùng xu khóa" chỉ có nghĩa khi tab có hàng bán bằng xu.
+      // Đặt trên danh sách (không ở cuối): danh sách dài phải cuộn mới thấy thì người chơi không biết mà chọn trước khi mua
+      const cb = h('input', { type: 'checkbox', class: 'switch', checked: !!this.shopNoBound, onchange: (e) => { this.shopNoBound = e.target.checked; } });
+      const bar = h('div', { class: 'shop-nbar' },
+        list.some((e) => e.cur !== 'luong') ? h('label', { class: 'shop-nb' }, cb, 'Không dùng xu khóa') : null,
+        h('div', { class: 'tiny muted shop-bnote' }, ico('lock'), h('span', null, 'Mua bằng lượng, hoặc mua bằng xu có dùng xu khóa: vật phẩm bị khóa (không giao dịch được).')));
+      body = h('div', null, bar, rows);
     }
     this.frameWin(sh.title, h('div', null, tabs, body), moneyLine());
   },

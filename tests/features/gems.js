@@ -123,6 +123,9 @@ function gemActionUnitTests() {
       `hút máu qua useSkill: hồi ${r1.healed} = 3.2% của ${r1.dmg} sát thương, gửi gói heal`);
     const r2 = swing(mon(100));
     ok(r2.dmg > 100 && r2.healed === Math.round((100 * ls) / 100), `đòn kết liễu: chỉ hút trên máu còn lại của quái (hồi ${r2.healed})`);
+    ok(I.GEM.lifestealCap === 10, 'trần hút máu chung là 10%');
+    const r3 = swing({ ...mon(1e6), boss: true });
+    ok(r3.dmg > 0 && r3.healed === Math.round((r3.dmg * ls * I.GEM.lifestealBoss) / 100), 'đánh boss: hút máu chỉ tính 50%');
   } finally {
     Math.random = rnd;
   }
@@ -182,13 +185,13 @@ async function gemTest(a) {
   const ou = await a.wait('openUi');
   ok(ou.ui === 'upgrade' && ou.tab === 'gem', 'Thợ Rèn mở thẳng tab Khảm ngọc');
   // (bot có thể đã nhặt ngọc rơi ngẫu nhiên ở các phần trước: so theo số lượng trước/sau)
-  const xu0 = a.me.xu;
+  const t0 = a.me.xu + (a.me.xuk || 0);
   const h1 = cnt('gem_hoa_1');
   const h2 = cnt('gem_hoa_2');
   a.send('buy', { npc, id: 'gem_hoa_1', qty: 4 });
   await a.wait('inv', (m) => m.inv.reduce((n, it) => n + (it && it.id === 'gem_hoa_1' ? it.q : 0), 0) === h1 + 4);
-  await a.wait('me', (m) => m.xu === xu0 - 6000).catch(() => null);
-  ok(a.me.xu === xu0 - 6000 && cnt('gem_hoa_1') === h1 + 4, 'mua 4 Hỏa Tâm Ngọc Cấp 1 trừ đúng 6.000 xu');
+  await a.wait('me', (m) => m.xu + (m.xuk || 0) === t0 - 6000).catch(() => null);
+  ok(a.me.xu + (a.me.xuk || 0) === t0 - 6000 && cnt('gem_hoa_1') === h1 + 4, 'mua 4 Hỏa Tâm Ngọc Cấp 1 trừ đúng 6.000 (xu khóa trước)');
 
   // khảm vào vũ khí đang mặc: chỉ số cộng đúng
   const crit0 = a.me.s.crit;
@@ -233,21 +236,21 @@ async function gemTest(a) {
   ok(!!(await note(/Cần 3 viên/)), 'chưa đủ 3 viên: không ghép được');
   a.send('gemMerge', { npc, id: 'gem_tho_10' });
   ok(!!(await note(/cấp cao nhất/)), 'ngọc cấp 10: không ghép tiếp được');
-  const xu1 = a.me.xu;
+  const t1 = a.me.xu + (a.me.xuk || 0);
   a.send('gemMerge', { npc, id: 'gem_hoa_1' });
   const mr = await result('merge');
   await a.wait('inv', (m) => m.inv.reduce((n, it) => n + (it && it.id === 'gem_hoa_2' ? it.q : 0), 0) === h2 + 1).catch(() => null);
   await sleep(120);
-  ok(!!mr && mr.ok && mr.id === 'gem_hoa_2' && cnt('gem_hoa_1') === h1 + 1 && cnt('gem_hoa_2') === h2 + 1 && a.me.xu === xu1 - 1000,
-    'ghép 3 Hỏa Tâm Ngọc Cấp 1 thành 1 viên Cấp 2, trừ 1.000 xu');
+  ok(!!mr && mr.ok && mr.id === 'gem_hoa_2' && cnt('gem_hoa_1') === h1 + 1 && cnt('gem_hoa_2') === h2 + 1 && a.me.xu + (a.me.xuk || 0) === t1 - 1000,
+    'ghép 3 Hỏa Tâm Ngọc Cấp 1 thành 1 viên Cấp 2, trừ 1.000 (xu khóa trước)');
 
   // gỡ ngọc: tốn xu, ngọc về hành trang, chỉ số trở lại
-  const xu2 = a.me.xu;
+  const t2 = a.me.xu + (a.me.xuk || 0);
   a.send('gemTake', { npc, src: 'eq', slot: 'weapon', hole: 0 });
   const tr = await result('take');
   await a.wait('inv', (m) => m.inv.some((it) => it && it.id === 'gem_loi_2')).catch(() => null);
   await sleep(150);
-  ok(!!tr && tr.cost === 1100 && a.me.xu === xu2 - 1100 && at('gem_loi_2') >= 0 && !a.inv.equip.weapon.gems, 'gỡ Lôi Quang Ngọc Cấp 2: trừ 1.100 xu, ngọc về hành trang');
+  ok(!!tr && tr.cost === 1100 && a.me.xu + (a.me.xuk || 0) === t2 - 1100 && at('gem_loi_2') >= 0 && !a.inv.equip.weapon.gems, 'gỡ Lôi Quang Ngọc Cấp 2: trừ 1.100 (xu khóa trước), ngọc về hành trang');
   ok(Math.abs(a.me.s.crit - crit0) < 0.05, `gỡ ngọc: chí mạng trở về ${crit0}`);
   // khảm lại để kiểm tra lưu dữ liệu ở phần 8; thêm Huyết Hồn để có hút máu
   await give('/item gem_huyet_1 1', 'gem_huyet_1');
@@ -302,11 +305,11 @@ async function gemTest(a) {
   const hat = a.inv.inv[at('hat_4')];
   const price = I.sellPrice(hat);
   ok(price === I.sellPrice({ ...hat, gems: undefined }) + Math.floor(I.ITEMS.gem_thuy_2.price * 0.25), `giá bán nón có ngọc gồm giá ngọc (${price} xu)`);
-  const xu3 = a.me.xu;
+  const t3 = a.me.xu + (a.me.xuk || 0);
   a.send('sell', { npc, slot: at('hat_4'), qty: 1 });
   ok(!!(await note(new RegExp(`Đã bán Nón Vàng được ${price} xu`))), 'bán nón có ngọc: thông báo đúng giá');
-  await Promise.all([a.wait('me', (m) => m.xu === xu3 + price), a.wait('inv', (m) => !m.inv.some((it) => it && it.id === 'hat_4'))]).catch(() => null);
-  ok(a.me.xu === xu3 + price && at('hat_4') < 0, 'bán món có ngọc: cộng đúng xu, món (kèm ngọc) rời hành trang');
+  await Promise.all([a.wait('me', (m) => m.xu + (m.xuk || 0) === t3 + price), a.wait('inv', (m) => !m.inv.some((it) => it && it.id === 'hat_4'))]).catch(() => null);
+  ok(a.me.xu + (a.me.xuk || 0) === t3 + price && at('hat_4') < 0, 'bán món có ngọc: cộng đúng tiền, món (kèm ngọc) rời hành trang');
   b.ws.close();
 }
 

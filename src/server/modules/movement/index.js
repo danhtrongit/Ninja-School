@@ -134,8 +134,8 @@ class Movement {
   teleport(p, dest) {
     if (!VILLAGES.includes(dest) || dest === p.map.id) return;
     const cost = p.lv < 20 ? 0 : 300;
-    if (p.c.xu < cost) return p.notice('Không đủ xu.', 'warn');
-    p.c.xu -= cost;
+    if (p.xuAll() < cost) return p.notice('Không đủ xu.', 'warn');
+    p.payXu(cost);
     p.markMe();
     this.world.changeMap(p, dest, MAPS[dest].spawnX);
   }

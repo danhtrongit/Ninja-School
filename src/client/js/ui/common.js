@@ -1,7 +1,7 @@
 // Hằng số và hàm dựng phần tử dùng chung giữa HUD và các cửa sổ (ô vật phẩm, ô kỹ năng, thanh, tiền)
 import { S, fmt, skillVal, itemName, gemDef, gemHoles, gemColor } from '../core/store.js';
 import { ELEMENT_COLORS } from '../render/sprites.js';
-import { iconURL, skillIconURL } from '../render/icons.js';
+import { iconURL, skillIconURL, uiIconURL } from '../render/icons.js';
 import { h, ico } from './dom.js';
 
 const SLOT_ICON = {
@@ -61,6 +61,7 @@ export function skImg(sid, cls = 'sk-img') {
 export function moneyLine() {
   return h('div', { class: 'money' },
     h('span', { class: 'xu' }, ico('xu'), h('b', null, fmt(S.me.xu)), ' xu'),
+    h('span', { class: 'xuk', title: 'Xu khóa: không giao dịch được, dùng trước khi trả phí NPC' }, ico('xuk'), h('b', null, fmt(S.me.xuk || 0)), ' xu khóa'),
     h('span', { class: 'luong' }, ico('luong'), h('b', null, fmt(S.me.luong)), ' lượng'));
 }
 
@@ -71,11 +72,13 @@ export function miniBar(v, max, cls = '') {
 
 export function itemIcon(it, opts = {}) {
   const def = S.G.items[it.id];
-  const el = h('div', { class: `slot r${it.r || 0}${opts.sel ? ' sel' : ''}`, title: itemName(it) },
+  const el = h('div', { class: `slot r${it.r || 0}${opts.sel ? ' sel' : ''}`, title: it.b ? `${itemName(it)} (khóa)` : itemName(it) },
     h('img', { src: iconURL(def.icon, it.r), alt: '', draggable: 'false' }));
   if (it.q > 1) el.appendChild(h('span', { class: 'qty' }, it.q > 999 ? '999+' : it.q));
   if (it.exp) el.appendChild(h('span', { class: 'exp' }, expLeft(it)));
   if (it.p) el.appendChild(h('span', { class: 'plus' }, `+${it.p}`));
+  // vật phẩm khóa: ổ khóa góc trên phải (không dùng lớp .locked, lớp đó là chưa đủ cấp/khác phái)
+  if (it.b) el.appendChild(h('img', { class: 'bnd', src: uiIconURL('lock'), alt: '', draggable: 'false' }));
   // ngọc: số cấp ở góc trên trái; trang bị đã khảm: dãy lỗ tròn góc dưới phải (lỗ có ngọc tô màu ngọc)
   if (def.type === 'gem') el.appendChild(h('span', { class: 'glv' }, def.glv));
   if (Array.isArray(it.gems) && it.gems.some(Boolean)) {

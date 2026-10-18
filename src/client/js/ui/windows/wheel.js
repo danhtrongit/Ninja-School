@@ -85,7 +85,10 @@ export default {
       const left = Math.cos(mid) < 0;
       g.save();
       g.rotate(left ? mid + Math.PI : mid);
-      g.font = '15px VT323, monospace';
+      // nhãn dài (vd "15.000 xu khóa") thu nhỏ chữ để không đè trục giữa
+      let fs = 15;
+      g.font = `${fs}px VT323, monospace`;
+      while (fs > 11 && g.measureText(prizes[i].label).width > R - 30) g.font = `${--fs}px VT323, monospace`;
       g.textAlign = left ? 'left' : 'right';
       g.textBaseline = 'middle';
       g.lineWidth = 3;

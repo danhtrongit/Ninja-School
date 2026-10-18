@@ -169,20 +169,37 @@ async function bossEventTest(a) {
   const boss = [...a.monsters.values()].find((m) => m.k === 'ev_hacviem');
   ok(!!boss && boss.id === ev.id, 'Tà Thú có mặt trên bản đồ sự kiện');
   if (!boss) return g.ws.close();
+  const { MONSTERS, eventHpMul } = require('../../src/shared/data/monsters');
+  const muls = Array.from({ length: 20 }, (_, i) => Math.round(MONSTERS.ev_hacviem.baseHp * eventHpMul(i + 1)));
+  ok(muls.includes(boss.mhp), `HP Tà Thú theo số người online đủ cấp (${boss.mhp})`);
   // G đứng ở mép trái (boss xuất hiện ở khoảng giữa bản đồ); A đứng bên phải boss để chiêu dải hướng ra xa G
   await dash(g, 120);
   const gHp = g.me.hp;
-  await dash(a, boss.x + 30);
-  a.send('move', { x: a.x, y: 300, dir: -1, st: 0 });
 
-  // Lần niệm 1: đứng yên trong vùng → bị trúng; G ở xa không mất máu
-  from = a.msgs.length;
-  const c1 = await seek(a, 'bossCast', (m) => m.id === boss.id, from, 9000);
-  const t1 = Date.now();
-  const h1 = await seek(a, 'bossHit', (m) => m.id === boss.id, c1.i, 4000);
-  const waited = Date.now() - t1;
+  // Lần niệm 1: đứng yên trong vùng → bị trúng; G ở xa không mất máu.
+  // Boss và quái quanh đó đủ sức hạ A trong lúc chờ (boss mất mục tiêu thì không niệm): gục thì hồi sinh, hồi đầy máu rồi chờ lần niệm sau
+  let c1 = null;
+  let h1 = null;
+  let hit1 = null;
+  let waited = 0;
+  for (let k = 0; k < 4; k++) {
+    await revive(a);
+    a.send('chat', { ch: 'map', msg: '/lv 120' });
+    const bm = a.monsters.get(boss.id);
+    if (bm && Math.abs(a.x - (bm.x + 30)) > 20) await dash(a, Math.round(bm.x + 30));
+    a.send('move', { x: a.x, y: 300, dir: -1, st: 0 });
+    from = a.msgs.length;
+    c1 = await seek(a, 'bossCast', (m) => m.id === boss.id, from, 9000).catch(() => null);
+    if (!c1) continue;
+    const t1 = Date.now();
+    h1 = await seek(a, 'bossHit', (m) => m.id === boss.id, c1.i, 4000);
+    waited = Date.now() - t1;
+    hit1 = await seek(a, 'hit', (m) => m.bs && m.a === `m${boss.id}`, h1.i, 800).catch(() => null);
+    // gục trước khi chiêu nổ thì không tính, chờ lần niệm sau
+    if (!a.msgs.slice(c1.i, h1.i).some((m) => m.t === 'dead')) break;
+  }
+  if (!c1) throw new Error('A: hết thời gian chờ "bossCast" lần 1');
   ok(c1.m.dur >= 900 && waited >= c1.m.dur - 150 && h1.m.k === c1.m.k, `bossCast (${c1.m.name}, ${c1.m.shape}, ${c1.m.dur}ms) đến trước bossHit sau thời gian niệm`);
-  const hit1 = await seek(a, 'hit', (m) => m.bs && m.a === `m${boss.id}`, h1.i, 800).catch(() => null);
   ok(!!hit1 && hit1.m.list.some(([tid]) => tid === `p${a.me.id}`), 'đứng trong vùng thì trúng chiêu boss');
   ok(!hit1 || !hit1.m.list.some(([tid]) => tid === `p${g.me.id}`), 'người đứng ngoài vùng không bị tính sát thương');
   await sleep(150);

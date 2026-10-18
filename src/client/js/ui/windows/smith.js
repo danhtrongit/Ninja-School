@@ -1,7 +1,7 @@
 // Cửa sổ Thợ Rèn (upgrade): Cường hóa / Khảm ngọc / Ghép ngọc
 // Các phương thức được gộp vào UI.prototype (xem ui.js), `this` là đối tượng UI
-import { S, fmt, itemName, rarityColor, gemDef, gemHoles, gemText, gemParts, gemColor } from '../../core/store.js';
-import { iconURL } from '../../render/icons.js';
+import { S, fmt, xuAll, itemName, rarityColor, gemDef, gemHoles, gemText, gemParts, gemColor } from '../../core/store.js';
+import { iconURL, uiIconURL } from '../../render/icons.js';
 import { sfx } from '../../core/sound.js';
 import { h, ico } from '../dom.js';
 import { gearSlots, itemIcon } from '../common.js';
@@ -50,10 +50,10 @@ export default {
             h('div', { class: 'upg-plus' }, h('span', null, `+${plus}`), h('i', null, '→'), h('span', { class: 'next' }, `+${plus + 1}`)),
             h('div', { class: 'rate' }, h('span', null, 'Tỉ lệ thành công'), h('div', { class: 'pbar rate-bar' }, h('i', { style: { width: `${U.rate[plus]}%` } }), h('span', null, `${U.rate[plus]}%`))),
             h('div', { class: `req ${have >= need ? 'good' : 'bad'}` }, h('img', { src: iconURL(S.G.items[stone].icon), alt: '' }), `${S.G.items[stone].name}: ${have}/${need}`),
-            h('div', { class: `req ${S.me.xu >= cost ? '' : 'bad'}` }, ico('xu'), `Phí: ${fmt(cost)} xu`),
+            h('div', { class: `req ${xuAll() >= cost ? '' : 'bad'}`, title: 'Trừ xu khóa trước' }, ico('xu'), `Phí: ${fmt(cost)} xu`),
             plus >= 4 ? h('div', { class: 'warn' }, 'Thất bại sẽ bị giảm 1 cấp (trừ khi dùng Bùa Bảo Hộ).') : h('div', { class: 'muted' }, 'Thất bại không mất cấp.'),
             h('label', { class: 'set-row' }, h('span', null, `Dùng Bùa Bảo Hộ (có ${charms})`), useCharm),
-            h('button', { class: 'btn primary big', disabled: have < need || S.me.xu < cost, onclick: () => this.net.send('upgrade', { npc: this.upgradeNpc, src: sel.src, slot: sel.slot, charm: useCharm.checked }) }, 'CƯỜNG HÓA')));
+            h('button', { class: 'btn primary big', disabled: have < need || xuAll() < cost, onclick: () => this.net.send('upgrade', { npc: this.upgradeNpc, src: sel.src, slot: sel.slot, charm: useCharm.checked }) }, 'CƯỜNG HÓA')));
       }
     }
     this.frameWin('Thợ Rèn', h('div', null, this.smithTabs('upg'), h('div', { class: 'upg-wrap' }, h('div', null, h('div', { class: 'sub-title' }, 'Trang bị'), grid, detail), panel)),
@@ -118,10 +118,13 @@ export default {
       const send = (t, extra) => this.net.send(t, { npc: this.upgradeNpc, src: sel.src, slot: sel.slot, ...extra });
       // cùng điều kiện với server (gemPut): lỗ trống, chưa có viên cùng loại
       const why = (g) => (gs.some((x) => x && x.gem === g.gem) ? `Món này đã có ${G.types[g.gem].name}` : '');
-      const putAt = (k, i) => {
+      const putAt = async (k, i) => {
         const g = gemDef(S.inv[i] && S.inv[i].id);
         if (!g) return;
         if (why(g)) return this.toast(`${why(g)}. Mỗi món chỉ khảm 1 viên mỗi loại.`, 'warn');
+        // server khóa cả món khi khảm ngọc khóa: hỏi trước, tránh khóa nhầm đồ định giao dịch
+        if (S.inv[i].b && !it.b && !(await this.ask({ title: 'Khảm ngọc khóa', icon: 'lock', ok: 'Vẫn khảm',
+          text: `${g.name} đang khóa. Khảm vào thì ${itemName(it)} cũng bị khóa (không giao dịch được). Tiếp tục?` }))) return;
         send('gemPut', { hole: k, gem: i });
       };
       const blocked = pickDef ? why(pickDef) : '';
@@ -158,8 +161,8 @@ export default {
       if (hs) {
         const cost = G.takeCost[hs.glv];
         act = h('div', { class: 'gem-act' }, h('div', null, 'Gỡ ', h('b', { style: { color: gemColor(hs) } }, hs.name), ' về hành trang'),
-          h('div', { class: `req ${S.me.xu >= cost ? '' : 'bad'}` }, ico('xu'), `Phí gỡ: ${fmt(cost)} xu`),
-          h('button', { class: 'btn danger big', disabled: S.me.xu < cost, onclick: () => send('gemTake', { hole: this.holeSel }) }, 'GỠ NGỌC'));
+          h('div', { class: `req ${xuAll() >= cost ? '' : 'bad'}`, title: 'Trừ xu khóa trước' }, ico('xu'), `Phí gỡ: ${fmt(cost)} xu`),
+          h('button', { class: 'btn danger big', disabled: xuAll() < cost, onclick: () => send('gemTake', { hole: this.holeSel }) }, 'GỠ NGỌC'));
       } else if (pickDef) {
         const free = gs.findIndex((g) => !g);
         act = h('div', { class: 'gem-act' }, h('div', null, 'Đã chọn ', h('b', { style: { color: gemColor(pickDef) } }, pickDef.name), ` (${gemText(pickDef)})`),
@@ -172,7 +175,8 @@ export default {
       }
       panel = h('div', { class: 'gem-panel' },
         h('div', { class: `gem-board h${holes}` },
-          h('div', { class: 'gb-item' }, h('div', { class: `slot big r${it.r || 0}` }, h('img', { src: iconURL(def.icon, it.r), alt: '' }), it.p ? h('span', { class: 'plus' }, `+${it.p}`) : null),
+          h('div', { class: 'gb-item' }, h('div', { class: `slot big r${it.r || 0}` }, h('img', { src: iconURL(def.icon, it.r), alt: '' }), it.p ? h('span', { class: 'plus' }, `+${it.p}`) : null,
+            it.b ? h('img', { class: 'bnd', src: uiIconURL('lock'), alt: '', title: 'Vật phẩm khóa' }) : null),
             h('div', { class: 'gb-name', style: { color: rarityColor(it) } }, itemName(it)),
             h('div', { class: 'tiny muted' }, `${sel.src === 'eq' ? 'Đang mặc · ' : ''}${holes} lỗ khảm`)),
           h('div', { class: 'gb-holes' }, ...holeEls.map((el, k) => h('div', { class: 'gh-wrap' }, el, caps[k])))),
@@ -191,7 +195,12 @@ export default {
   renderGemMerge() {
     const G = S.G.gems;
     const count = new Map();
-    for (const it of S.inv) if (it && gemDef(it.id)) count.set(it.id, (count.get(it.id) || 0) + it.q);
+    const nBound = new Map();
+    for (const it of S.inv) {
+      if (!it || !gemDef(it.id)) continue;
+      count.set(it.id, (count.get(it.id) || 0) + it.q);
+      if (it.b) nBound.set(it.id, (nBound.get(it.id) || 0) + it.q);
+    }
     const kinds = Object.keys(G.types);
     const ids = [...count.keys()].sort((a, b) => {
       const da = S.G.items[a];
@@ -229,9 +238,11 @@ export default {
             h('div', { class: 'rate' }, h('span', null, 'Tỉ lệ thành công'), h('div', { class: 'pbar rate-bar' }, h('i', { style: { width: `${rate}%` } }), h('span', null, `${rate}%`))),
             h('div', { class: 'merge-reqs' },
               h('div', { class: `req ${have >= 3 ? 'good' : 'bad'}` }, h('img', { src: iconURL(g.icon), alt: '' }), have >= 3 ? `Có ${have} viên (cần 3)` : `Có ${have}/3 viên`),
-              h('div', { class: `req ${S.me.xu >= cost ? '' : 'bad'}` }, ico('xu'), `Phí: ${fmt(cost)} xu`)),
+              h('div', { class: `req ${xuAll() >= cost ? '' : 'bad'}`, title: 'Trừ xu khóa trước' }, ico('xu'), `Phí: ${fmt(cost)} xu`)),
             rate < 100 ? h('div', { class: 'warn tiny' }, 'Thất bại mất 1 viên, 2 viên còn lại trả về hành trang.') : h('div', { class: 'muted tiny' }, 'Ghép cấp này luôn thành công.'),
-            h('button', { class: 'btn primary big', disabled: have < 3 || S.me.xu < cost, onclick: () => this.net.send('gemMerge', { npc: this.upgradeNpc, id: this.mergeSel }) }, 'GHÉP NGỌC')));
+            // server dùng viên khóa trước: có viên khóa thì viên ghép ra cũng khóa
+            nBound.get(this.mergeSel) ? h('div', { class: 'id-bound tiny' }, ico('lock'), 'Có viên khóa: viên ghép ra sẽ bị khóa.') : null,
+            h('button', { class: 'btn primary big', disabled: have < 3 || xuAll() < cost, onclick: () => this.net.send('gemMerge', { npc: this.upgradeNpc, id: this.mergeSel }) }, 'GHÉP NGỌC')));
       }
     }
     this.frameWin('Thợ Rèn', h('div', null, this.smithTabs('merge'),

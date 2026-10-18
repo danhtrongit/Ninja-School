@@ -269,8 +269,8 @@ export class UI {
     this.hbSets = h('div', { class: 'hb-sets' });
     sk.appendChild(this.hbSets);
     this.potBtns = {
-      hp: h('button', { class: 'sbtn pot hp', 'data-act': 'hp', title: 'Bình sinh lực (Q)' }, h('img', { alt: '', draggable: 'false' }), h('span', { class: 'qty' }), h('small', null, 'Q')),
-      mp: h('button', { class: 'sbtn pot mp', 'data-act': 'mp', title: 'Bình chakra (E)' }, h('img', { alt: '', draggable: 'false' }), h('span', { class: 'qty' }), h('small', null, 'E')),
+      hp: h('button', { class: 'sbtn pot hp', 'data-act': 'hp', title: 'Bình sinh lực (Q)' }, h('img', { alt: '', draggable: 'false' }), h('span', { class: 'cd' }), h('span', { class: 'cdt' }), h('span', { class: 'qty' }), h('small', null, 'Q')),
+      mp: h('button', { class: 'sbtn pot mp', 'data-act': 'mp', title: 'Bình chakra (E)' }, h('img', { alt: '', draggable: 'false' }), h('span', { class: 'cd' }), h('span', { class: 'cdt' }), h('span', { class: 'qty' }), h('small', null, 'E')),
     };
     sk.appendChild(this.potBtns.hp);
     sk.appendChild(this.potBtns.mp);
@@ -414,6 +414,7 @@ export class UI {
     bar('#bar-mp', me.mp, me.s.maxMp, `${fmt(me.mp)}/${fmt(me.s.maxMp)}`);
     bar('#bar-exp', me.exp, me.need, me.level >= (S.G.maxLevel || 100) ? 'MAX' : `${((me.exp / me.need) * 100).toFixed(2)}%`);
     $('#st-xu').textContent = fmt(me.xu);
+    $('#st-xu').parentElement.title = `Xu: ${fmt(me.xu)} · Xu khóa: ${fmt(me.xuk || 0)}`;
     $('#st-luong').textContent = fmt(me.luong);
     const avKey = `${me.cls}|${me.gender}|${JSON.stringify(me.look || {})}|${me.name}`;
     if (avKey !== this.avatarKey) {
@@ -750,6 +751,20 @@ export class UI {
       };
       upd(this.basicBtn, g.basicSkill(), true);
       this.skillBtns.forEach((b, i) => upd(b, S.me.hotbar[i], false));
+      // vòng hồi chiêu trên nút bình thuốc (dùng chung đồng hồ performance.now với game.lastPotion)
+      for (const kind of ['hp', 'mp']) {
+        const b = this.potBtns && this.potBtns[kind];
+        if (!b) continue;
+        const cdMs = (S.G.potCd && S.G.potCd[kind]) || 600;
+        const left = g.lastPotion[kind] + cdMs - now;
+        const p = left > 0 ? Math.round(Math.min(1, left / cdMs) * 200) / 200 : 0;
+        if (b._p !== p) {
+          b._p = p;
+          b.querySelector('.cd').style.setProperty('--p', p);
+          b.classList.toggle('cool', p > 0);
+          b.querySelector('.cdt').textContent = left >= 1000 ? String(Math.ceil(left / 1000)) : '';
+        }
+      }
     }
     if (now - this.lastFrame < 80) return;
     this.lastFrame = now;
@@ -976,6 +991,7 @@ export class UI {
     S.arena = null;
     this.arenaRes = null;
     this.setArena(null);
+    this.shopNoBound = false;
   }
 }
 

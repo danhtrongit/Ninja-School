@@ -41,7 +41,7 @@ export default {
         const [id, q] = r.items[r.items.length - 1];
         const it = { id, q, r: S.G.items[id].grade || 0 };
         pic = itemIcon(it, { onclick: () => this.showItem(it, { from: 'view' }) });
-      } else pic = h('div', { class: 'slot ev-money' }, h('img', { src: uiIconURL(r.luong ? 'luong' : 'xu'), alt: '' }));
+      } else pic = h('div', { class: 'slot ev-money' }, h('img', { src: uiIconURL(r.luong ? 'luong' : 'xuk'), alt: '' }));
       const ex = (k) => { sfx('click'); this.net.send('seasonEx', { npc: this.eventNpc, id: e.id, n: k }); };
       const many = !e.limit && have >= e.cost * 10;
       return h('div', { class: `ev-card${can ? ' can' : ''}${out ? ' out' : ''}` },

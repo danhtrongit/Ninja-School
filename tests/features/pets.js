@@ -117,11 +117,11 @@ async function petTest(a) {
   a.send('chat', { ch: 'map', msg: '/xu 100000' });
   await a.wait('chat', (m) => /xu/.test(m.msg));
   await sleep(150);
-  const xu0 = a.me.xu;
+  const t0 = a.me.xu + (a.me.xuk || 0);
   a.send('buy', { npc: 'v_fire_potion', id: 'pf_fish', qty: 3 });
   await a.wait('notice', (m) => /Đã mua/.test(m.msg));
   await sleep(120);
-  ok(cnt('pf_fish') === 3 && a.me.xu === xu0 - 3 * D.items.pf_fish.price, 'mua 3 Cá Khô Ngân Lân trừ đúng xu');
+  ok(cnt('pf_fish') === 3 && a.me.xu + (a.me.xuk || 0) === t0 - 3 * D.items.pf_fish.price, 'mua 3 Cá Khô Ngân Lân trừ đúng tiền (xu khóa trước)');
 
   // Diệt quái: thú nhận EXP (gói 'pet'), Tha Đồ nhặt món rơi gần
   a.send('chat', { ch: 'map', msg: '/tp fire_field' });

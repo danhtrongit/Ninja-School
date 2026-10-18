@@ -146,11 +146,12 @@ async function mailTest(a, b) {
   b2.send('mailList');
   let ml = await b2.wait('mail');
   const m1 = ml.list[0];
-  ok(ml.max === 30 && m1.xu === 1234 && m1.luong === 3 && m1.items[0].id === 'stone3' && m1.items[0].q === 5 && !m1.read, 'người offline nhận được thư: xu, lượng, vật phẩm đính kèm');
+  ok(ml.max === 30 && m1.xuk === 1234 && m1.luong === 3 && m1.items[0].id === 'stone3' && m1.items[0].q === 5 && !m1.read, 'người offline nhận được thư: xu khóa, lượng, vật phẩm đính kèm');
   const free = b2.inv.inv.filter((x) => !x).length;
   b2.send('chat', { ch: 'map', msg: `/item w_kunai_1 ${free}` });
   await b2.wait('inv', (m) => m.inv.every(Boolean));
   const xu0 = b2.me.xu;
+  const xuk0 = b2.me.xuk || 0;
   b2.send('mailClaim', { id: m1.id });
   ok(!!(await b2.wait('notice', (m) => /không đủ chỗ/.test(m.msg))), 'hành trang đầy: từ chối nhận quà');
   ml = await b2.wait('mail');
@@ -164,8 +165,8 @@ async function mailTest(a, b) {
   await b2.wait('notice', (m) => /Đã nhận quà/.test(m.msg));
   ml = await b2.wait('mail');
   await sleep(150);
-  ok(ml.list[0].got && b2.me.xu === xu0 + 1234 && b2.inv.inv.some((it) => it && it.id === 'stone3' && it.q === 5) && b2.me.mail.g === 0,
-    'dọn 1 ô: nhận đủ 1.234 xu, 3 lượng, 5 đá; hết chấm đỏ quà');
+  ok(ml.list[0].got && b2.me.xuk === xuk0 + 1234 && b2.me.xu === xu0 && b2.inv.inv.some((it) => it && it.id === 'stone3' && it.q === 5) && b2.me.mail.g === 0,
+    'dọn 1 ô: nhận đủ 1.234 xu khóa, 3 lượng, 5 đá; hết chấm đỏ quà');
 
   // Giftcode: admin tạo mã tạm, mỗi nhân vật 1 lần, túi đầy thì quà vào hộp thư
   ok(!!(await say(a, '/code QUATEST1 1000 2 hp2 30 1', /Đã tạo giftcode QUATEST1/)), 'admin /code tạo giftcode tạm thời');
@@ -191,18 +192,19 @@ async function mailTest(a, b) {
   b2.send('mailList');
   ml = await b2.wait('mail');
   const gm = ml.list.find((m) => /QUATEST1/.test(m.title));
-  ok(!!gm && gm.xu === 1000 && gm.luong === 2 && gm.items[0].id === 'hp2' && gm.items[0].q === 30, 'thư giftcode có đủ quà');
+  ok(!!gm && gm.xuk === 1000 && gm.luong === 2 && gm.items[0].id === 'hp2' && gm.items[0].q === 30, 'thư giftcode có đủ quà');
   for (const it of b2.inv.inv.filter((x) => x && x.id === 'w_kunai_1').slice(0, 2)) {
     b2.send('discard', { slot: b2.inv.inv.indexOf(it) });
     await sleep(80);
   }
   await sleep(250);
   const xu1 = b2.me.xu;
+  const xuk1 = b2.me.xuk || 0;
   const l1 = b2.me.luong;
   b2.send('mailClaimAll');
   await b2.wait('notice', (m) => /Đã nhận quà từ 1 thư/.test(m.msg));
   await sleep(200);
-  ok(b2.me.xu === xu1 + 1000 && b2.me.luong === l1 + 2 && b2.inv.inv.some((it) => it && it.id === 'hp2'), 'nhận tất cả: lấy quà mọi thư còn quà');
+  ok(b2.me.xuk === xuk1 + 1000 && b2.me.luong === l1 + 2 && b2.inv.inv.some((it) => it && it.id === 'hp2'), 'nhận tất cả: lấy quà mọi thư còn quà');
   b2.send('mailDelRead');
   ml = await b2.wait('mail');
   ok(ml.list.length === 0 && b2.me.mail.n === 0, 'xóa thư đã đọc: hộp thư trống');
@@ -264,11 +266,11 @@ async function mailTest(a, b) {
   a.send('npcAct', { id: 'v_fire_event', a: 'shop' });
   ok(!!(await a.wait('openUi', (m) => m.ui === 'event')), 'mở cửa sổ đổi quà lễ hội');
   const c0 = cakes(a);
-  const xa = a.me.xu;
+  const xka = a.me.xuk || 0;
   a.send('seasonEx', { npc: 'v_fire_event', id: 'xu', n: 2 });
   let sr = await a.wait('seasonResult');
   await sleep(150);
-  ok(sr.ok && a.me.xu === xa + 12000 && cakes(a) === c0 - 10, 'đổi 2 lần 5 bánh lấy 6.000 xu');
+  ok(sr.ok && a.me.xuk === xka + 12000 && cakes(a) === c0 - 10, 'đổi 2 lần 5 bánh lấy 6.000 xu khóa');
   const la = a.me.luong;
   await sleep(250);
   a.send('seasonEx', { npc: 'v_fire_event', id: 'luong', n: 50 });

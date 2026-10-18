@@ -3,7 +3,7 @@
 import { S, fmt, itemStats, itemName, rarityColor, gemDef, gemHoles, gemText, gemColor } from '../../core/store.js';
 import { drawNinja, mountOffset } from '../../render/sprites.js';
 import { iconURL } from '../../render/icons.js';
-import { $, h } from '../dom.js';
+import { $, h, ico } from '../dom.js';
 import { STYLE_SLOTS, gearSlots, expLeft, elColorOfSkill, passiveText, skImg, moneyLine, itemIcon, emptySlot } from '../common.js';
 
 // Vị trí ô trang bị quanh hình nhân vật: [cột, hàng]. Tab Trang bị: 9 ô chiến đấu; tab Thời trang: 4 ô thời trang + thú cưng
@@ -75,8 +75,9 @@ export default {
     drawNinja(ctx, cv.width / 2 + (sc === 2 ? 4 : 0), cv.height - 9, { ...o, look, dir: 1, anim: 'idle', t, scale: sc });
   },
 
-  // Lưới hành trang chia trang INV_PAGE ô (túi mở rộng tới 100 ô); trang đang xem dùng chung cho túi, kho, cửa hàng, giao dịch
-  invGrid(onclick, mark) {
+  // Lưới hành trang chia trang INV_PAGE ô (túi mở rộng tới 100 ô); trang đang xem dùng chung cho túi, kho, cửa hàng, giao dịch.
+  // dim(it) đúng: ô mờ, không bấm được (vd đồ khóa/có hạn trong giao dịch)
+  invGrid(onclick, mark, dim) {
     const pages = Math.max(1, Math.ceil(S.inv.length / INV_PAGE));
     const pg = Math.min(this.invPage || 0, pages - 1);
     const from = pg * INV_PAGE;
@@ -84,7 +85,10 @@ export default {
     S.inv.slice(from, from + INV_PAGE).forEach((it, k) => {
       const i = from + k;
       if (!it) return grid.appendChild(h('div', { class: 'slot empty' }));
-      grid.appendChild(itemIcon(it, { sel: mark && mark.has(i), onclick: () => onclick(it, i) }));
+      const off = !!(dim && dim(it));
+      const el = itemIcon(it, { sel: mark && mark.has(i), onclick: off ? null : () => onclick(it, i) });
+      if (off) el.classList.add('nt');
+      grid.appendChild(el);
     });
     if (pages < 2) return grid;
     // trang cuối chưa đủ ô: lấp ô khóa để lưới không co lại; bấm vào thì hỏi mở rộng
@@ -239,6 +243,7 @@ export default {
           : h('div', { class: 'tiny good' }, 'Cấp cao nhất'),
         h('div', { class: 'tiny muted' }, `Gỡ khỏi trang bị: ${fmt(G.takeCost[def.glv])} xu`)));
     }
+    if (it.b) box.appendChild(h('div', { class: 'id-bound' }, ico('lock'), 'Vật phẩm khóa: không thể giao dịch'));
     if (it.q > 1) box.appendChild(h('div', { class: 'muted' }, `Số lượng: ${it.q}`));
     if (extra) box.appendChild(extra);
     return box;
@@ -302,7 +307,7 @@ export default {
           text: `Bán ${itemName(it)} kèm ${gemN} viên ngọc đang khảm? Ngọc sẽ mất, chỉ nhận thêm 25% giá ngọc. Có thể gỡ ngọc ở Thợ Rèn trước khi bán.` }))) return;
         this.net.send('sell', { npc: this.shop.npc, slot: ctx.slot, qty: n });
         this.hideItem();
-      } }, `Bán (${fmt(price)} xu/cái)`));
+      } }, `Bán (${fmt(price)} ${it.b ? 'xu khóa' : 'xu'}/cái)`));
     }
     add('Đóng', () => {});
     const pop = h('div', { class: `item-pop r${it.r || 0}` }, this.itemDetail(it), btns);

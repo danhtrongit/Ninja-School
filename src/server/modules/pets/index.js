@@ -18,6 +18,9 @@ class Pets {
     const maxLv = it.plv >= PET.maxLv;
     if (maxLv && it.love >= PET.loveMax) return p.notice(`${ITEMS[it.id].name} đã no nê, cấp và thân mật đều tối đa.`);
     p.lastFeed = now;
+    // thức ăn khóa (mua bằng xu khóa) làm thú khóa theo, để xu khóa không thành giá trị giao dịch được
+    const fb = !!(p.c.inv[slot] && p.c.inv[slot].b) && !it.b;
+    if (fb) it.b = 1;
     p.removeAt(slot, 1);
     const love0 = it.love;
     it.love = Math.min(PET.loveMax, it.love + (e.love || 0));
@@ -28,6 +31,7 @@ class Pets {
     const parts = [];
     if (got) parts.push(`+${got.toLocaleString('vi-VN')} EXP`);
     if (it.love > love0) parts.push(`+${it.love - love0} thân mật`);
+    if (fb) parts.push('thú cưng đã bị khóa');
     p.notice(`${ITEMS[it.id].name} ăn ${def.name}: ${parts.join(', ') || 'đã no'}.`, 'reward');
   }
 }

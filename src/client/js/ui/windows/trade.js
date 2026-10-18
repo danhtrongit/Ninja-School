@@ -24,11 +24,11 @@ export default {
       if (this.tradeSel.has(i)) this.tradeSel.delete(i);
       else if (this.tradeSel.size < 10) this.tradeSel.add(i);
       pushSet();
-    }, this.tradeSel);
+    }, this.tradeSel, (it) => !!(it.b || it.exp));
     this.frameWin(`Giao dịch với ${t.with}`, h('div', { class: 'trade-wrap' },
       h('div', { class: `trade-col${mine.lock ? ' locked' : ''}` }, h('div', { class: 'sub-title' }, 'Bạn đưa ', ...state(mine)), offer(mine), h('div', { class: 'row xu' }, ico('xu'), 'Xu: ', xuIn)),
       h('div', { class: `trade-col${theirs.lock ? ' locked' : ''}` }, h('div', { class: 'sub-title' }, `${t.with} đưa `, ...state(theirs)), offer(theirs), h('div', { class: 'row xu' }, ico('xu'), `Xu: ${fmt(theirs.xu)}`)),
-      h('div', { class: 'trade-inv' }, h('div', { class: 'muted tiny' }, 'Bấm vào vật phẩm trong túi để thêm/bỏ khỏi giao dịch'), inv)),
+      h('div', { class: 'trade-inv' }, h('div', { class: 'muted tiny' }, 'Bấm vật phẩm để thêm/bỏ. Vật phẩm khóa (ổ khóa) và có hạn không giao dịch được; xu khóa không đưa vào giao dịch.'), inv)),
     h('div', { class: 'row' },
       h('button', { class: 'btn', disabled: mine.lock, onclick: () => this.net.send('tradeLock') }, 'Khóa'),
       h('button', { class: 'btn primary', disabled: !mine.lock || !theirs.lock || mine.ok, onclick: () => this.net.send('tradeOk') }, 'Đồng ý'),

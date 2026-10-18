@@ -265,7 +265,7 @@ class Combat {
             const r = this.calc(att, { def: v.e.def.def, dodge: 0, el: v.e.def.el }, mul, isSkill);
             list.push([`m${v.e.id}`, r.dmg, r.crit ? 1 : 0, 0]);
             if (sk.slow) v.e.slowUntil = now + sk.slow;
-            dealt += Math.min(r.dmg, Math.max(0, v.e.hp));
+            dealt += Math.min(r.dmg, Math.max(0, v.e.hp)) * (v.e.boss ? GEM.lifestealBoss : 1);
             this.damageMonster(v.e, p, r.dmg);
           } else {
             // đòn trước đã kết thúc trận (lôi đài hạ gục, thách đấu phân thắng bại): các đòn sau không đánh tiếp

@@ -188,3 +188,7 @@ body.win-open .mbtn::after { display: none; }
 @media (max-height: 520px) {
   .doll { grid-template-rows: repeat(4, 61px); }
 }
+
+/* ----- Xu khóa & vật phẩm khóa */
+body.touch .shop-nb { min-height: 44px; }
+body.touch .money { gap: 8px; }

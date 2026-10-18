@@ -3,8 +3,9 @@
 // Hành trang & trang bị: dùng vật phẩm, mặc/tháo, hủy, sắp xếp, mở rương. Cộng chỉ số trang bị vào Player.recalc
 const { CLASSES } = require('../../../shared/data/classes');
 const { ITEMS, SLOTS, GEAR_SLOTS, TIERS, itemStats } = require('../../../shared/data/items');
-const { INV_SIZE, INV_EXPAND, invSize } = require('../../../shared/constants');
+const { INV_SIZE, INV_EXPAND, invSize, POTION_CD } = require('../../../shared/constants');
 const { int, own, refreshInfo } = require('../../core/util');
+const { sameStack } = require('../../../shared/bound');
 
 class Inventory {
   constructor(world) {
@@ -24,14 +25,25 @@ class Inventory {
     if (def.lv > p.lv) return p.notice(`Cần đạt cấp ${def.lv}.`, 'warn');
     const e = def.effect || {};
     if (def.type === 'potion') {
-      const key = e.hp ? 'pot_hp' : 'pot_mp';
-      if ((p.cool[key] || 0) > now) return;
+      const kind = e.hp ? 'hp' : 'mp';
+      const key = `pot_${kind}`;
+      // dung sai 200ms cho độ trễ mạng (máy khách tự chặn theo cùng hồi chiêu)
+      const left = (p.cool[key] || 0) - now;
+      if (left > 200) {
+        // nút "Sử dụng" ở hành trang không tự chặn theo hồi chiêu: báo tối đa 1 lần mỗi vòng hồi chiêu
+        if ((p.cool.potMsg || 0) <= now) {
+          p.cool.potMsg = now + left;
+          p.notice(`Bình thuốc đang hồi chiêu (${Math.ceil(left / 1000)} giây).`);
+        }
+        return;
+      }
       if (e.hp && p.c.hp >= p.s.maxHp) return p.notice('Sinh lực đã đầy.');
       if (e.mp && p.c.mp >= p.s.maxMp) return p.notice('Chakra đã đầy.');
-      p.cool[key] = now + 500;
+      // phần dung sai dùng sớm được trừ vào lượt sau, uống dồn đều vẫn không nhanh hơn POTION_CD
+      p.cool[key] = Math.max(now, p.cool[key] || 0) + POTION_CD[kind];
       p.heal(e.hp || 0, e.mp || 0);
       p.removeAt(slot, 1);
-      if (p.map) p.map.broadcast('heal', { list: e.hp ? [[`p${p.id}`, e.hp]] : [], pot: p.id });
+      if (p.map) p.map.broadcast('heal', { list: e.hp ? [[`p${p.id}`, e.hp]] : [], pot: p.id, pk: kind });
       return;
     }
     if (def.type === 'scroll') {
@@ -58,32 +70,34 @@ class Inventory {
     }
     if (def.type === 'chest') {
       if (p.freeSlots() < 1) return p.notice('Hành trang đã đầy!', 'warn');
+      const bound = !!it.b;
       p.removeAt(slot, 1);
-      this.openChest(p);
+      this.openChest(p, bound);
     }
   }
 
-  openChest(p) {
+  openChest(p, bound) {
     const lv = p.lv;
     const r = Math.random();
     const tier = Math.min(TIERS - 1, Math.floor(lv / 10));
     if (r < 0.3) {
       const xu = 500 + lv * 200 + Math.floor(Math.random() * lv * 200);
-      p.gainXu(xu);
-      p.notice(`Mở rương nhận ${xu} xu!`, 'reward');
+      if (bound) p.gainXuk(xu);
+      else p.gainXu(xu);
+      p.notice(`Mở rương nhận ${xu} ${bound ? 'xu khóa' : 'xu'}!`, 'reward');
     } else if (r < 0.5) {
       const st = lv < 30 ? 'stone1' : lv < 60 ? 'stone2' : lv < 90 ? 'stone3' : 'stone4';
       const q = 2 + Math.floor(Math.random() * 4);
-      p.addItem(st, q);
+      p.addItem(st, q, 0, 0, bound ? 1 : 0);
       p.notice(`Mở rương nhận ${q} ${ITEMS[st].name}!`, 'reward');
     } else if (r < 0.75) {
       const slot = GEAR_SLOTS[Math.floor(Math.random() * GEAR_SLOTS.length)];
       const id = slot === 'weapon' ? `w_${p.c.cls}_${tier}` : `${slot}_${tier}`;
       const rar = Math.random() < 0.1 ? 3 : Math.random() < 0.4 ? 2 : 1;
-      p.addItem(id, 1, rar);
+      p.addItem(id, 1, rar, 0, bound ? 1 : 0);
       p.notice(`Mở rương nhận ${ITEMS[id].name}!`, 'reward');
     } else if (r < 0.88) {
-      p.addItem('exp2', 1);
+      p.addItem('exp2', 1, 0, 0, bound ? 1 : 0);
       p.notice('Mở rương nhận Bí Kíp Nhân Đôi!', 'reward');
     } else if (r < 0.93) {
       this.world.mods.fashion.giveFashion(p, 'Mở rương');
@@ -184,7 +198,7 @@ class Inventory {
     for (const it of items) {
       const def = ITEMS[it.id];
       if (def.stack) {
-        const ex = merged.find((x) => x.id === it.id && x.q < def.stack);
+        const ex = merged.find((x) => sameStack(x, it.id, it.b) && x.q < def.stack);
         if (ex) {
           const n = Math.min(def.stack - ex.q, it.q);
           ex.q += n;
@@ -197,7 +211,7 @@ class Inventory {
     merged.sort((a, b) => {
       const da = ITEMS[a.id];
       const db = ITEMS[b.id];
-      return (rank(da.type) - rank(db.type)) || (da.slot || '').localeCompare(db.slot || '') || (db.tier || 0) - (da.tier || 0) || a.id.localeCompare(b.id);
+      return (rank(da.type) - rank(db.type)) || (da.slot || '').localeCompare(db.slot || '') || (db.tier || 0) - (da.tier || 0) || ((a.b ? 1 : 0) - (b.b ? 1 : 0)) || a.id.localeCompare(b.id);
     });
     p.c.inv = p.c.inv.map((_, i) => merged[i] || null);
     p.markInv();
@@ -219,6 +233,7 @@ module.exports = {
   hooks: {
     clientData(out) {
       out.invExpand = { base: INV_SIZE, ...INV_EXPAND };
+      out.potCd = POTION_CD;
     },
     // chỉ số trang bị đang mặc (gồm ngọc khảm, thú cưng theo cấp, thời trang)
     stats(t) {

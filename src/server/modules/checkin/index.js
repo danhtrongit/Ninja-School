@@ -17,11 +17,11 @@ class Checkin {
     const streak = ck.day === vnDay(-1) ? ck.streak + 1 : 1;
     const base = CHECKIN[(streak - 1) % CHECKIN.length];
     const r = { ...base, xu: base.xu ? Math.round(base.xu * (1 + p.lv / 20)) : 0 };
-    if (!giveReward(p, r)) return;
+    if (!giveReward(p, r, { bound: true })) return;
     ck.day = today;
     ck.streak = streak;
     p.markMe();
-    p.notice(`Điểm danh ngày ${((streak - 1) % 7) + 1}: ${rewardLabel(r)}`, 'reward');
+    p.notice(`Điểm danh ngày ${((streak - 1) % 7) + 1}: ${rewardLabel(r, true)}`, 'reward');
   }
 }
 

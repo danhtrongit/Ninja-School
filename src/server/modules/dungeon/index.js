@@ -8,6 +8,7 @@ const { expNeed, vnDay } = require('../../../shared/formulas');
 const { dialog } = require('../../core/npc');
 
 const WAVES = 5;
+const BOSS_HP = 0.5; // boss phó bản: nhóm nhỏ, còn phải dọn 4 đợt quái trong 10 phút
 const TIME_LIMIT = 10 * 60 * 1000;
 const DAILY_RUNS = 3;
 const MIN_LV = 10;
@@ -65,6 +66,10 @@ class Dungeon {
     }
     const m = this.map.addMonster(key, spawn, false);
     m.noRespawn = true;
+    if (opts.boss) {
+      m.maxHp = Math.round(m.maxHp * BOSS_HP);
+      m.hp = m.maxHp;
+    }
     this.map.broadcast('mSpawn', m.pub());
     return m;
   }

@@ -4,6 +4,7 @@
 const { ITEMS } = require('../../../shared/data/items');
 const { int } = require('../../core/util');
 const { nearNpc } = require('../../core/npc');
+const { sameStack } = require('../../../shared/bound');
 
 class Storage {
   constructor(world) {
@@ -20,7 +21,7 @@ class Storage {
     if (def.stack) {
       for (const s of st) {
         if (it.q <= 0) break;
-        if (s && s.id === it.id && s.q < def.stack) {
+        if (s && sameStack(s, it.id, it.b) && s.q < def.stack) {
           const n = Math.min(def.stack - s.q, it.q);
           s.q += n;
           it.q -= n;

@@ -1,7 +1,8 @@
 'use strict';
 
 // Nhiệm vụ chính (Trưởng Làng) và nhiệm vụ diệt quái hằng ngày (Tiểu Nhị)
-const { ITEMS } = require('../../../shared/data/items');
+const { ITEMS, makeItem } = require('../../../shared/data/items');
+const { bind } = require('../../../shared/bound');
 const { MAPS } = require('../../../shared/data/maps');
 const { MONSTERS } = require('../../../shared/data/monsters');
 const { MAIN_QUESTS, DAILY } = require('../../../shared/data/quests');
@@ -39,7 +40,7 @@ class Quest {
   rewardText(p, r) {
     const parts = [];
     if (r.exp) parts.push(`${r.exp.toLocaleString('vi-VN')} EXP`);
-    if (r.xu) parts.push(`${r.xu.toLocaleString('vi-VN')} xu`);
+    if (r.xu) parts.push(`${r.xu.toLocaleString('vi-VN')} xu khóa`);
     if (r.luong) parts.push(`${r.luong} lượng`);
     for (const [id, q] of r.items || []) {
       const rid = this.rewardId(p, id);
@@ -82,11 +83,11 @@ class Quest {
     const need = items.reduce((s, [id, n]) => s + (ITEMS[id].stack ? 1 : n), 0);
     if (p.freeSlots() < need) return p.notice(`Cần ${need} ô trống trong hành trang.`, 'warn');
     if (def.kind === 'collect') p.removeItem(def.item, def.n);
-    for (const [id, n] of items) p.addItem(id, n, ITEMS[id].type === 'equip' ? 1 : 0);
+    for (const [id, n] of items) p.addItem(id, n, ITEMS[id].type === 'equip' ? 1 : 0, 0, 1);
     q.i++;
     q.st = 0;
     q.prog = 0;
-    if (r.xu) p.gainXu(r.xu);
+    if (r.xu) p.gainXuk(r.xu);
     if (r.luong) p.c.luong += r.luong;
     if (r.exp) p.gainExp(r.exp / p.s.expMul);
     p.markMe();
@@ -109,7 +110,7 @@ class Quest {
     }
     if (d.done >= DAILY.max) return dialog(p, n, `Hôm nay ngươi đã hoàn thành ${DAILY.max} nhiệm vụ. Ngày mai hãy quay lại!`);
     const rw = DAILY.reward(p.lv);
-    return dialog(p, n, `Ta có nhiệm vụ diệt quái hằng ngày cho ngươi (${d.done}/${DAILY.max}).\nThưởng: ${rw.exp.toLocaleString('vi-VN')} EXP, ${rw.xu} xu, ${rw.luong} lượng.`, [{ a: 'accept', label: 'Nhận nhiệm vụ' }]);
+    return dialog(p, n, `Ta có nhiệm vụ diệt quái hằng ngày cho ngươi (${d.done}/${DAILY.max}).\nThưởng: ${rw.exp.toLocaleString('vi-VN')} EXP, ${rw.xu} xu khóa, ${rw.luong} lượng.`, [{ a: 'accept', label: 'Nhận nhiệm vụ' }]);
   }
 
   acceptDaily(p) {
@@ -134,12 +135,13 @@ class Quest {
     const rw = DAILY.reward(p.lv);
     d.task = null;
     d.done++;
-    p.gainXu(rw.xu);
+    p.gainXuk(rw.xu);
     p.c.luong += rw.luong;
     const got = p.gainExp(rw.exp);
-    if (d.done % 5 === 0) p.addItem('chest', 1);
+    // rương khóa chỉ gộp với chồng khóa: túi đầy thì gửi thủ kho, không để mất
+    if (d.done % 5 === 0 && !p.addItem('chest', 1, 0, 0, 1)) p.stashItem(bind(makeItem('chest', 1)));
     p.markMe();
-    p.notice(`Hoàn thành nhiệm vụ hằng ngày: +${got} EXP, +${rw.xu} xu, +${rw.luong} lượng${d.done % 5 === 0 ? ', +1 Rương Báu' : ''}.`, 'reward');
+    p.notice(`Hoàn thành nhiệm vụ hằng ngày: +${got} EXP, +${rw.xu} xu khóa, +${rw.luong} lượng${d.done % 5 === 0 ? ', +1 Rương Báu' : ''}.`, 'reward');
   }
 }
 

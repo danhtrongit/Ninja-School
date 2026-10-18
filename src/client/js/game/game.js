@@ -176,6 +176,8 @@ export class Game {
         // hút máu (ngọc Huyết Hồn) hiện màu đỏ máu nhạt, khác số sát thương đỏ tươi
         if (e && amt) this.fx.text(e.x, e.y - this.headH(e) - 2, `+${amt}`, m.ls ? '#ff8aa0' : '#69f0ae');
       }
+      // uống bình từ cửa sổ hành trang cũng bắt đầu hồi chiêu trên nút bình (khớp mốc server)
+      if (m.pot && S.me && m.pot === S.me.id && (m.pk === 'hp' || m.pk === 'mp')) this.lastPotion[m.pk] = performance.now();
     });
     n.on('levelUp', (m) => {
       const getter = () => this.entity(`p${m.id}`);
@@ -718,8 +720,11 @@ export class Game {
       if (!auto) this.ui.toast('Lôi đài không cho dùng bình thuốc');
       return;
     }
+    // server bỏ qua bình khi đã gục: không bắt đầu vòng hồi chiêu giả trên nút
+    if (!S.me || S.me.dead) return;
     const now = performance.now();
-    if (now - this.lastPotion[kind] < 600) return;
+    const cd = (S.G.potCd && S.G.potCd[kind]) || 600;
+    if (now - this.lastPotion[kind] < cd) return;
     // ưu tiên bình nhỏ nhất đủ dùng
     const need = kind === 'hp' ? S.me.s.maxHp - S.me.hp : S.me.s.maxMp - S.me.mp;
     if (need <= 0) return;

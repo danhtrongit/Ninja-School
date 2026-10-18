@@ -157,6 +157,8 @@ for (const id of Object.keys(MONSTERS)) if (MONSTERS[id].event && !TATHU.bosses.
 for (const id of Object.keys(MONSTERS)) if (!placed.has(id)) err(`Quái ${id}: không xuất hiện ở bản đồ nào`);
 // Chiêu boss: hình ảnh có trong fx.bossSkill, vùng đánh hợp lệ, thời gian niệm đủ để chạy ra (kể cả khi cuồng nộ)
 const BOSS_K = new Set(['quake', 'roar', 'summon', 'beam', 'nova']);
+// dải hệ số theo loại chiêu (DESIGN_RULES mục 9)
+const MUL_RANGE = { quake: [1.3, 1.8], beam: [1.4, 2.0], nova: [2.0, 2.6], roar: [0.5, 0.7], summon: [0, 0] };
 const SHAPES = new Set(['circle', 'line', 'pillar']);
 for (const [id, m] of Object.entries(MONSTERS)) {
   if (!m.boss) continue;
@@ -172,6 +174,8 @@ for (const [id, m] of Object.entries(MONSTERS)) {
     if (!(sk.windup >= 800 && sk.windup <= 3000)) err(`${where}: windup ${sk.windup}ms phải trong 800-3000ms để né được`);
     if (!(sk.cd > sk.windup)) err(`${where}: hồi chiêu phải dài hơn thời gian niệm`);
     if (!(sk.mul >= 0 && sk.mul <= 3)) err(`${where}: hệ số sát thương ${sk.mul} ngoài 0-3`);
+    const mr = MUL_RANGE[sk.k];
+    if (mr && !(sk.mul >= mr[0] && sk.mul <= mr[1])) err(`${where}: hệ số ${sk.k} ×${sk.mul} ngoài ${mr[0]}-${mr[1]}`);
     const ex = sk.extra || {};
     if (sk.k === 'summon' && (!MONSTERS[ex.m] || MONSTERS[ex.m].boss || !placed.has(ex.m) || !(ex.n >= 1 && ex.n <= 4))) err(`${where}: quái con "${ex.m}" x${ex.n} không hợp lệ`);
     if (sk.k === 'roar' && !(ex.slow > 0 && ex.slow <= 60 && ex.dur > 0 && ex.dur <= 5000)) err(`${where}: làm chậm phải 1-60% trong tối đa 5 giây`);
@@ -406,6 +410,34 @@ if (RARITY.length !== 5) err('RARITY phải có 5 bậc');
   }
   for (const sid in AUDIO.SKILL_SFX) if (!SKILLS[sid]) err(`Âm thanh: SKILL_SFX có kỹ năng lạ "${sid}"`);
   for (const m of Object.values(MONSTERS)) for (const bs of m.skills || []) if (!AUDIO.BOSS_SFX[bs.k]) err(`Âm thanh: chiêu boss "${bs.k}" (${m.name}) chưa có tiếng trong BOSS_SFX`);
+}
+
+// Xu khóa: thưởng xu (trao thành xu khóa) phải là số nguyên không âm
+{
+  const bad = (v) => v != null && !(Number.isInteger(v) && v >= 0);
+  for (const [k, g] of Object.entries(GIFTCODES)) if (g.reward && bad(g.reward.xu)) err(`Giftcode ${k}: reward.xu phải là số nguyên ≥ 0`);
+  CHECKIN.forEach((r, i) => { if (bad(r.xu)) err(`Điểm danh ngày ${i + 1}: xu phải là số nguyên ≥ 0`); });
+  for (const s of SEASONS) for (const e of s.exchange || []) if (e.reward && bad(e.reward.xu)) err(`Lễ hội ${s.id}/${e.id}: reward.xu phải là số nguyên ≥ 0`);
+}
+
+// Cân bằng: quái/boss so với người chơi trung bình cùng cấp (mô hình trong tools/balance.js, dải ở DESIGN_RULES mục 9)
+{
+  const { mobRows, bossRows } = require('./balance');
+  const pc = (x) => `${(x * 100).toFixed(1)}%`;
+  for (const r of mobRows()) {
+    if (!(r.hitK >= 0.015 && r.hitK <= 0.07)) err(`Cân bằng: quái ${r.id} (cấp ${r.lv}) đánh Kiếm trung bình ${pc(r.hitK)} HP/đòn, cần 1,5-7%`);
+    if (!(r.hitsToKill >= 2 && r.hitsToKill <= 8.5)) err(`Cân bằng: quái ${r.id} cần ${r.hitsToKill.toFixed(1)} đòn thường, cần 2-8,5`);
+  }
+  for (const r of bossRows()) {
+    if (r.skillC > 0.47) err(`Cân bằng: boss ${r.id} chiêu ${r.skill} lấy ${pc(r.skillC)} HP Cung trung bình, tối đa 47%`);
+    if (r.event) {
+      if (r.eventMin[1] > 15) err(`Cân bằng: Tà Thú ${r.id} 1 người mất ${r.eventMin[1].toFixed(1)} phút, tối đa 15`);
+      if (r.eventMin[10] < 2) err(`Cân bằng: Tà Thú ${r.id} 10 người chỉ ${r.eventMin[10].toFixed(1)} phút, tối thiểu 2`);
+    } else {
+      if (!(r.hitK >= 0.04 && r.hitK <= 0.18)) err(`Cân bằng: boss ${r.id} đánh thường ${pc(r.hitK)} HP Kiếm, cần 4-18%`);
+      if (!(r.soloMin >= 2 && r.soloMin <= 6)) err(`Cân bằng: boss ${r.id} solo ${r.soloMin.toFixed(1)} phút, cần 2-6`);
+    }
+  }
 }
 
 if (errors.length) {

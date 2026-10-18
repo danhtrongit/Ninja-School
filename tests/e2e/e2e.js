@@ -219,9 +219,10 @@ const ok = (c, msg) => { console.log((c ? '  ✔ ' : '  ✘ ') + msg); if (!c) f
     await freshWin('mail', 'KeyL');
     ok(await waitFor(() => !!document.querySelector('.mail-item.has-gift'), 4000), 'hộp thư có thư quà');
     await shot('n-mail');
-    const xu0 = await S_(() => window.ninja.S.me.xu);
+    // thư hệ thống trao xu khóa: tính tổng xu + xu khóa
+    const xu0 = await S_(() => (window.ninja.S.me.xu || 0) + (window.ninja.S.me.xuk || 0));
     await tapLoc(page.locator('.mail-foot .btn.primary').first());
-    ok(await waitFor((x) => window.ninja.S.me.xu >= x + 500, 3000, xu0), 'nhận tất cả quà trong thư (+500 xu)');
+    ok(await waitFor((x) => (window.ninja.S.me.xu || 0) + (window.ninja.S.me.xuk || 0) >= x + 500, 3000, xu0), 'nhận tất cả quà trong thư (+500 xu)');
     await page.fill('.code-in', 'MASAIKHONGCO');
     await tapLoc(page.locator('.code-row .btn.primary'));
     ok(await waitFor(() => !!document.querySelector('.code-msg.bad'), 3000), 'giftcode sai báo lỗi');
@@ -249,7 +250,11 @@ const ok = (c, msg) => { console.log((c ? '  ✔ ' : '  ✘ ') + msg); if (!c) f
     const evMap = await S_(() => window.ninja.S.event.map);
     // boss chờ 2,2s mới ra chiêu đầu, đòn thường của Tà Thú đủ hạ nhân vật cấp 50 trước đó:
     // /lv lên ít nhất 80 (kèm hồi đầy sinh lực) để sống tới lúc niệm chiêu
-    await cmd(`/lv ${Math.max(80, await S_(() => window.ninja.S.me.level))}`);
+    // Tà Thú sau cân bằng đánh mạnh: lên 120 và dồn tiềm năng vào thể lực để nhân vật thử chịu được tới chiêu đầu
+    await cmd('/lv 120');
+    await ev(() => { const n = window.ninja.S.me.potential || 0; if (n > 0) window.ninja.net.send('addStat', { k: 'vit', n }); });
+    await page.waitForTimeout(300);
+    await cmd('/lv 120');
     await cmd(`/tp ${evMap}`);
     await page.waitForTimeout(1200);
     const bx = await S_(() => { const m = [...window.ninja.game.monsters.values()].find((o) => o.def && o.def.boss && !o.dead); return m ? Math.round(m.x) : null; });
@@ -275,8 +280,19 @@ const ok = (c, msg) => { console.log((c ? '  ✔ ' : '  ✘ ') + msg); if (!c) f
         g.toggleAuto(true);
       });
       let cast = false;
-      for (let k = 0; k < 30 && !cast; k++) {
+      for (let k = 0; k < 40 && !cast; k++) {
         cast = await ev(() => window.__casts > 0);
+        // Tà Thú sau cân bằng có thể hạ nhân vật thử trước chiêu đầu: hồi sinh, hồi đầy rồi quay lại cạnh boss
+        if (!cast && (await ev(() => window.ninja.S.me.dead))) {
+          await ev(() => window.ninja.net.send('revive', {}));
+          await waitFor(() => !window.ninja.S.me.dead, 5000);
+          await cmd(`/lv ${await S_(() => window.ninja.S.me.level)}`);
+          if ((await S_(() => window.ninja.game.map.id)) !== evMap) { await cmd(`/tp ${evMap}`); await page.waitForTimeout(1200); }
+          const bx2 = await S_(() => { const m = [...window.ninja.game.monsters.values()].find((o) => o.def && o.def.boss && !o.dead); return m ? Math.round(m.x) : null; });
+          if (bx2 != null) await ev((x) => { const g = window.ninja.game; g.travelTo({ map: g.map.id, x }); }, bx2);
+          await waitFor(() => !window.ninja.game.travel, 20000);
+          await ev(() => { const g = window.ninja.game; const m = [...g.monsters.values()].find((o) => o.def && o.def.boss && !o.dead); if (m) g.setTarget({ kind: 'm', id: m.id, e: m }); g.toggleAuto(true); });
+        }
         if (process.env.DBG) console.log('    dbg', await ev(() => { const g = window.ninja.game; const m = [...g.monsters.values()].find((o) => o.def && o.def.boss); return JSON.stringify({ hp: window.ninja.S.me.hp, me: [Math.round(g.me.x), Math.round(g.me.y)], tr: !!g.travel, auto: g.auto, boss: m && [Math.round(m.x), Math.round(m.y), m.hp, m.st] }); }));
         if (!cast) await page.waitForTimeout(1000);
       }

@@ -1,6 +1,6 @@
 'use strict';
 
-// Lệnh quản trị (tài khoản trong ADMINS): /lv /item /plus /tp /xu /boss /mail /code /sukien /arena...
+// Lệnh quản trị (tài khoản trong ADMINS): /lv /item /plus /tp /xu /boss /mail /code /sukien /arena... /xuk
 const { ITEMS, UPGRADE } = require('../../../shared/data/items');
 const { MAPS } = require('../../../shared/data/maps');
 const { MONSTERS } = require('../../../shared/data/monsters');
@@ -10,6 +10,7 @@ const { MAX_LEVEL } = require('../../../shared/constants');
 const { int, own, refreshInfo } = require('../../core/util');
 const { rewardItems, rewardLabel, normCode } = require('../mail');
 const { find } = require('../invites');
+const { bind } = require('../../../shared/bound');
 
 class Admin {
   constructor(world) {
@@ -38,9 +39,10 @@ class Admin {
     const r = this.adminReward(args.slice(1));
     if (typeof r === 'string') return sys(r);
     const M = this.world.mail;
-    const base = { from: 'Ban Quản Trị', title: 'Quà từ Ban Quản Trị', body: 'Cảm ơn ngươi đã đồng hành cùng làng Ninja. Hãy nhận quà đính kèm nhé!', xu: r.xu, luong: r.luong };
+    const base = { from: 'Ban Quản Trị', title: 'Quà từ Ban Quản Trị', body: 'Cảm ơn ngươi đã đồng hành cùng làng Ninja. Hãy nhận quà đính kèm nhé!', xuk: r.xu, luong: r.luong };
     const items = rewardItems(r);
-    const label = rewardLabel(r, items);
+    items.forEach(bind);
+    const label = rewardLabel({ xuk: r.xu, luong: r.luong }, items);
     if (who.toLowerCase() === 'all') {
       let ok = 0;
       let full = 0;
@@ -63,7 +65,7 @@ class Admin {
     const now = Date.now();
     if (!args[0]) {
       const mc = M.adminCodes();
-      const list = Object.keys(mc).map((k) => `${k} (${rewardLabel(mc[k].reward)}; còn ${Math.ceil((mc[k].until - now) / 3600000)} giờ; đã dùng ${mc[k].used || 0}${mc[k].max ? `/${mc[k].max}` : ''})`);
+      const list = Object.keys(mc).map((k) => `${k} (${rewardLabel({ xuk: mc[k].reward.xu, luong: mc[k].reward.luong, items: mc[k].reward.items })}; còn ${Math.ceil((mc[k].until - now) / 3600000)} giờ; đã dùng ${mc[k].used || 0}${mc[k].max ? `/${mc[k].max}` : ''})`);
       return sys(list.length ? `Giftcode tạm: ${list.join(' | ')}` : 'Chưa có giftcode tạm. Cú pháp: /code <MÃ> <xu> <lượng> [vật phẩm] [sl] [giờ=24] [lượt]');
     }
     if (args[0].toLowerCase() === 'xoa') {
@@ -78,7 +80,7 @@ class Admin {
     const def = { reward: { xu: r.xu, luong: r.luong, items: r.items }, until: now + hours * 3600000, max, used: 0, by: p.name, note: 'Quà Ban Quản Trị' };
     const e = M.addCode(code, def);
     if (e) return sys(e);
-    return sys(`Đã tạo giftcode ${code}: ${rewardLabel(def.reward)}; hết hạn sau ${hours} giờ${max ? `, tối đa ${max} lượt` : ''}.`);
+    return sys(`Đã tạo giftcode ${code}: ${rewardLabel({ xuk: def.reward.xu, luong: def.reward.luong, items: def.reward.items })}; hết hạn sau ${hours} giờ${max ? `, tối đa ${max} lượt` : ''}.`);
   }
 
   // Lệnh admin (chat đã kiểm tra quyền)
@@ -103,8 +105,8 @@ class Admin {
       }
       case 'item':
         if (!own(ITEMS, args[0] || '')) return sys('Không có vật phẩm này.');
-        // /item <mã> [số lượng] [độ hiếm] [số ngày hạn dùng]
-        p.addItem(args[0], Math.max(1, int(args[1], 1)), int(args[2], 0), Math.max(0, Math.min(3650, int(args[3], 0))));
+        // /item <mã> [số lượng] [độ hiếm] [số ngày hạn dùng] [k = khóa]
+        p.addItem(args[0], Math.max(1, int(args[1], 1)), int(args[2], 0), Math.max(0, Math.min(3650, int(args[3], 0))), args[4] === 'k' ? 1 : 0);
         return sys('Đã thêm vật phẩm.');
       case 'hethan': {
         // kiểm thử: mọi món có hạn trên người hết hạn sau n giây (mặc định 2)
@@ -140,6 +142,7 @@ class Admin {
       case 'arena': return this.world.arena.admin(p, args, sys);
       case 'code': return this.adminCode(p, args, sys);
       case 'xu': p.gainXu(n); return sys(`+${n} xu`);
+      case 'xuk': p.gainXuk(n); return sys(`+${n} xu khóa`);
       case 'luong': p.c.luong += n; p.markMe(); return sys(`+${n} lượng`);
       case 'tp':
         if (!own(MAPS, args[0] || '') || MAPS[args[0]].instance) return sys(`Bản đồ: ${Object.keys(MAPS).join(', ')}`);

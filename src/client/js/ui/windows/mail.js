@@ -33,7 +33,7 @@ export default {
     if (!data) return this.frameWin('Hộp Thư', h('div', { class: 'muted' }, 'Đang tải thư...'));
     const list = data.list || [];
     const now = Date.now() + (S.skew || 0);
-    const gift = (m) => !m.got && (m.xu > 0 || m.luong > 0 || m.items.length > 0);
+    const gift = (m) => !m.got && (m.xu > 0 || m.xuk > 0 || m.luong > 0 || m.items.length > 0);
     if (!list.some((m) => m.id === this.mailSel)) this.mailSel = list.length ? list[0].id : null;
     const sel = list.find((m) => m.id === this.mailSel) || null;
     // mở thư chưa đọc: báo server, đánh dấu ngay ở máy khách
@@ -60,6 +60,7 @@ export default {
     } else {
       const att = [];
       if (sel.xu > 0) att.push(h('div', { class: 'mail-coin' }, h('img', { src: uiIconURL('xu'), alt: '' }), h('span', null, fmt(sel.xu)), h('small', null, 'xu')));
+      if (sel.xuk > 0) att.push(h('div', { class: 'mail-coin' }, h('img', { src: uiIconURL('xuk'), alt: '' }), h('span', null, fmt(sel.xuk)), h('small', null, 'xu khóa')));
       if (sel.luong > 0) att.push(h('div', { class: 'mail-coin' }, h('img', { src: uiIconURL('luong'), alt: '' }), h('span', null, fmt(sel.luong)), h('small', null, 'lượng')));
       for (const it of sel.items) att.push(itemIcon(it, { onclick: () => this.showItem(it, { from: 'view' }) }));
       const days = Math.max(0, Math.ceil(((data.keep || 30) * 86400000 - (now - sel.at)) / 86400000));

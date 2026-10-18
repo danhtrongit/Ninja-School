@@ -3,7 +3,7 @@
 // Sự kiện Tà Thú Xuất Thế: boss sự kiện xuất hiện theo lịch ở một bãi luyện công,
 // cả máy chủ cùng đánh, thưởng theo bảng xếp hạng sát thương.
 const { MAPS, GROUND } = require('../../../shared/data/maps');
-const { MONSTERS } = require('../../../shared/data/monsters');
+const { MONSTERS, eventHpMul } = require('../../../shared/data/monsters');
 const { SKILLS } = require('../../../shared/data/skills');
 const { ITEMS, makeItem } = require('../../../shared/data/items');
 const { TATHU } = require('../../../shared/data/extras');
@@ -41,6 +41,12 @@ function rewardTier(rank, pct) {
 }
 
 const stoneOf = (lv) => (lv < 30 ? 'stone1' : lv < 60 ? 'stone2' : lv < 90 ? 'stone3' : 'stone4');
+// Số người online đủ sức đánh Tà Thú cấp lv (cấp ≥ lv − 10), dùng để tính HP lúc xuất hiện
+function eligibleCount(players, lv) {
+  let n = 0;
+  for (const p of players) if (p && p.c && p.map && !p.map.def.instance && p.lv >= lv - 10) n++;
+  return n;
+}
 // Sách nội tại đúng phái, cấp yêu cầu theo cấp boss
 function bookOf(cls, lv) {
   const req = lv < 45 ? 15 : lv < 80 ? 35 : 50;
@@ -108,6 +114,11 @@ class BeastEvent {
     m.noRespawn = true;
     m.event = true;
     m.x = x;
+    // HP theo số người đủ cấp đang online: ít người vẫn kịp hạ trong 20 phút, đông người vẫn có bảng xếp hạng
+    const online = this.world.players ? eligibleCount(this.world.players.values(), MONSTERS[key].lv) : 0;
+    const n = Math.max(1, online);
+    m.maxHp = Math.round(MONSTERS[key].baseHp * eventHpMul(n));
+    m.hp = m.maxHp;
     map.broadcast('mSpawn', m.pub());
     const now = Date.now();
     this.cur = { key, m, map, start: now, until: now + TATHU.dur };
@@ -246,5 +257,5 @@ module.exports = {
     },
     second: { order: 1, fn(now) { this.tick(now); } },
   },
-  BeastEvent, nextTathuAt, eventMaps, rewardTier, bookOf,
+  BeastEvent, nextTathuAt, eventMaps, rewardTier, bookOf, eligibleCount,
 };

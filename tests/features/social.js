@@ -44,7 +44,7 @@ async function socialTest(ctx) {
   await b.wait('invite', (m) => m.kind === 'trade');
   b.send('tradeAccept', { from: 'KiemSi' });
   await a.wait('trade');
-  const potSlot = a.inv.inv.findIndex((it) => it && it.id === 'hp1');
+  const potSlot = a.inv.inv.findIndex((it) => it && it.id === 'hp1' && !it.b);
   a.send('tradeSet', { slots: [potSlot], xu: 500 });
   await b.wait('trade', (m) => m.theirs.xu === 500);
   a.send('tradeLock');
@@ -54,7 +54,7 @@ async function socialTest(ctx) {
   b.send('tradeOk');
   await b.wait('tradeEnd');
   await sleep(150);
-  ok(b.me.xu === 1500 && b.inv.inv.some((it) => it && it.id === 'hp1' && it.q >= 15), 'giao dịch xu + vật phẩm thành công');
+  ok(b.me.xu === 1500 && b.inv.inv.reduce((n, it) => n + (it && it.id === 'hp1' ? it.q : 0), 0) >= 15, 'giao dịch xu + vật phẩm thành công');
   ctx.b = b;
 }
 

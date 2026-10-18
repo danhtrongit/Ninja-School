@@ -729,3 +729,19 @@ kbd {
 .inv-pages .ip-n.full { color: #ffb4a0; }
 .overlay { position: fixed; inset: 0; z-index: 100; display: flex; align-items: center; justify-content: center; background: rgba(0, 0, 0, 0.55); }
 #rotate-hint { display: none; }
+
+/* ----- Xu khóa & vật phẩm khóa */
+/* ổ khóa góc trên phải (dấu "E" đang mặc ở Thợ Rèn cũng ở góc này thì ổ khóa xuống dưới nó) */
+.slot img.bnd { position: absolute; right: 1px; top: 1px; z-index: 3; width: 12px; height: 12px; image-rendering: pixelated; pointer-events: none; }
+.slot:has(> .worn) > img.bnd { top: 16px; }
+/* đủ độ ưu tiên để thắng cỡ ảnh ô lớn trong @media điện thoại (.gb-item .slot.big img) */
+.slot.big > img.bnd, .gb-item .slot.big > img.bnd { width: 16px; height: 16px; right: 2px; top: 2px; }
+.slot.nt { opacity: 0.45; cursor: not-allowed; }
+.id-bound { margin-top: 4px; display: flex; align-items: center; gap: 4px; color: var(--warn); }
+.id-bound .ico { width: 16px; height: 16px; }
+.money { flex-wrap: wrap; }
+.money .xuk, .money .xuk b { color: var(--xuk); }
+.shop-nbar { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 14px; margin: 0 0 6px; padding: 4px 8px; background: var(--panel2); border: 1px solid var(--line); border-radius: 4px; }
+.shop-nb { display: flex; align-items: center; gap: 6px; flex: none; cursor: pointer; color: #ffe7a0; }
+.shop-bnote { display: flex; align-items: center; gap: 4px; flex: 1 1 240px; min-width: 0; }
+.shop-bnote .ico { width: 14px; height: 14px; flex: none; }

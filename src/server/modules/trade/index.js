@@ -3,6 +3,7 @@
 // Giao dịch giữa hai người chơi đứng gần nhau: đặt đồ + xu, khóa, xác nhận
 const { int } = require('../../core/util');
 const { find, invite, takeInvite } = require('../invites');
+const { canTransfer } = require('../../../shared/bound');
 
 class Trade {
   constructor(world) {
@@ -47,9 +48,9 @@ class Trade {
     if (!p.trade || p.trade.lock) return;
     const all = [...new Set((Array.isArray(m.slots) ? m.slots : []).map((s) => int(s, -1)))]
       .filter((s) => s >= 0 && s < p.c.inv.length && p.c.inv[s]);
-    // vật phẩm có hạn dùng (thời trang từ rương/vòng quay) không được giao dịch
-    const slots = all.filter((s) => !p.c.inv[s].exp).slice(0, 10);
-    if (slots.length < all.length) p.notice('Vật phẩm có hạn sử dụng không thể giao dịch.', 'warn');
+    // vật phẩm khóa hoặc có hạn dùng (thời trang từ rương/vòng quay) không được giao dịch
+    const slots = all.filter((s) => canTransfer(p.c.inv[s])).slice(0, 10);
+    if (slots.length < all.length) p.notice('Vật phẩm khóa hoặc có hạn sử dụng không thể giao dịch.', 'warn');
     p.trade.slots = slots;
     // giữ đúng món + số lượng lúc đặt để tradeOk phát hiện bị tráo (dùng/tháo đồ vào ô đã đặt)
     // (kèm ngọc khảm: món đổi ngọc sau khi đặt cũng coi như bị tráo)
@@ -74,7 +75,7 @@ class Trade {
     const same = (pl) => pl.trade.slots.every((s, k) => {
       const snap = (pl.trade.items || [])[k];
       const it = pl.c.inv[s];
-      return snap && it && it === snap.it && it.q === snap.q && !it.exp && JSON.stringify(it.gems || null) === snap.g;
+      return snap && it && it === snap.it && it.q === snap.q && canTransfer(it) && JSON.stringify(it.gems || null) === snap.g;
     });
     if (!same(p) || !same(o)) return this.cancelTrade(p, 'Vật phẩm đã thay đổi, giao dịch bị hủy.');
     const take = (pl) => pl.trade.slots.map((s) => pl.c.inv[s]);

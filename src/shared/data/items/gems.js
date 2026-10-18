@@ -23,7 +23,9 @@ const GEM = {
   // số lỗ khảm theo bậc trang bị: Gỗ-Sắt 1, Bạc-Huyền 2, Long trở lên 3
   holes: (tier) => (tier <= 2 ? 1 : tier <= 6 ? 2 : 3),
   // trần tổng % hút máu (của đòn gây ra)
-  lifestealCap: 15,
+  lifestealCap: 10,
+  // đánh boss chỉ hút 50% (không bất tử trước boss nhờ hút máu)
+  lifestealBoss: 0.5,
   // quái thường rơi ngọc
   dropRate: 0.012,
   price: (lv) => 1500 * Math.pow(3, lv - 1),

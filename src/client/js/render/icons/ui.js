@@ -574,6 +574,56 @@ function drawAuto(P) {
   P.set(3, 12, '#5d4037');
 }
 
+// ----- Xu khóa & vật phẩm khóa
+function drawLock(P) {
+  // quai thép hình vòm: mép trái/trên sáng, mép phải tối
+  P.rect(5, 1, 6, 2, '#cfd8dc');
+  P.rect(4, 2, 2, 5, '#cfd8dc');
+  P.rect(10, 2, 2, 5, '#78909c');
+  P.set(10, 1, '#78909c');
+  // thân sơn mài đỏ, bỏ 4 góc
+  P.fill(2, 7, 13, 14, (_x, _y, x, y) => {
+    if ((x === 2 || x === 13) && (y === 7 || y === 14)) return null;
+    return y === 7 ? '#c62828' : y === 14 ? '#5a140a' : '#8e2414';
+  });
+  P.set(3, 8, '#f0c869');
+  P.set(12, 8, '#f0c869');
+  P.rect(7, 9, 2, 4, '#120804');
+}
+
+function drawXuk(P) {
+  // đồng xu đồng đỏ (cùng công thức ánh sáng với đồng xu thường) + ổ khóa con góc dưới phải
+  // tâm giữa ô 7 và 8 để lỗ vuông 2x2 nằm chính giữa
+  const R = 6.5;
+  P.fill(0, 0, 15, 15, (x, y, px, py) => {
+    const dx = x - 8;
+    const dy = y - 8;
+    const r = Math.sqrt(dx * dx + dy * dy);
+    if (r > R) return null;
+    if (px >= 7 && px <= 8 && py >= 7 && py <= 8) return null;
+    if (px >= 6 && px <= 9 && py >= 6 && py <= 9) return '#6d3a12';
+    const lit = (-dx - dy) / R;
+    if (r > 5.3) return lit > 0 ? '#f0b27a' : '#8d4f22';
+    return lit > 0.5 ? '#ffd1a6' : lit > -0.1 ? '#e0975a' : '#b46a32';
+  });
+  P.set(4, 4, '#ffffff');
+  // viền tối tách ổ khóa khỏi mặt xu
+  P.rect(8, 10, 1, 6, OUT);
+  P.rect(9, 9, 2, 1, OUT);
+  P.rect(13, 9, 2, 1, OUT);
+  P.rect(11, 10, 2, 1, OUT);
+  P.set(9, 10, OUT);
+  P.set(14, 10, OUT);
+  P.set(11, 9, '#cfd8dc');
+  P.set(12, 9, '#cfd8dc');
+  P.set(10, 10, '#cfd8dc');
+  P.set(13, 10, '#cfd8dc');
+  P.rect(9, 11, 6, 5, '#8e2414');
+  P.rect(9, 11, 6, 1, '#c62828');
+  P.set(11, 13, '#ffe082');
+  P.set(12, 13, '#ffe082');
+}
+
 const uiCache = new Map();
 export function uiIconURL(name) {
   if (uiCache.has(name)) return uiCache.get(name);
@@ -585,6 +635,8 @@ export function uiIconURL(name) {
     case 'wheel': drawWheel(P); break;
     case 'auto': drawAuto(P); break;
     case 'pet': drawPaw(P, '#ffb74d'); break;
+    case 'lock': drawLock(P); break;
+    case 'xuk': drawXuk(P); break;
     default: {
       const m = UI_MAPS[name];
       if (m) P.map(m, UI_PAL);

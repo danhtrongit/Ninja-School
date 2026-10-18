@@ -50,7 +50,7 @@ class Gems {
     p.markInv();
     p.markMe();
     this.world.db.dirty = true;
-    p.send('gemResult', { ...g, item: res.def.name });
+    p.send('gemResult', { ...g, item: res.def.name, bound: !!res.it.b });
   }
 
   gemPut(p, m) {
@@ -64,6 +64,7 @@ class Gems {
     const t = GEM_TYPES[gd.gem];
     if (res.gems.some((id) => id && gemDef(id).gem === gd.gem)) return p.notice(`Món này đã khảm ${t.name}. Mỗi món chỉ khảm 1 viên mỗi loại.`, 'warn');
     res.gems[res.hole] = g.id;
+    if (g.b) res.it.b = 1;
     p.removeAt(gi, 1);
     this.gemDone(p, { act: 'put', ok: true, id: g.id, name: gd.name, hole: res.hole }, res);
     smithFx(p, { k: 'gem', ok: true, c: t.c });
@@ -76,11 +77,11 @@ class Gems {
     if (!id) return p.notice('Lỗ này đang trống.', 'warn');
     const gd = gemDef(id);
     const cost = GEM.takeCost(gd.glv);
-    if (p.c.xu < cost) return p.notice(`Gỡ ngọc cần ${cost.toLocaleString('vi-VN')} xu.`, 'warn');
-    if (!p.canAdd(id, 1)) return p.notice('Hành trang đã đầy!', 'warn');
-    p.c.xu -= cost;
+    if (p.xuAll() < cost) return p.notice(`Gỡ ngọc cần ${cost.toLocaleString('vi-VN')} xu.`, 'warn');
+    if (!p.canAdd(id, 1, res.it.b ? 1 : 0)) return p.notice('Hành trang đã đầy!', 'warn');
+    p.payXu(cost);
     res.gems[res.hole] = null;
-    p.addItem(id, 1);
+    p.addItem(id, 1, 0, 0, res.it.b ? 1 : 0);
     this.gemDone(p, { act: 'take', ok: true, id, name: gd.name, hole: res.hole, cost }, res);
   }
 
@@ -95,19 +96,25 @@ class Gems {
     if (gd.glv >= GEM.max) return p.notice('Ngọc đã đạt cấp cao nhất.', 'warn');
     if (p.countItem(id) < 3) return p.notice(`Cần 3 viên ${gd.name}.`, 'warn');
     const cost = GEM.mergeCost(gd.glv);
-    if (p.c.xu < cost) return p.notice(`Ghép ngọc cần ${cost.toLocaleString('vi-VN')} xu.`, 'warn');
+    if (p.xuAll() < cost) return p.notice(`Ghép ngọc cần ${cost.toLocaleString('vi-VN')} xu.`, 'warn');
     const next = gemId(gd.gem, gd.glv + 1);
     // Xét chỗ trống sau khi đã bỏ 3 viên (cả chồng 3 viên được ghép thì ô đó trống ra); không đủ thì trả lại nguyên
-    p.removeItem(id, 3);
-    if (!p.canAdd(next, 1)) {
-      p.addItem(id, 3);
+    const nb = p.removeItemB(id, 3);
+    const kb = nb > 0 ? 1 : 0;
+    if (!p.canAdd(next, 1, kb)) {
+      if (nb) p.addItem(id, nb, 0, 0, 1);
+      if (3 - nb) p.addItem(id, 3 - nb);
       return p.notice('Hành trang đã đầy!', 'warn');
     }
     p.lastGemMerge = now;
-    p.c.xu -= cost;
+    p.payXu(cost);
     const ok = Math.random() * 100 < GEM.rate[gd.glv - 1];
-    if (ok) p.addItem(next, 1);
-    else p.addItem(id, 2);
+    if (ok) p.addItem(next, 1, 0, 0, kb);
+    else {
+      const rb = Math.min(nb, 2);
+      if (rb) p.addItem(id, rb, 0, 0, 1);
+      if (2 - rb) p.addItem(id, 2 - rb);
+    }
     const t = GEM_TYPES[gd.gem];
     p.markMe();
     p.send('gemResult', { act: 'merge', ok, id: ok ? next : id, from: id, name: ok ? ITEMS[next].name : gd.name, cost });
@@ -124,7 +131,7 @@ module.exports = {
     // Ngọc khảm: bảng tra sẵn (máy khách không cần công thức)
     clientData(out) {
       out.gems = {
-        max: GEM.max, types: GEM_TYPES, rate: GEM.rate, lifestealCap: GEM.lifestealCap,
+        max: GEM.max, types: GEM_TYPES, rate: GEM.rate, lifestealCap: GEM.lifestealCap, lifestealBoss: GEM.lifestealBoss,
         mergeCost: Array.from({ length: GEM.max + 1 }, (_, lv) => (lv ? GEM.mergeCost(lv) : 0)),
         takeCost: Array.from({ length: GEM.max + 1 }, (_, lv) => (lv ? GEM.takeCost(lv) : 0)),
         holes: Array.from({ length: TIERS }, (_, t) => GEM.holes(t)),

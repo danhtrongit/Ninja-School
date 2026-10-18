@@ -33,12 +33,12 @@ class Smith {
     const sq = UPGRADE.stoneQty(plus);
     const cost = UPGRADE.cost(plus, def.tier);
     if (p.countItem(stone) < sq) return p.notice(`Cần ${sq} ${ITEMS[stone].name}.`, 'warn');
-    if (p.c.xu < cost) return p.notice(`Cần ${cost} xu.`, 'warn');
+    if (p.xuAll() < cost) return p.notice(`Cần ${cost} xu.`, 'warn');
     const useCharm = !!m.charm && plus >= 4;
     if (useCharm && p.countItem('charm') < 1) return p.notice('Không có Bùa Bảo Hộ.', 'warn');
     p.removeItem(stone, sq);
     if (useCharm) p.removeItem('charm', 1);
-    p.c.xu -= cost;
+    p.payXu(cost);
     const ok = Math.random() * 100 < UPGRADE.rate[plus];
     if (ok) {
       it.p = plus + 1;

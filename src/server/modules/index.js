@@ -32,4 +32,5 @@ module.exports = [
   require('./mail'),
   require('./arena'),
   require('./audio'),
+  require('./bound'),
 ];

@@ -38,14 +38,18 @@ class Shop {
     // sách nội tại chỉ đọc được 1 lần: mỗi lần mua 1 cuốn
     const qty = def.stack && def.type !== 'book' ? Math.max(1, Math.min(999, int(m.qty, 1))) : 1;
     const cost = e.price * qty;
-    const bal = e.cur === 'luong' ? p.c.luong : p.c.xu;
-    if (bal < cost) return p.notice(e.cur === 'luong' ? 'Không đủ lượng.' : 'Không đủ xu.', 'warn');
-    if (!p.canAdd(e.id, qty)) return p.notice('Hành trang đã đầy!', 'warn');
-    if (e.cur === 'luong') p.c.luong -= cost;
-    else p.c.xu -= cost;
-    p.addItem(e.id, qty, 0);
+    const luong = e.cur === 'luong';
+    // nb: người chơi chọn không dùng xu khóa (hàng mua về không bị khóa)
+    const nb = m.nb === true || m.nb === 1;
+    if (luong ? p.c.luong < cost : (nb ? p.c.xu : p.xuAll()) < cost) return p.notice(luong ? 'Không đủ lượng.' : 'Không đủ xu.', 'warn');
+    // mua bằng lượng, hoặc lần mua có dùng xu khóa: hàng bị khóa
+    const bound = luong || (!nb && (p.c.xuk || 0) > 0 && cost > 0);
+    if (!p.canAdd(e.id, qty, bound ? 1 : 0)) return p.notice('Hành trang đã đầy!', 'warn');
+    if (luong) p.c.luong -= cost;
+    else p.payXu(cost, nb);
+    p.addItem(e.id, qty, 0, 0, bound ? 1 : 0);
     p.markMe();
-    p.notice(`Đã mua ${def.name}${qty > 1 ? ` x${qty}` : ''}.`);
+    p.notice(`Đã mua ${def.name}${qty > 1 ? ` x${qty}` : ''}${bound ? ' (khóa)' : ''}.`);
   }
 
   sell(p, m) {
@@ -57,9 +61,11 @@ class Shop {
     if (!it) return;
     const qty = Math.max(1, Math.min(it.q, int(m.qty, it.q)));
     const price = sellPrice(it) * qty;
+    const wasBound = !!it.b;
     p.removeAt(slot, qty);
-    p.gainXu(price);
-    p.notice(`Đã bán ${ITEMS[it.id].name}${qty > 1 ? ` x${qty}` : ''} được ${price} xu.`);
+    if (wasBound) p.gainXuk(price);
+    else p.gainXu(price);
+    p.notice(`Đã bán ${ITEMS[it.id].name}${qty > 1 ? ` x${qty}` : ''} được ${price} ${wasBound ? 'xu khóa' : 'xu'}.`);
   }
 }
 

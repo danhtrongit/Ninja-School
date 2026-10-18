@@ -23,6 +23,8 @@ const { audioUnitTests, audioHttpTest } = require('./features/audio');
 const { airTest } = require('./features/movement');
 const { fashionTest } = require('./features/fashion');
 const { saveTest, reloadTest } = require('./features/persistence');
+const { unit: boundUnit, bot: boundBot } = require('./features/bound');
+const { balanceUnitTests, balanceBotTest } = require('./features/balance');
 
 // Kiểm thử không cần server (thế giới giả hoặc gọi thẳng công thức)
 function unitTests() {
@@ -35,6 +37,8 @@ function unitTests() {
   arenaUnitTests();
   bagUnitTests();
   audioUnitTests();
+  boundUnit(ok);
+  balanceUnitTests();
 }
 
 async function main() {
@@ -64,6 +68,8 @@ async function main() {
     await bagTest(ctx.a);
     await audioHttpTest();
 
+    await boundBot();
+    await balanceBotTest(ctx);
     await saveTest(ctx);
   } catch (e) {
     fail();

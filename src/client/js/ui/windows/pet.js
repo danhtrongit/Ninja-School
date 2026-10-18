@@ -69,7 +69,11 @@ export default {
     el.share.textContent = v.share;
   },
 
-  feedPet(slot) {
+  async feedPet(slot) {
+    const fd = S.inv[slot];
+    const mp = myPet();
+    if (fd && fd.b && mp && !mp.it.b && !(await this.ask({ title: 'Thức ăn khóa', icon: 'lock', ok: 'Vẫn cho ăn',
+      text: `${S.G.items[fd.id].name} đang khóa. Cho ăn thì ${mp.def.name} cũng bị khóa (không giao dịch được). Tiếp tục?` }))) return;
     this.petHappy = performance.now();
     this.net.send('useItem', { slot });
   },
@@ -126,7 +130,9 @@ export default {
     const feed = foods.map((id) => {
       const fd = S.G.items[id];
       const n = S.inv.reduce((s2, x) => s2 + (x && x.id === id ? x.q : 0), 0);
-      const slot = S.inv.findIndex((x) => x && x.id === id);
+      // ưu tiên thức ăn cùng trạng thái khóa với thú để không khóa thú ngoài ý muốn
+      const same = S.inv.findIndex((x) => x && x.id === id && !!x.b === !!it.b);
+      const slot = same >= 0 ? same : S.inv.findIndex((x) => x && x.id === id);
       return h('div', { class: 'pet-food' }, itemIcon({ id, q: n || 1 }, { onclick: () => this.showItem({ id, q: n || 1 }, { from: 'view' }) }),
         h('div', { class: 'pf-txt' }, h('div', { class: 'pf-name' }, fd.name),
           h('div', { class: 'tiny muted' }, `+${fmt(fd.effect.petExp)} EXP · +${fd.effect.love} thân mật`)),

@@ -22,11 +22,11 @@ async function questTest(ctx) {
   a.send('npc', { id: 'v_fire_potion' });
   const shop = await a.wait('shop');
   ok(shop.items.some((x) => x.id === 'hp1'), 'mở tiệm thuốc');
-  const xu0 = a.me.xu;
+  const t0 = a.me.xu + (a.me.xuk || 0);
   a.send('buy', { npc: 'v_fire_potion', id: 'hp1', qty: 5 });
   await a.wait('notice', (m) => /Đã mua/.test(m.msg));
   await sleep(100);
-  ok(a.me.xu === xu0 - 100, 'mua 5 bình HP trừ đúng 100 xu');
+  ok(a.me.xu + (a.me.xuk || 0) === t0 - 100, 'mua 5 bình HP trừ đúng 100 (xu khóa trước, thiếu mới trừ xu)');
 
   const hatSlot = a.inv.inv.findIndex((it) => it && it.id === 'hat_0');
   a.send('equip', { slot: hatSlot });

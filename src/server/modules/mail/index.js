@@ -4,6 +4,7 @@
 // lần vào game sau sẽ thấy. Đính kèm là món đồ đầy đủ (giữ độ hiếm, hạn dùng, ngọc, cấp thú).
 const { ITEMS, makeItem, cleanGems, cleanPet } = require('../../../shared/data/items');
 const { MAIL, GIFTCODES, CODE_LIMIT } = require('../../../shared/data/extras');
+const { bind } = require('../../../shared/bound');
 
 const DAY = 86400000;
 const XU_MAX = 2e9;
@@ -56,13 +57,14 @@ function itemsLabel(items) {
 function rewardLabel(r, items) {
   const parts = [];
   if (r.xu) parts.push(`${fmt(r.xu)} xu`);
+  if (r.xuk) parts.push(`${fmt(r.xuk)} xu khóa`);
   if (r.luong) parts.push(`${fmt(r.luong)} lượng`);
   const its = items || rewardItems(r);
   if (its.length) parts.push(itemsLabel(its));
   return parts.join(', ');
 }
 
-const hasGift = (m) => !m.got && (m.xu > 0 || m.luong > 0 || m.items.length > 0);
+const hasGift = (m) => !m.got && (m.xu > 0 || m.xuk > 0 || m.luong > 0 || m.items.length > 0);
 
 // Dọn hộp thư lúc tải nhân vật / trước khi gửi: bỏ thư hỏng, thư quá hạn giữ, món lạ hoặc hết hạn dùng
 function cleanMailbox(list, now = Date.now()) {
@@ -81,7 +83,7 @@ function cleanMailbox(list, now = Date.now()) {
       });
     out.push({
       id: Math.max(1, int(m.id, 1)), at: +m.at, from: clean(m.from, 24) || 'Hệ thống', title: clean(m.title, MAIL.titleLen) || 'Thư',
-      body: clean(m.body, MAIL.bodyLen), xu: Math.max(0, Math.min(XU_MAX, int(m.xu))), luong: Math.max(0, Math.min(LUONG_MAX, int(m.luong))),
+      body: clean(m.body, MAIL.bodyLen), xu: Math.max(0, Math.min(XU_MAX, int(m.xu))), xuk: Math.max(0, Math.min(XU_MAX, int(m.xuk))), luong: Math.max(0, Math.min(LUONG_MAX, int(m.luong))),
       items, read: !!m.read, got: !!m.got,
     });
   }
@@ -127,6 +129,7 @@ class Mailer {
 
   // Bỏ một thư vào hộp thư của nhân vật c (online hoặc offline). Hộp đầy thì bỏ thư cũ nhất đã đọc và không còn quà;
   // toàn thư còn quà thì trả về false (người gọi tự xử lý, không làm mất quà)
+  // (thư do người chơi gửi, nếu có sau này, chỉ được đính kèm món canTransfer)
   deliver(c, m) {
     if (!c) return false;
     // dọn cả hộp thư của người offline (thư quá hạn giữ)
@@ -141,7 +144,7 @@ class Mailer {
     c.mailSeq = Math.max(int(c.mailSeq), ...box.map((x) => x.id)) + 1;
     const mail = {
       id: c.mailSeq, at: Date.now(), from: clean(m.from, 24) || 'Hệ thống', title: clean(m.title, MAIL.titleLen) || 'Thư',
-      body: clean(m.body, MAIL.bodyLen), xu: Math.max(0, Math.min(XU_MAX, int(m.xu))), luong: Math.max(0, Math.min(LUONG_MAX, int(m.luong))),
+      body: clean(m.body, MAIL.bodyLen), xu: Math.max(0, Math.min(XU_MAX, int(m.xu))), xuk: Math.max(0, Math.min(XU_MAX, int(m.xuk))), luong: Math.max(0, Math.min(LUONG_MAX, int(m.luong))),
       items: (m.items || []).filter((it) => it && own(ITEMS, it.id)).slice(0, MAIL.maxItems), read: false, got: false,
     };
     box.push(mail);
@@ -162,7 +165,7 @@ class Mailer {
     if (!chunks.length) chunks.push([]);
     if (this.room(c) < chunks.length) return false;
     chunks.forEach((its, k) => this.deliver(c, {
-      ...base, items: its, xu: k ? 0 : base.xu, luong: k ? 0 : base.luong,
+      ...base, items: its, xu: k ? 0 : base.xu, xuk: k ? 0 : base.xuk, luong: k ? 0 : base.luong,
       title: chunks.length > 1 ? `${clean(base.title, MAIL.titleLen - 6)} (${k + 1}/${chunks.length})` : base.title,
     }));
     return true;
@@ -202,14 +205,15 @@ class Mailer {
       return 'full';
     }
     if (x.xu) p.gainXu(x.xu);
+    if (x.xuk) p.gainXuk(x.xuk);
     if (x.luong) p.c.luong += x.luong;
-    for (const it of items) p.addItemObj(it);
+    for (const it of items) if (!p.addItemObj(it)) p.stashItem(it);
     x.got = true;
     x.read = true;
     p.markMe();
     p.markInv();
     if (this.world.db) this.world.db.dirty = true;
-    if (!quiet) p.notice(`Đã nhận quà: ${rewardLabel({ xu: x.xu, luong: x.luong }, items) || 'thư trống'}.`, 'reward');
+    if (!quiet) p.notice(`Đã nhận quà: ${rewardLabel({ xu: x.xu, xuk: x.xuk, luong: x.luong }, items) || 'thư trống'}.`, 'reward');
     return 'ok';
   }
 
@@ -364,16 +368,17 @@ class Mailer {
     if (p.trade) return res(false, 'Đang giao dịch.');
     const r = def.reward || {};
     const items = rewardItems(r);
-    const label = rewardLabel(r, items);
+    items.forEach(bind);
+    const label = rewardLabel({ xuk: r.xu, luong: r.luong }, items);
     let mailed = false;
     if (p.canAddItems(items)) {
-      if (r.xu) p.gainXu(r.xu);
+      if (r.xu) p.gainXuk(r.xu);
       if (r.luong) p.c.luong += r.luong;
-      for (const it of items) p.addItemObj(it);
+      for (const it of items) if (!p.addItemObj(it)) p.stashItem(it);
       p.markMe();
     } else {
       // hành trang không đủ chỗ: quà vào hộp thư
-      const base = { from: 'Quà tặng', title: `Giftcode ${code}`, body: `Quà từ mã ${code}${def.note ? ` (${def.note})` : ''}. Hành trang không đủ chỗ nên quà được gửi qua thư.`, xu: r.xu, luong: r.luong };
+      const base = { from: 'Quà tặng', title: `Giftcode ${code}`, body: `Quà từ mã ${code}${def.note ? ` (${def.note})` : ''}. Hành trang không đủ chỗ nên quà được gửi qua thư.`, xuk: r.xu, luong: r.luong };
       if (!this.sendItems(p.c, base, items)) return res(false, 'Hành trang và hộp thư đều đầy. Hãy dọn bớt rồi nhập lại.');
       mailed = true;
     }

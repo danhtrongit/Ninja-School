@@ -5,6 +5,7 @@ const { SEASONS } = require('../../../shared/data/extras');
 const { ITEMS, makeItem } = require('../../../shared/data/items');
 const { vnTime, rewardItems, rewardLabel } = require('../mail');
 const { nearNpc, dialog } = require('../../core/npc');
+const { bind } = require('../../../shared/bound');
 
 const int = (v, d = 0) => (Number.isFinite(+v) ? Math.floor(+v) : d);
 const randInt = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
@@ -21,7 +22,7 @@ const seasonAt = (now) => LIST.find((s) => s.start <= now && now < s.end) || nul
 function seasonClient() {
   return LIST.map((s) => ({
     id: s.id, name: s.name, desc: s.desc, token: s.token, start: s.start, end: s.end,
-    exchange: s.exchange.map((e) => ({ id: e.id, cost: e.cost, limit: e.limit || 0, reward: e.reward, label: rewardLabel(e.reward) })),
+    exchange: s.exchange.map((e) => ({ id: e.id, cost: e.cost, limit: e.limit || 0, reward: e.reward, label: rewardLabel({ ...e.reward, xuk: e.reward.xu, xu: 0 }) })),
   }));
 }
 
@@ -115,17 +116,18 @@ class Season {
     if (p.countItem(s.token) < row.cost * n) return res(false, `Không đủ ${tok}: cần ${row.cost * n}, đang có ${p.countItem(s.token)}.`);
     const r = row.reward;
     const items = rewardItems({ items: (r.items || []).map(([iid, q]) => [iid, q * n]), days: r.days });
+    items.forEach(bind);
     // ô bánh trao hết cả chồng được tính là chỗ trống cho quà
     if (!p.canAddItems(items, [[s.token, row.cost * n]])) return res(false, 'Hành trang không đủ chỗ trống.');
     p.removeItem(s.token, row.cost * n);
-    if (r.xu) p.gainXu(r.xu * n);
+    if (r.xu) p.gainXuk(r.xu * n);
     if (r.luong) p.c.luong += r.luong * n;
-    for (const it of items) p.addItemObj(it);
+    for (const it of items) if (!p.addItemObj(it)) p.stashItem(it);
     cnt[row.id] = used + n;
     p.markMe();
     p.markInv();
     if (this.world.db) this.world.db.dirty = true;
-    const got = rewardLabel({ xu: (r.xu || 0) * n, luong: (r.luong || 0) * n }, items);
+    const got = rewardLabel({ xuk: (r.xu || 0) * n, luong: (r.luong || 0) * n }, items);
     p.notice(`Đổi ${row.cost * n} ${tok} lấy ${got}.`, 'reward');
     return res(true, `Đã đổi: ${got}`);
   }

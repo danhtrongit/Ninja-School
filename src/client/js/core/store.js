@@ -45,6 +45,9 @@ export function store(key, val) {
 
 export const fmt = (n) => Math.floor(n || 0).toLocaleString('vi-VN');
 
+// Tổng xu trả được cho phí NPC (server trừ xu khóa trước)
+export const xuAll = () => (S.me ? (S.me.xu || 0) + (S.me.xuk || 0) : 0);
+
 export function skillVal(arr, lv) {
   if (!arr) return 0;
   return arr[0] + arr[1] * Math.max(0, lv - 1);

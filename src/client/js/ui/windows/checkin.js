@@ -14,7 +14,8 @@ export default {
     const cur = (nextStreak - 1) % 7;
     const label = (r) => {
       const parts = [];
-      if (r.xu) parts.push(`${fmt(Math.round(r.xu * (1 + S.me.level / 20)))} xu`);
+      // "xu khóa" không tách dòng giữa hai chữ trong ô ngày hẹp
+      if (r.xu) parts.push(`${fmt(Math.round(r.xu * (1 + S.me.level / 20)))} xu\u00a0khóa`);
       if (r.luong) parts.push(`${r.luong} lượng`);
       for (const [id, q] of r.items || []) parts.push(`${S.G.items[id].name}${q > 1 ? ` x${q}` : ''}`);
       return parts;
@@ -22,7 +23,7 @@ export default {
     const bigIcon = (r, i) => {
       if (r.items && r.items.length) return h('img', { src: iconURL(S.G.items[r.items[r.items.length - 1][0]].icon, i === 6 ? 4 : 0), alt: '' });
       if (r.luong) return h('img', { src: uiIconURL('luong'), alt: '', class: 'ui' });
-      return h('img', { src: uiIconURL('xu'), alt: '', class: 'ui' });
+      return h('img', { src: uiIconURL('xuk'), alt: '', class: 'ui' });
     };
     const cells = S.G.checkin.map((r, i) => {
       const got = i < cur || (claimed && i === cur);

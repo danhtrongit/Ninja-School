@@ -32,6 +32,7 @@ Toàn bộ đồ họa pixel được **vẽ bằng code**, không dùng hình �
 | Điểm danh & Vòng quay | Quà điểm danh 7 ngày liên tục · Vòng quay may mắn bằng xu hoặc lượng |
 | Tiện ích | Tự động đánh (tự tìm quái, dùng kỹ năng, uống thuốc, nhặt đồ), bảng xếp hạng, bản đồ thu nhỏ, điều khiển cảm ứng, âm thanh tổng hợp bằng WebAudio · Ngày/đêm theo giờ Việt Nam và rung màn hình (chỉnh trong Cài đặt) |
 | Tiền tệ | Xu (đánh quái, nhiệm vụ) và Lượng (boss, nhiệm vụ hằng ngày) mua Bí Kíp x2 EXP, Bùa Bảo Hộ, Thẻ Hồi Sinh, Sách kỹ năng nội tại, thời trang và thú cưỡi |
+| Xu khóa & vật phẩm khóa | Quà nhiệm vụ/điểm danh/vòng quay/giftcode/thư Ban Quản Trị/đổi quà lễ hội trao **xu khóa** và vật phẩm khóa (ổ khóa đỏ góc ô); hàng mua bằng lượng, hoặc bằng xu có dùng xu khóa, cũng bị khóa. Đồ khóa không giao dịch được (vẫn mặc, cất kho, cường hóa, khảm, bán NPC ra xu khóa). Xu khóa dùng trước khi trả phí NPC (mua hàng, cường hóa, ngọc, dịch chuyển, vòng quay); cửa hàng có ô "Không dùng xu khóa" |
 
 ## Chạy trên máy
 
@@ -62,6 +63,7 @@ Kiểm thử tự động (bật server tạm và cho 2 bot chơi thử qua WebS
 ```bash
 npm test
 npm run check
+node tools/balance.js   # bảng cân bằng người chơi/quái/boss
 npm run test:ui    # giao diện 2 người chơi thật (cần Playwright, server chạy với ADMINS=duoalpha,duobravo)
 npm run test:e2e   # tìm đường, bản đồ thế giới, hệ thống mới (cần Playwright, BASE_URL + ACC là tài khoản admin)
 npm run test:perf  # đo khung hình trên bản đồ đông quái (cần Playwright, BASE_URL + ACC là tài khoản admin)
@@ -131,7 +133,7 @@ location / {
 Bấm vào NPC để nói chuyện, bấm vào quái để chọn mục tiêu, bấm vào người chơi để mời nhóm, giao dịch, thách đấu, nhắn tin, xem thông tin.
 
 Lệnh chat: `/w tên tin` (nhắn riêng), `/p` (nhóm), `/g` (gia tộc), `/a` (thế giới), `/moi tên`, `/gd tên`, `/td tên`, `/xem tên`, `/online`, `/help`.
-Lệnh admin: `/lv n`, `/item id sl [độ hiếm] [số ngày hạn]`, `/hethan [giây]` (mọi đồ có hạn trên người hết hạn sau n giây, để thử), `/plus n` (cường hóa vũ khí), `/thu cấp [thân mật]` (cấp và thân mật thú đang mang), `/xu n`, `/luong n`, `/tp map`, `/boss`, `/bosshp %` (đặt máu boss trên bản đồ đang đứng, để thử cuồng nộ), `/event tathu [boss] [bản đồ]` (gọi Tà Thú ngay), `/event stop`, `/all tin`, `/kick tên`, `/mail <tên|all> <xu> <lượng> [vật phẩm] [sl] [ngày]` (gửi thư quà, người offline nhận khi vào game), `/code <MÃ> <xu> <lượng> [vật phẩm] [sl] [giờ=24] [lượt]` (tạo giftcode tạm), `/code` (danh sách), `/code xoa <MÃ>`, `/sukien <mã mùa|tat|auto>` (ép bật/tắt lễ hội để thử), `/arena` (xem hàng chờ lôi đài), `/arena reward` (trao thưởng lôi đài tuần ngay), `/arena elo n` (đặt điểm lôi đài của mình).
+Lệnh admin: `/lv n`, `/item id sl [độ hiếm] [số ngày hạn] [k = khóa]`, `/hethan [giây]` (mọi đồ có hạn trên người hết hạn sau n giây, để thử), `/plus n` (cường hóa vũ khí), `/thu cấp [thân mật]` (cấp và thân mật thú đang mang), `/xu n`, `/xuk n` (xu khóa), `/luong n`, `/tp map`, `/boss`, `/bosshp %` (đặt máu boss trên bản đồ đang đứng, để thử cuồng nộ), `/event tathu [boss] [bản đồ]` (gọi Tà Thú ngay), `/event stop`, `/all tin`, `/kick tên`, `/mail <tên|all> <xu> <lượng> [vật phẩm] [sl] [ngày]` (gửi thư quà, người offline nhận khi vào game), `/code <MÃ> <xu> <lượng> [vật phẩm] [sl] [giờ=24] [lượt]` (tạo giftcode tạm), `/code` (danh sách), `/code xoa <MÃ>`, `/sukien <mã mùa|tat|auto>` (ép bật/tắt lễ hội để thử), `/arena` (xem hàng chờ lôi đài), `/arena reward` (trao thưởng lôi đài tuần ngay), `/arena elo n` (đặt điểm lôi đài của mình).
 
 Giftcode cố định, lịch lễ hội và luật/thưởng lôi đài nằm trong `src/shared/data/extras.js` (`GIFTCODES`, `SEASONS`, `ARENA`).
 

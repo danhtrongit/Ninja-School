@@ -101,14 +101,14 @@ const BOSS_SKILLS = {
   boss_wolf: [fissure(230, 1.7, { name: 'Lang Trảo' }), roar(130, 40, { name: 'Lang Hống' })],
   boss_pharaoh: [pillar(3, 1.6, { name: 'Thái Dương Trụ' }), summon('mummy', 3), nova(130, 2.0, { name: 'Sa Bạo' })],
   boss_yeti: [quake(110, 1.8), roar(150, 45, { name: 'Băng Hống' })],
-  boss_crystal: [pillar(3, 1.7, { name: 'Pha Lê Trụ' }), nova(140, 2.1, { name: 'Tinh Bạo' })],
+  boss_crystal: [pillar(3, 1.7, { name: 'Pha Lê Trụ' }), nova(140, 2.0, { name: 'Tinh Bạo' })],
   boss_oni: [quake(100, 1.8), beam(260, 1.9, { name: 'Quỷ Hỏa Tuyến' }), summon('oni', 2)],
   boss_god: [nova(150, 2.2, { name: 'Ma Thần Bạo' }), pillar(4, 1.8, { name: 'Hắc Lôi Trụ' }), beam(280, 2.0)],
-  boss_heaven: [pillar(4, 1.9, { name: 'Thiên Phạt' }), nova(160, 2.3), roar(160, 45)],
-  boss_dragon: [beam(300, 2.1, { name: 'Long Tức' }), quake(120, 2.0, { name: 'Long Chấn' }), summon('seaserpent', 2)],
-  ev_hacviem: [beam(260, 1.8, { name: 'Hắc Viêm Tuyến' }), quake(110, 1.9, { name: 'Viêm Chấn' }), roar(150, 40, { name: 'Tà Hống' })],
-  ev_bangphach: [pillar(4, 1.8, { name: 'Băng Phách Trụ' }), quake(120, 2.0, { name: 'Băng Chấn' }), summon('icewolf', 2)],
-  ev_huyetnguyet: [nova(160, 2.3, { name: 'Huyết Nguyệt Bạo' }), pillar(4, 1.9, { name: 'Huyết Trụ' }), roar(160, 45, { name: 'Tà Hống' })],
+  boss_heaven: [pillar(4, 1.9, { name: 'Thiên Phạt' }), nova(160, 2.0), roar(160, 45)],
+  boss_dragon: [beam(300, 1.8, { name: 'Long Tức' }), quake(120, 1.8, { name: 'Long Chấn' }), summon('seaserpent', 2)],
+  ev_hacviem: [beam(260, 1.8, { name: 'Hắc Viêm Tuyến' }), quake(110, 1.8, { name: 'Viêm Chấn' }), roar(150, 40, { name: 'Tà Hống' })],
+  ev_bangphach: [pillar(4, 1.8, { name: 'Băng Phách Trụ' }), quake(120, 1.8, { name: 'Băng Chấn' }), summon('icewolf', 2)],
+  ev_huyetnguyet: [nova(160, 2.0, { name: 'Huyết Nguyệt Bạo' }), pillar(4, 1.9, { name: 'Huyết Trụ' }), roar(160, 45, { name: 'Tà Hống' })],
 };
 // Cuồng nộ khi máu dưới 30%: hồi chiêu và đánh thường nhanh hơn, niệm chiêu ngắn hơn (vẫn đủ thời gian chạy ra)
 const RAGE = { hp: 0.3, cd: 0.6, windup: 0.85, atkCd: 0.75, speed: 1.2 };
@@ -142,7 +142,8 @@ const SIZES = {
 function baseStats(lv) {
   return {
     hp: Math.round(40 + lv * lv * 2 + lv * 20),
-    atk: Math.round(8 + lv * 5),
+    // công tăng theo bình phương để theo kịp thủ người chơi khi có ngọc/thời trang/nội tại/thú
+    atk: Math.round(8 + lv * 6 + 0.12 * lv * lv),
     def: Math.round(lv * 1.5),
     exp: Math.round(10 + lv * 8),
   };
@@ -161,17 +162,31 @@ for (const [id, name, lv, type, pal, el, aggro, drops, ranged, scale] of LIST) {
     fly: type === 'flyer' || type === 'ghost',
   };
 }
+// Tà Thú: hệ số HP theo n = số người online đủ cấp lúc xuất hiện (1..20). 1 người ~8-10 phút, 10 người ~3 phút
+const EVENT_HP = { base: 300, per: 120, cap: 20 };
+function eventHpMul(n) {
+  const k = Math.max(1, Math.min(EVENT_HP.cap, Math.floor(Number(n) || 1)));
+  return EVENT_HP.base + EVENT_HP.per * k;
+}
+// Hệ số boss so với quái thường cùng cấp (DESIGN_RULES mục 9). Tà Thú: HP theo số người online lúc xuất hiện
+// (eventHpMul, module events đặt lại maxHp), giá trị ở đây là mức 1 người để dữ liệu tĩnh và lệnh admin luôn hợp lệ.
+const BOSS_MUL = { hp: 150, atk: 1.5, def: 1.6, exp: 60 };
+const EVENT_MUL = { atk: 1.5, def: 1.6, exp: 150 };
+
 for (const [id, name, lv, type, pal, el, scale, event] of BOSSES) {
   const s = baseStats(lv);
   const sz = SIZES[type];
-  // boss sự kiện: cả máy chủ cùng đánh nên máu dày hơn (×80), EXP nhiều hơn (×60)
   MONSTERS[id] = {
     name, lv, type, pal, el, aggro: true, boss: true, event: !!event, ranged: false, scale,
-    hp: Math.round(s.hp * (event ? 80 : 45)), atk: Math.round(s.atk * 2.2), def: Math.round(s.def * 1.6), exp: Math.round(s.exp * (event ? 60 : 40)),
+    hp: Math.round(s.hp * (event ? eventHpMul(1) : BOSS_MUL.hp)),
+    atk: Math.round(s.atk * (event ? EVENT_MUL.atk : BOSS_MUL.atk)),
+    def: Math.round(s.def * (event ? EVENT_MUL.def : BOSS_MUL.def)),
+    exp: Math.round(s.exp * (event ? EVENT_MUL.exp : BOSS_MUL.exp)),
+    baseHp: s.hp,
     speed: 45, atkRange: 40 * scale * 0.6, atkCd: 1500, aoe: 60 * scale * 0.5, respawn: 10 * 60 * 1000,
     w: Math.round(sz[0] * scale), h: Math.round(sz[1] * scale), fly: type === 'flyer' || type === 'ghost',
     drops: BOSS_DROPS[id] || [], skills: BOSS_SKILLS[id] || [],
   };
 }
 
-module.exports = { MONSTERS, RAGE };
+module.exports = { MONSTERS, RAGE, baseStats, eventHpMul, EVENT_HP, BOSS_MUL, EVENT_MUL };
