@@ -29,22 +29,22 @@ function get(p, headers) {
 
 async function audioHttpTest() {
   console.log('Âm thanh: phục vụ file theo Range');
-  const dir = path.join(__dirname, '../../src/client/audio/sfx');
+  const dir = path.join(__dirname, '../../src/client/audio/music');
   const file = path.join(dir, 'zz_range_test.ogg');
   const made = !fs.existsSync(dir);
   fs.mkdirSync(dir, { recursive: true });
   const data = Buffer.from(Array.from({ length: 1000 }, (_, i) => i % 256));
   fs.writeFileSync(file, data);
   try {
-    const full = await get('/audio/sfx/zz_range_test.ogg');
+    const full = await get('/audio/music/zz_range_test.ogg');
     ok(full.status === 200 && full.body.length === 1000 && full.headers['accept-ranges'] === 'bytes' && full.headers['content-type'] === 'audio/ogg', 'tải cả file âm thanh: 200, có Accept-Ranges, đúng kiểu');
-    const part = await get('/audio/sfx/zz_range_test.ogg', { Range: 'bytes=10-19' });
+    const part = await get('/audio/music/zz_range_test.ogg', { Range: 'bytes=10-19' });
     ok(part.status === 206 && part.body.equals(data.subarray(10, 20)) && part.headers['content-range'] === 'bytes 10-19/1000', 'Range bytes=10-19: 206 đúng 10 byte');
-    const tail = await get('/audio/sfx/zz_range_test.ogg', { Range: 'bytes=-5' });
+    const tail = await get('/audio/music/zz_range_test.ogg', { Range: 'bytes=-5' });
     ok(tail.status === 206 && tail.body.equals(data.subarray(995)), 'Range bytes=-5: 5 byte cuối');
-    const open = await get('/audio/sfx/zz_range_test.ogg', { Range: 'bytes=990-' });
+    const open = await get('/audio/music/zz_range_test.ogg', { Range: 'bytes=990-' });
     ok(open.status === 206 && open.body.length === 10, 'Range bytes=990-: tới hết file');
-    const bad = await get('/audio/sfx/zz_range_test.ogg', { Range: 'bytes=5000-' });
+    const bad = await get('/audio/music/zz_range_test.ogg', { Range: 'bytes=5000-' });
     ok(bad.status === 416, 'Range ngoài file: 416');
   } finally {
     fs.rmSync(file, { force: true });

@@ -1,7 +1,8 @@
 'use strict';
 
-// Chép file âm thanh đã tạo (ngoài repo) vào src/client/audio/{music,sfx} và ghi CREDITS.md theo nguồn từng file.
-// Dùng: node tools/sync-audio.js [thư mục out]   (mặc định ~/.local/share/ninja-audio/out, có music/ và sfx/ chứa <id>.ogg, <id>.m4a, <id>.json)
+// Chép file nhạc nền đã tạo (ngoài repo) vào src/client/audio/music và ghi CREDITS.md theo nguồn từng file.
+// Tiếng hiệu ứng không dùng file: tổng hợp bằng WebAudio ở src/client/js/core/sound.js.
+// Dùng: node tools/sync-audio.js [thư mục out]   (mặc định ~/.local/share/ninja-audio/out, có music/ chứa <id>.ogg, <id>.m4a, <id>.json)
 // Chỉ chép id có trong bảng âm thanh (src/shared/data/audio.js) để không lọt file thử nghiệm vào game.
 const fs = require('fs');
 const os = require('os');
@@ -12,13 +13,11 @@ const SRC = path.resolve(process.argv[2] || path.join(os.homedir(), '.local/shar
 const DST = path.join(__dirname, '..', 'src', 'client', 'audio');
 const used = {
   music: new Set([AUDIO.MUSIC_DEFAULT, ...Object.values(AUDIO.MUSIC_THEME), ...Object.values(AUDIO.MUSIC_SCENE)]),
-  sfx: new Set([...Object.values(AUDIO.SKILL_SFX), ...Object.values(AUDIO.FX_SFX), ...Object.values(AUDIO.EVENT_SFX), ...Object.values(AUDIO.BOSS_SFX),
-    'enhance_ok', 'enhance_fail', 'gem', 'mail', 'arena_start', 'victory', 'defeat', 'ui_open']),
 };
 
 const credits = [];
 let copied = 0;
-for (const kind of ['music', 'sfx']) {
+for (const kind of ['music']) {
   const from = path.join(SRC, kind);
   if (!fs.existsSync(from)) continue;
   fs.mkdirSync(path.join(DST, kind), { recursive: true });

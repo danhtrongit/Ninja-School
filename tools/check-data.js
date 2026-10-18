@@ -396,7 +396,7 @@ if (RARITY.length !== 5) err('RARITY phải có 5 bậc');
   for (const m of Object.values(MAPS)) if (m.arena && !m.instance) err(`Bản đồ ${m.id}: cờ arena chỉ dùng cho phòng đấu (instance)`);
 }
 
-// Âm thanh: mỗi theme có nhạc, mỗi kỹ năng chủ động và chiêu boss có tiếng (file thật có thể chưa tạo: máy khách tự dùng tiếng tổng hợp)
+// Âm thanh: mỗi theme có nhạc, mỗi kỹ năng chủ động và chiêu boss có tiếng tổng hợp
 {
   const ID = /^[a-z0-9_]+$/;
   const ids = [AUDIO.MUSIC_DEFAULT, ...Object.values(AUDIO.MUSIC_THEME), ...Object.values(AUDIO.MUSIC_SCENE), ...Object.values(AUDIO.SKILL_SFX),
@@ -410,6 +410,18 @@ if (RARITY.length !== 5) err('RARITY phải có 5 bậc');
   }
   for (const sid in AUDIO.SKILL_SFX) if (!SKILLS[sid]) err(`Âm thanh: SKILL_SFX có kỹ năng lạ "${sid}"`);
   for (const m of Object.values(MONSTERS)) for (const bs of m.skills || []) if (!AUDIO.BOSS_SFX[bs.k]) err(`Âm thanh: chiêu boss "${bs.k}" (${m.name}) chưa có tiếng trong BOSS_SFX`);
+  const fs = require('fs');
+  const path = require('path');
+  // tiếng hiệu ứng tổng hợp bằng WebAudio: mọi id tiếng trong bảng và mọi sfx('...') phải có công thức trong RECIPES (core/sound.js)
+  const snd = fs.readFileSync(path.join(CLIENT_JS, 'core', 'sound.js'), 'utf8');
+  const rec = snd.slice(snd.indexOf('const RECIPES = {'), snd.indexOf('\n};', snd.indexOf('const RECIPES = {')));
+  const have = new Set([...rec.matchAll(/^ {2}([a-z0-9_]+): \[/gm)].map((m) => m[1]));
+  const alias = snd.match(/const ALIAS = \{([^}]*)\}/);
+  if (alias) for (const m of alias[1].matchAll(/([a-z_]+): '([a-z0-9_]+)'/g)) if (have.has(m[2])) have.add(m[1]);
+  const sfxIds = new Set([...Object.values(AUDIO.SKILL_SFX), ...Object.values(AUDIO.FX_SFX), ...Object.values(AUDIO.EVENT_SFX), ...Object.values(AUDIO.BOSS_SFX)]);
+  const clientJs = (d) => fs.readdirSync(d, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? clientJs(path.join(d, e.name)) : e.name.endsWith('.js') ? [path.join(d, e.name)] : []));
+  for (const f of clientJs(CLIENT_JS)) for (const m of fs.readFileSync(f, 'utf8').matchAll(/\bsfx\('([a-z0-9_]+)'\)/g)) sfxIds.add(AUDIO.EVENT_SFX[m[1]] || m[1]);
+  for (const id of sfxIds) if (!have.has(id)) err(`Âm thanh: tiếng "${id}" chưa có công thức tổng hợp trong RECIPES (src/client/js/core/sound.js)`);
 }
 
 // Xu khóa: thưởng xu (trao thành xu khóa) phải là số nguyên không âm
