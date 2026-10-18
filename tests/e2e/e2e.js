@@ -448,7 +448,18 @@ const ok = (c, msg) => { console.log((c ? '  ✔ ' : '  ✘ ') + msg); if (!c) f
   // ---- 2. Bản đồ thế giới: đi xa hơn (3 bản đồ)
   await ev(() => window.ninja.game.toggleAuto(false));
   if ((await ev(() => window.ninja.S.me.level)) < 30) await cmd('/lv 30');
-  const far = MOBILE ? (await mapId() === 'v_water' ? 'v_fire' : 'v_water') : 'v_water';
+  // lộ trình xa đi ngang Rừng Trúc (Vua Slime + quái chủ động): nhân vật thử mặc đủ bộ đồ cấp 30 như người chơi thật,
+  // không thì nhân vật trần có khi bị hạ giữa đường và bài kiểm tìm đường hỏng vì lý do khác
+  const weapon = await ev(() => `w_${window.ninja.S.me.cls}_3`);
+  for (const id of [weapon, 'hat_3', 'armor_3', 'gloves_3', 'pants_3', 'shoes_3', 'necklace_3', 'ring_3', 'amulet_3']) {
+    if (await ev((id) => Object.values(window.ninja.S.equip).some((e) => e && e.id === id), id)) continue;
+    await cmd(`/item ${id}`);
+    await waitFor((id) => window.ninja.S.inv.some((it) => it && it.id === id), 3000, id);
+    await ev((id) => window.ninja.net.send('equip', { slot: window.ninja.S.inv.findIndex((it) => it && it.id === id) }), id);
+    await waitFor((id) => Object.values(window.ninja.S.equip).some((e) => e && e.id === id), 3000, id);
+  }
+  await cmd('/lv 30');
+  const far =MOBILE ? (await mapId() === 'v_water' ? 'v_fire' : 'v_water') : 'v_water';
   if (MOBILE) await tap('.mbtn.m-map').catch(async () => openWin('map', 'KeyM'));
   else await page.keyboard.press('KeyM');
   await page.waitForTimeout(700);

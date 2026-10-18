@@ -4,6 +4,13 @@ Ghi sau mỗi tính năng / mỗi lần đổi mốc ảnh. Mới nhất ở tr�
 
 ## 2026-10-19
 
+### Sửa kiểm thử chập chờn khi chạy verify trên bản sạch
+
+- `test:ui` chưa bao giờ in `OK no console errors` nên bước 8a của verify luôn hỏng dù mọi kiểm tra đạt. Nay in dòng này khi không có lỗi console.
+- `test:e2e MOBILE=1`, chặng đi xa Làng Hỏa Vân → Làng Thủy Nguyệt:
+  - Nhân vật thử cấp 30 không mặc gì đi ngang Rừng Trúc. Vua Slime đánh 136-149 mỗi đòn (~20% sinh lực), Sơn Tặc 66-73. Chạy lại 7 lần thì 1 lần chết giữa đường.
+  - Nay nhân vật thử mặc đủ bộ đồ cấp 30 trước chặng này (như người chơi thật). Điều kiện đạt và hạn 180 giây giữ nguyên. Máy tính và điện thoại đều tới nơi sau 34 giây.
+
 ### Khép GĐ0: tài khoản, nhân vật, khung module, lưu, lệnh admin → done (21/21 mục GĐ0)
 
 - `tests/features/account.js`:
