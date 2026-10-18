@@ -382,7 +382,7 @@
       "git log origin/main có đúng 4 nhóm commit theo thứ tự: (0) cherry-pick 5a50602 'Điểm khôi phục: sau đợt 1, 2A, 2B' (43 file: lôi đài, hộp thư, lễ hội, ngọc, thú cưng, thời trang, bản đồ thế giới, nội tại, Tà Thú); (1) tái cấu trúc thuần = cây của 920700a (tên 'tạm: ảnh chụp' nhưng chứa tái cấu trúc 210 file, không có ảnh) với thông điệp mới; (2) túi đồ fdd1297 + 4b0ff52; (3) âm thanh 25428b0 + phần còn lại của mốc a4b4a0a (Range ở services/http.js, tests/e2e/e2e.js) + thư mục src/client/audio/ kèm CREDITS.md",
       "Không có commit mang tên 'tạm: ảnh chụp', không có NOTE.md, data/, ảnh chụp",
       "Cây sau nhóm (3) trùng cây a4b4a0a cộng src/client/audio/ (git diff rỗng ngoài thư mục âm thanh)",
-      "Phần đồ họa N-F2/N-F3/N-W1 (nhánh nf/f2, nf/f3, nf/w1) và lô 1-A (dot3/bound, dot3/balance) không vào main ở GĐ0: các nhánh rebase lên main mới, git diff giữa main + các nhánh đó và index ngày 18-10-2026 rỗng (không mất việc)",
+      "Sau 4 nhóm: phần đã chạy production (đồ họa d8161c2, xu khóa + cân bằng 8f389c3) vào main thành commit riêng (docs/DECISIONS.md D-01); git diff giữa main và index ngày 18-10-2026 rỗng (không mất việc)",
       "CI xanh trên main với node-version 24 (ADR-10-5)",
       "nội dung app/ trên production (hoặc /api/status.version sau ops-deploy) khớp commit trên main",
       "notes của ui-bag-expand, ui-bag-bulkdrop, ui-ask-dialog, snd-audio-files ghi 'đã gộp main' kèm mã commit; id nào đạt đủ acceptance còn lại thì đổi done"
