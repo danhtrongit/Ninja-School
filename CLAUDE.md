@@ -36,6 +36,7 @@ tests/e2e/                 Playwright: e2e.js, perf.js, ui-multiplayer.js
 tools/                     check-data.js (npm run check), shot.js (chụp ảnh)
 ```
 
+- `services/http.js` chèn vào `index.html` lúc phục vụ một import map trỏ mỗi file `js/**` tới bản `?v=<băm nội dung>` (lưu đệm vĩnh viễn) và `modulepreload` cho mọi module, `css/*.css` cũng gắn `?v=`. Thêm/sửa file client không cần làm gì thêm; chỉ import bằng đường dẫn tương đối tĩnh.
 - Client là ES module không build nên **không** import `src/shared/` (dữ liệu tĩnh tới qua gói `data`, đọc bằng `S.G`).
 - `render/<x>.js` là **file vào** giữ API công khai (bảng dưới), phần thân nằm trong thư mục con (`sprites.js` → `sprites/`, `monsterart.js` → `monster/`, `maprender.js` → `map/`, `fx.js` → `fx/`, `icons.js` → `icons/`). Module khác chỉ import file vào.
 - `ui/ui.js` giữ HUD, khung cửa sổ, chat và bảng `refresh()`; nội dung từng cửa sổ ở `ui/windows/<x>.js` (`export default { renderX() {...} }`, `this` là đối tượng UI), gộp vào `UI.prototype` ở cuối `ui.js`.
@@ -106,6 +107,7 @@ tools/                     check-data.js (npm run check), shot.js (chụp ảnh)
 | Lễ hội theo mùa | `modules/season` | `windows/season.js` | `features/mail.js` |
 | Hộp thư, giftcode | `modules/mail` | `windows/mail.js` | `features/mail.js` |
 | Lôi đài | `modules/arena` | `windows/arena.js` (+ tab trong `rank.js`) | `features/arena.js` |
+| Âm thanh (nhạc nền, tiếng hiệu ứng, âm lượng) | `modules/audio` (+ Range trong `services/http.js`) | `windows/settings.js` (thanh âm lượng) | `features/audio.js` |
 | Lệnh admin | `modules/admin` | | dùng trong mọi phần kiểm thử |
 
 **Vùng dùng chung** (thường chỉ một agent giữ mỗi vùng trong một đợt):
@@ -205,6 +207,7 @@ Cách giao:
 - **Sự kiện theo mùa mới**: thêm phần tử vào `SEASONS` (`extras.js`: `id, name, desc, from, until, token, drop { rate, lvGap, boss, event }, exchange [{ id, cost, limit?, reward { xu, luong, items, days } }]`), không trùng thời gian mùa khác → vật phẩm token `type: 'event'` cộng dồn trong `items/consumables.js` với icon `k` riêng (vẽ trong `iconCanvas` của `render/icons.js`, thêm vào `ICON_KINDS` của `tools/check-data.js`) → `npm run check`. Thử trước ngày bằng `/sukien <id>`, xong thì `/sukien auto`.
 - **Luật / thưởng lôi đài**: chỉ sửa `ARENA` (`extras.js`): `minLv`, `elo`, `k`, `match { base, grow, growEvery, max }`, `countdown`, `dur`, `pairDaily`, `daily`, `win/lose/draw { xu, fame }`, `weeklyMin`, `weeklyWin`, `dodgeLock`, `weekly [{ to, luong, xu, items }]` (`to` tăng dần, hạng thấp không nhiều lượng hơn hạng cao) → `npm run check` → cập nhật bảng mục 9 của `DESIGN_RULES.md`. Thử thưởng tuần bằng `/arena reward`.
 - **Loại NPC mới**: thêm vào `NPC_TYPES` (`maps.js`) → ngoại hình trong `NPCS` (`render/sprites/npc.js`) → nhà trong `SHOP` (`render/map/village.js`) → đăng ký `npcs: { loại: { open(p, n), act(p, n, a, m) } }` trong module của tính năng → `npm run check` (kiểm đủ 3 nơi vẽ).
+- **Âm thanh**: bảng gắn ở `src/shared/data/audio.js` (`MUSIC_THEME` theme → nhạc, `MUSIC_SCENE` boss/Tà Thú/lôi đài/phó bản/lễ hội, `SKILL_SFX` kỹ năng → tiếng, mặc định theo `FX_SFX[fx.k]`, `EVENT_SFX` tên `sfx('...')` → file, `BOSS_SFX` chiêu boss). Theme bản đồ hoặc kỹ năng mới phải có dòng tương ứng (`npm run check` báo thiếu). Máy khách: `sfx(tên)`, `skillSfx(sid, k)`, `bossSfx(k)`, `music(id)`, `musicFor(map, scene)` (`core/sound.js`); nhạc tự chọn ở `updateMusic()` (`game/game.js`). File tạo ngoài repo bằng hàng đợi `~/.local/share/ninja-audio/run_queue.py` (chỉ chạy khi máy rảnh), rồi `node tools/sync-audio.js` chép vào `src/client/audio` và ghi `CREDITS.md`.
 - **Bậc trang bị mới**: thêm vào `TIER_NAMES/TIER_LV/TIER_COLORS` (`items/base.js`) **và** `TIER_OUTFIT/TIER_METAL/TIER_TRIM` (`render/sprites/color.js`).
 
 ## Git

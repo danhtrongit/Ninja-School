@@ -11,6 +11,7 @@ const { CLASSES } = require('../src/shared/data/classes');
 const { CHECKIN, WHEEL, TATHU, MAIL, GIFTCODES, CODE_LIMIT, SEASONS, ARENA } = require('../src/shared/data/extras');
 const { eventMaps } = require('../src/server/modules/events');
 const { PET, PET_SKILLS, PETS, PET_FOOD } = require('../src/shared/data/pets');
+const AUDIO = require('../src/shared/data/audio');
 
 // Đọc mã nguồn client để dò tên hình vẽ. File vào (render/icons.js) đã tách phần thân ra thư mục
 // con (render/icons/*.js) nên đọc gộp cả file lẫn thư mục đó.
@@ -389,6 +390,22 @@ if (RARITY.length !== 5) err('RARITY phải có 5 bậc');
   if (ld && ld.platforms.some(([x, , w]) => x < 40 || x + w > ld.w - 40)) err('Bản đồ loidai: bục nằm ngoài sàn đấu');
   if (!Object.values(MAPS).some((m) => !m.instance && m.npcs.some((n) => n.type === 'arena'))) err('Lôi đài: chưa đặt NPC loại "arena" (Võ Sư) ở bản đồ nào');
   for (const m of Object.values(MAPS)) if (m.arena && !m.instance) err(`Bản đồ ${m.id}: cờ arena chỉ dùng cho phòng đấu (instance)`);
+}
+
+// Âm thanh: mỗi theme có nhạc, mỗi kỹ năng chủ động và chiêu boss có tiếng (file thật có thể chưa tạo: máy khách tự dùng tiếng tổng hợp)
+{
+  const ID = /^[a-z0-9_]+$/;
+  const ids = [AUDIO.MUSIC_DEFAULT, ...Object.values(AUDIO.MUSIC_THEME), ...Object.values(AUDIO.MUSIC_SCENE), ...Object.values(AUDIO.SKILL_SFX),
+    ...Object.values(AUDIO.FX_SFX), ...Object.values(AUDIO.EVENT_SFX), ...Object.values(AUDIO.BOSS_SFX)];
+  for (const id of ids) if (typeof id !== 'string' || !ID.test(id)) err(`Âm thanh: id file "${id}" không hợp lệ (chỉ a-z, 0-9, _)`);
+  for (const t of THEMES) if (!AUDIO.MUSIC_THEME[t]) err(`Âm thanh: theme "${t}" chưa có nhạc nền trong MUSIC_THEME (audio.js)`);
+  for (const t in AUDIO.MUSIC_THEME) if (!THEMES.has(t)) err(`Âm thanh: MUSIC_THEME có theme lạ "${t}"`);
+  for (const [sid, sk] of Object.entries(SKILLS)) {
+    if (sk.type === 'passive') continue;
+    if (!AUDIO.SKILL_SFX[sid] && !(sk.fx && AUDIO.FX_SFX[sk.fx.k])) err(`Âm thanh: kỹ năng ${sid} chưa có tiếng (SKILL_SFX hoặc FX_SFX["${sk.fx && sk.fx.k}"])`);
+  }
+  for (const sid in AUDIO.SKILL_SFX) if (!SKILLS[sid]) err(`Âm thanh: SKILL_SFX có kỹ năng lạ "${sid}"`);
+  for (const m of Object.values(MONSTERS)) for (const bs of m.skills || []) if (!AUDIO.BOSS_SFX[bs.k]) err(`Âm thanh: chiêu boss "${bs.k}" (${m.name}) chưa có tiếng trong BOSS_SFX`);
 }
 
 if (errors.length) {

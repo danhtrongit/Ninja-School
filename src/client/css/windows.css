@@ -505,6 +505,13 @@ body.touch .gem-act .btn.big, body.touch .merge-box .btn.big, body.touch .upg-bo
 /* cài đặt */
 .set-wrap .sec { margin: 0 0 8px; }
 .set-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin: 4px 0; cursor: pointer; }
+.vol-row > span { flex: none; min-width: 84px; }
+.vol-row .vol-n { flex: none; width: 30px; text-align: right; font-weight: normal; color: #ffe7a0; }
+input.vol { flex: 1; min-width: 90px; height: 18px; margin: 0; background: transparent; accent-color: #e8a83a; cursor: pointer; -webkit-appearance: none; appearance: none; }
+input.vol::-webkit-slider-runnable-track { height: 8px; border-radius: 4px; background: linear-gradient(#120804, #3a2412); box-shadow: 0 0 0 1px #6d4c2a; }
+input.vol::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 18px; margin-top: -5px; border-radius: 3px; background: linear-gradient(#ffe08a, #c8862a); box-shadow: 0 0 0 1px #120804; }
+input.vol::-moz-range-track { height: 8px; border-radius: 4px; background: linear-gradient(#120804, #3a2412); box-shadow: 0 0 0 1px #6d4c2a; }
+input.vol::-moz-range-thumb { width: 14px; height: 18px; border: none; border-radius: 3px; background: linear-gradient(#ffe08a, #c8862a); box-shadow: 0 0 0 1px #120804; }
 input.switch {
   appearance: none; -webkit-appearance: none; position: relative; width: 44px; height: 24px; margin: 0; flex: none; cursor: pointer; border-radius: 12px;
   background: linear-gradient(#1a0d06, #3a2414); border: 1px solid var(--ink); box-shadow: inset 0 0 0 1px #8a5f2a, inset 0 2px 4px rgba(0, 0, 0, 0.6);

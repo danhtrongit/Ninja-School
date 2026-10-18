@@ -242,11 +242,14 @@ const ok = (c, msg) => { console.log((c ? '  ✔ ' : '  ✘ ') + msg); if (!c) f
     // Tà Thú: gọi sự kiện, biểu ngữ HUD, tới bãi, boss niệm chiêu
     await closeWin();
     await cmd('/event stop');
-    // Tà Thú cấp thấp nhất cho nhân vật thử (cấp 50) sống sót tới lúc boss niệm chiêu
-    await cmd('/event tathu ev_hacviem');
+    // Tà Thú cấp thấp nhất, ghim bãi quái yếu nhất (wasteland) để nhân vật thử (cấp 50) sống tới lúc boss niệm chiêu
+    await cmd('/event tathu ev_hacviem wasteland');
     ok(await waitFor(() => !!window.ninja.S.event && !document.querySelector('#hud-event').classList.contains('hidden'), 4000), 'biểu ngữ Tà Thú hiện trên HUD');
     await shot('n-tathu-banner');
     const evMap = await S_(() => window.ninja.S.event.map);
+    // boss chờ 2,2s mới ra chiêu đầu, đòn thường của Tà Thú đủ hạ nhân vật cấp 50 trước đó:
+    // /lv lên ít nhất 80 (kèm hồi đầy sinh lực) để sống tới lúc niệm chiêu
+    await cmd(`/lv ${Math.max(80, await S_(() => window.ninja.S.me.level))}`);
     await cmd(`/tp ${evMap}`);
     await page.waitForTimeout(1200);
     const bx = await S_(() => { const m = [...window.ninja.game.monsters.values()].find((o) => o.def && o.def.boss && !o.dead); return m ? Math.round(m.x) : null; });
@@ -285,6 +288,8 @@ const ok = (c, msg) => { console.log((c ? '  ✔ ' : '  ✘ ') + msg); if (!c) f
     }
     await cmd('/event stop');
     await ev(() => { window.ninja.game.cancelTravel(); if (window.ninja.S.me.dead) window.ninja.net.send('revive', {}); });
+    // đợi hồi sinh xong, khung Trọng Thương đóng để không che nút ở bước sau
+    await waitFor(() => !window.ninja.S.me.dead && !document.querySelector('.death'), 5000);
     await page.waitForTimeout(600);
     await cmd('/tp v_fire');
     await page.waitForTimeout(800);

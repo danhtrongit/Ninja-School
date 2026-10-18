@@ -60,7 +60,7 @@ docker run -d --name ninja --restart unless-stopped \
   ghcr.io/danhtrongit/ninja-school:latest
 ```
 
-Mở `http://IP-VPS` là vào được game.
+Mở `http://IP-VPS` là vào được game. Cách này phục vụ qua HTTP/1.1 nên lần đầu mở trang tải ~100 file chậm hơn khi mạng trễ; có tên miền thì nên dùng B2b (Caddy tự bật HTTP/2).
 
 ### B2b. Có tên miền + HTTPS tự động (Caddy)
 
@@ -113,11 +113,18 @@ curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash - && sudo apt-ge
 git clone https://github.com/danhtrongit/Ninja-School.git ~/ninja && cd ~/ninja
 npm ci --omit=dev
 sudo npm i -g pm2
-PORT=3000 DATA_DIR=$HOME/ninja-data ADMINS=tentaikhoan_admin pm2 start src/server/index.js --name ninja
+PORT=3000 DATA_DIR=$HOME/ninja-data ADMINS=tentaikhoan_admin pm2 start npm --name ninja -- start
 pm2 save && pm2 startup        # tự chạy lại khi VPS khởi động
 ```
 
-Đặt sau Nginx: xem cấu hình chuyển tiếp WebSocket trong README (bắt buộc có `Upgrade` và `Connection "upgrade"`). Cập nhật bằng `git pull && npm ci --omit=dev && pm2 restart ninja`.
+Đặt sau Nginx: xem cấu hình chuyển tiếp WebSocket trong README (bắt buộc có `Upgrade` và `Connection "upgrade"`), nên bật HTTP/2 (`listen 443 ssl http2;`). Cập nhật bằng `git pull && npm ci --omit=dev && pm2 restart ninja`.
+
+> **Máy cài theo hướng dẫn cũ** (`pm2 start server/index.js`): mã máy chủ đã dời sang `src/server/`, pm2 vẫn nhớ đường dẫn cũ nên `pm2 restart` sẽ báo `Script not found`. Làm **một lần** sau `git pull`, giữ nguyên `DATA_DIR`/`ADMINS` đang dùng:
+> ```bash
+> pm2 delete ninja
+> PORT=3000 DATA_DIR=$HOME/ninja-data ADMINS=tentaikhoan_admin pm2 start npm --name ninja -- start
+> pm2 save
+> ```
 
 ---
 

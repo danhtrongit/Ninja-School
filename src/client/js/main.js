@@ -6,6 +6,7 @@ import { Game } from './game/game.js';
 import { Input } from './core/input.js';
 import { iconURL } from './render/icons.js';
 import { TitleLogo, TitleScene, drawStage, elementIconURL, CLASS_STATS } from './render/titleart.js';
+import { music } from './core/sound.js';
 
 const $ = (s) => document.querySelector(s);
 const net = new Net();
@@ -37,6 +38,7 @@ function show(name) {
   if (name === 'login' && prev !== 'login') logo.restart();
   if (name !== 'chars') hideDelete();
   if (name !== 'game') {
+    music('title');
     game.active = false;
     game.leaveSession();
     ui.reset();
@@ -82,6 +84,7 @@ net.on('close', () => {
 
 net.on('data', (m) => {
   S.G = m;
+  if (screen !== 'game') music('title');
   for (const k in m.monsters) m.monsters[k].k = k;
   if (!backdrop) backdrop = new TitleScene(m, 'v_fire');
   if (m.version) $('#ver').textContent = ` · v${m.version}`;

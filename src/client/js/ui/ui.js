@@ -70,6 +70,7 @@ export class UI {
       this.arenaKey = ak;
       // có thư mới khi đang mở hộp thư: tải lại danh sách
       const mn = m.mail ? m.mail.n : 0;
+      if (mn > (this.mailUnread || 0) && this.mailUnread != null) sfx('mail');
       if (this.winName === 'mail' && mn > (this.mailUnread || 0)) this.net.send('mailList');
       this.mailUnread = mn;
     });
@@ -172,6 +173,7 @@ export class UI {
       this.closeDialog();
     });
     n.on('upgradeResult', (m) => {
+      sfx(m.ok ? 'enhance_ok' : 'enhance_fail');
       this.toast(m.ok ? `Cường hóa thành công! ${m.name} +${m.plus}` : `Cường hóa thất bại! ${m.name} còn +${m.plus}`, m.ok ? 'reward' : 'warn');
       this.upgradeFlash = m.ok ? 'ok' : 'fail';
       this.refresh();
@@ -181,6 +183,7 @@ export class UI {
         : m.act === 'take' ? `Đã gỡ ${m.name} khỏi ${m.item} (-${fmt(m.cost)} xu).`
           : m.ok ? `Ghép ngọc thành công! Nhận ${m.name}.` : `Ghép ngọc thất bại! Mất 1 viên ${m.name}.`;
       // chỉ giữ thông báo khảm/gỡ/ghép mới nhất: khảm liên tiếp không xếp chồng che nút thao tác trong cửa sổ
+      sfx(m.act === 'put' || m.act === 'take' || m.ok ? 'gem' : 'enhance_fail');
       if (this.gemToast) this.gemToast.remove();
       this.gemToast = this.toast(msg, m.ok ? 'reward' : 'warn');
       if (m.act === 'put') {

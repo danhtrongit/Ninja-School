@@ -13,7 +13,7 @@ export const S = {
 
 function loadSettings() {
   // daynight: mức lớp ngày/đêm 0 (tắt) / 0.5 (nhẹ) / 1 (đầy đủ); shake: rung màn hình
-  const def = { autoHp: 40, autoMp: 25, names: true, autoPick: true, autoRange: 600, chatTab: 'all', sound: true, daynight: 1, shake: true };
+  const def = { autoHp: 40, autoMp: 25, names: true, autoPick: true, autoRange: 600, chatTab: 'all', sound: true, musicVol: 60, sfxVol: 80, daynight: 1, shake: true };
   try {
     const st = { ...def, ...JSON.parse(localStorage.getItem('ns_settings') || '{}') };
     if (![0, 0.5, 1].includes(st.daynight)) st.daynight = def.daynight;

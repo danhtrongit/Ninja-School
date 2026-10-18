@@ -10,7 +10,8 @@ Các con số dưới đây lấy từ code hiện tại. Nếu cần đổi m�
 
 1. **Phong cách**: game nhập vai ninja 2D di động kiểu Việt Nam cổ điển. Nhân vật chibi đầu to, viền tối, màu bão hòa tươi, bối cảnh làng Nhật Bản (mái ngói cong, đèn lồng, hoa anh đào), giao diện gỗ sơn mài viền vàng đồng.
 2. **Bản quyền**: mọi hình ảnh đều tự thiết kế. **Cấm** sao chép, can lại hay tải về sprite, logo, âm thanh của TeaMobi hoặc bất kỳ game nào. Tên NPC, bản đồ, kỹ năng cũng phải tự đặt.
-3. **Vẽ bằng code**: không có file ảnh hay âm thanh bên ngoài. Đồ họa dùng `fillRect`, chuỗi pixel art, canvas offscreen, CSS gradient hoặc SVG nội tuyến (`data:`). Âm thanh dùng WebAudio tổng hợp (`src/client/js/core/sound.js`).
+3. **Vẽ bằng code**: không có file ảnh bên ngoài. Đồ họa dùng `fillRect`, chuỗi pixel art, canvas offscreen, CSS gradient hoặc SVG nội tuyến (`data:`).
+   **Âm thanh**: nhạc nền và tiếng hiệu ứng là file do dự án tự tạo bằng model sinh âm thanh (nhạc: ACE-Step 1.5, MIT; tiếng: Stable Audio 3 Small SFX, ghi "Powered by Stability AI"), đặt ở `src/client/audio/{music,sfx}/<id>.ogg` (+ `.m4a`) qua `tools/sync-audio.js`, nguồn từng file ghi ở `src/client/audio/CREDITS.md`. Không dùng file tải từ nơi khác. Thiếu file thì `core/sound.js` dùng tiếng tổng hợp WebAudio. Nhạc loop, nhỏ hơn tiếng hiệu ứng (bus nhạc × 0.55), đổi bài giảm dần 1.2 giây.
 4. **Nhất quán hơn ấn tượng**: một chi tiết đẹp nhưng lệch phong cách chung thì phải bỏ hoặc sửa cho khớp.
 
 ---

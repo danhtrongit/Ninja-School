@@ -31,4 +31,5 @@ module.exports = [
   require('./season'),
   require('./mail'),
   require('./arena'),
+  require('./audio'),
 ];

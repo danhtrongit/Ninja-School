@@ -6,7 +6,7 @@ import { drawPet, PET_ART, petHeight, petFlies } from '../render/petart.js';
 import { iconCanvas } from '../render/icons.js';
 import { MapRenderer, setLighting } from '../render/maprender.js';
 import { FX } from '../render/fx.js';
-import { sfx } from '../core/sound.js';
+import { sfx, skillSfx, bossSfx, music, musicFor } from '../core/sound.js';
 import { findRoute, nearestMap, mapsWithNpc, questDest, dailyDest, buildNav, surfaceAt, surfaceBelow, navPlan } from './pathfind.js';
 
 const GRAV = 1000;
@@ -231,6 +231,8 @@ export class Game {
     // lôi đài: trạng thái hàng chờ / trận (idle, queue, prep, fight, end) và kết quả trận
     n.on('arena', (m) => this.onArena(m));
     n.on('arenaResult', (m) => {
+      if (m.res === 'win') sfx('victory');
+      else if (m.res === 'lose') sfx('defeat');
       if (this.ui.showArenaResult) this.ui.showArenaResult(m);
     });
   }
@@ -238,6 +240,7 @@ export class Game {
   onArena(m) {
     const st = ['queue', 'prep', 'fight', 'end'].includes(m.st) ? m.st : 'idle';
     const prev = S.arena;
+    if (st === 'fight' && (!prev || prev.st !== 'fight')) sfx('arena_start');
     S.arena = st === 'idle' ? null : { ...m, st, opp: m.opp || (prev && prev.opp) || null, at: performance.now() };
     if (st === 'prep') {
       // server làm mới hồi chiêu khi vào trận
@@ -260,6 +263,19 @@ export class Game {
   // Được tự đuổi theo người chơi: chỉ đối thủ lôi đài hoặc đối thủ thách đấu
   canChase(p) {
     return this.isArenaOpp(p) || (!!this.duelWith && !!p && p.id === this.duelWith);
+  }
+
+  // Nhạc nền theo tình huống: lôi đài > Tà Thú cùng bản đồ > boss trong tầm nhìn > phó bản > lễ hội ở làng > theme bản đồ
+  updateMusic() {
+    const map = this.map;
+    if (!map || !this.me) return;
+    let scene = null;
+    if (map.arena || (S.arena && (S.arena.st === 'prep' || S.arena.st === 'fight'))) scene = 'arena';
+    else if (S.event && S.event.on && S.event.map === S.mapId) scene = 'tathu';
+    else if ([...this.monsters.values()].some((mo) => mo.def.boss && Math.abs(mo.x - this.me.x) < this.W * 0.75)) scene = 'boss';
+    else if (map.instance) scene = 'dungeon';
+    else if (/^village_/.test(map.theme) && activeSeason()) scene = 'festival';
+    music(musicFor(map, scene));
   }
 
   enterMap(m) {
@@ -294,6 +310,7 @@ export class Game {
     this.navCache.key = '';
     if (this.hunt && this.hunt.map !== m.map) this.hunt = null;
     this.ui.onEnterMap(this.map);
+    this.updateMusic();
     this.prewarm();
     this.resumeTravel();
   }
@@ -360,7 +377,7 @@ export class Game {
     mo.cast = { name: m.name || '', t0: this.t, dur };
     if (m.dir) mo.dir = m.dir;
     this.fx.text(mo.x, mo.y - mo.h - 18, m.name || '', '#ff8a80', true);
-    if (this.me && Math.abs(mo.x - this.me.x) < this.W) sfx('magic');
+    if (this.me && Math.abs(mo.x - this.me.x) < this.W) bossSfx(m.k);
   }
 
   // Tung chiêu: hiệu ứng tại vùng đã chốt (rung màn hình do fx.bossSkill tự gọi shakeAt theo khoảng cách)
@@ -469,12 +486,7 @@ export class Game {
       a.attackUntil = this.t + 0.25;
       a.dir = dir;
     }
-    if (S.me && m.a === S.me.id) {
-      if (f.k === 'slash' || f.k === 'dash') sfx('swing');
-      else if (f.k === 'proj' || f.k === 'rain' || f.k === 'wave') sfx('shoot');
-      else if (f.k === 'heal') sfx('heal');
-      else sfx('magic');
-    }
+    if (S.me && m.a === S.me.id) skillSfx(m.sid, f.k);
     const te = m.tid ? this.entity(m.tid) : null;
     const tx = te ? te.x : m.tx;
     const ty = te ? this.centerY(m.tid, te) : m.ty - 11;
@@ -1081,6 +1093,10 @@ export class Game {
     this.t += dt;
     this.dt = dt;
     if (!this.active || !this.me || !S.me) return;
+    if (this.t >= (this.musicT || 0)) {
+      this.musicT = this.t + 1;
+      this.updateMusic();
+    }
     this.handleInput();
     const me = this.me;
     const dead = S.me.dead;

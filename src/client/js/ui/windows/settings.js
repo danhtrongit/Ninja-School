@@ -1,6 +1,7 @@
 // Cửa sổ Cài đặt (settings)
 // Các phương thức được gộp vào UI.prototype (xem ui.js), `this` là đối tượng UI
 import { S, saveSettings } from '../../core/store.js';
+import { applyAudio, audioInfo, sfx } from '../../core/sound.js';
 import { h } from '../dom.js';
 
 export default {
@@ -19,13 +20,25 @@ export default {
         class: `btn small${st[k] === v ? ' primary' : ''}`, role: 'radio', 'aria-checked': String(st[k] === v),
         onclick: () => { st[k] = v; apply(); this.refresh(); },
       }, txt))));
+    // thanh âm lượng 0-100: đổi là nghe ngay, lưu khi thả tay
+    const slider = (k, label) => {
+      const out = h('b', { class: 'vol-n' }, String(st[k]));
+      return h('label', { class: 'set-row vol-row' }, h('span', null, label),
+        h('input', { type: 'range', min: 0, max: 100, step: 5, value: st[k], class: 'vol', 'data-vol': k, 'aria-label': label,
+          oninput: (e) => { st[k] = +e.target.value; out.textContent = String(st[k]); applyAudio(); },
+          onchange: () => { saveSettings(); if (k === 'sfxVol') sfx('click'); } }), out);
+    };
+    const snd = chk('sound', 'Âm thanh');
+    snd.querySelector('input').addEventListener('change', applyAudio);
+    const au = audioInfo();
     const lit = seg('daynight', 'Ngày/đêm', [[0, 'Tắt'], [0.5, 'Nhẹ'], [1, 'Đầy đủ']]);
     const shake = chk('shake', 'Rung màn hình');
     shake.querySelector('input').addEventListener('change', apply);
     this.frameWin('Cài Đặt', h('div', { class: 'set-wrap' },
       h('div', { class: 'sec' }, h('div', { class: 'sec-title' }, 'Tự động đánh'), num('autoHp', 'Tự uống HP khi dưới (%)', 0, 95), num('autoMp', 'Tự uống MP khi dưới (%)', 0, 95), num('autoRange', 'Phạm vi tìm quái', 100, 2000), chk('autoPick', 'Tự nhặt đồ')),
-      h('div', { class: 'sec' }, h('div', { class: 'sec-title' }, 'Hiển thị & âm thanh'), chk('names', 'Hiện tên người chơi'), chk('sound', 'Âm thanh'), lit, shake,
-        h('div', { class: 'muted tiny' }, 'Trời sáng tối theo giờ Việt Nam. Màn hình rung khi trúng đòn boss hoặc hạ boss.')),
+      h('div', { class: 'sec' }, h('div', { class: 'sec-title' }, 'Hiển thị & âm thanh'), chk('names', 'Hiện tên người chơi'), snd, slider('musicVol', 'Nhạc nền'), slider('sfxVol', 'Hiệu ứng'), lit, shake,
+        h('div', { class: 'muted tiny' }, 'Trời sáng tối theo giờ Việt Nam. Màn hình rung khi trúng đòn boss hoặc hạ boss.'),
+        au.sfx ? h('div', { class: 'muted tiny audio-credit' }, 'Tiếng hiệu ứng: Powered by Stability AI.') : null),
       h('div', { class: 'sec' }, h('div', { class: 'sec-title' }, 'Mã quà tặng'), this.codeBox(),
         h('div', { class: 'muted tiny' }, `Mỗi mã dùng 1 lần cho mỗi tài khoản. Hành trang đầy thì quà được gửi vào Hộp Thư${this.touch ? '' : ' (L)'}.`)),
       h('div', { class: 'sec help' }, h('div', { class: 'sec-title' }, 'Điều khiển'),
