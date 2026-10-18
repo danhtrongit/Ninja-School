@@ -41,6 +41,8 @@ class Pk {
     p.c.mp = p.s.maxMp;
     p.send('revived', {});
     this.world.changeMap(p, CLASSES[p.c.cls].village, null);
+    p.markMe();
+    refreshInfo(p);
   }
 
   // ---------- Thách đấu

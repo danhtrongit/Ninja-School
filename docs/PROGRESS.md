@@ -4,6 +4,11 @@ Ghi sau mỗi tính năng / mỗi lần đổi mốc ảnh. Mới nhất ở tr�
 
 ## 2026-10-18
 
+### Sửa: hồi sinh về làng không hồi máu
+
+- Máy chủ đã hồi đầy máu nhưng nhánh về làng không gửi lại gói `me`. Máy khách thay `S.me` theo `enterMap` mà không vẽ lại HUD, nên thanh máu vẫn hiện 0. Đã sửa cả hai phía: `Pk.revive` gọi `markMe()`, còn `ui.onEnterMap` gọi `updateStatus()`.
+- Test: `tests/features/pk.js` (đơn vị) và bước "đổi bản đồ: thanh máu vẽ lại" trong `test:e2e`.
+
 ### Tiếng hiệu ứng tổng hợp WebAudio (D-03)
 
 - Chủ dự án báo tiếng hiệu ứng file nghe rè, ồn. Thay bằng 49 tiếng tổng hợp trong `src/client/js/core/sound.js`, bỏ 45 file `src/client/audio/sfx`.

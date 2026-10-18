@@ -307,8 +307,12 @@ const ok = (c, msg) => { console.log((c ? '  ✔ ' : '  ✘ ') + msg); if (!c) f
     // đợi hồi sinh xong, khung Trọng Thương đóng để không che nút ở bước sau
     await waitFor(() => !window.ninja.S.me.dead && !document.querySelector('.death'), 5000);
     await page.waitForTimeout(600);
+    // gói enterMap thay cả S.me mà không kèm gói 'me' (như hồi sinh về làng): thanh máu phải vẽ lại theo số mới
+    await ev(() => { const { S, ui } = window.ninja; S.me = { ...S.me, hp: 1 }; ui.updateStatus(); });
     await cmd('/tp v_fire');
     await page.waitForTimeout(800);
+    const hb = await ev(() => { const me = window.ninja.S.me; return { w: parseFloat(document.querySelector('#bar-hp i').style.width), want: Math.min(100, (me.hp / me.s.maxHp) * 100), hp: me.hp, txt: document.querySelector('#bar-hp span').textContent }; });
+    ok(hb.hp > 1 && Math.abs(hb.w - hb.want) < 0.5 && !hb.txt.startsWith('1/'), `đổi bản đồ: thanh máu vẽ lại theo gói enterMap (${hb.txt})`);
 
     // lôi đài: tab Lôi đài trong Xếp hạng, đăng ký rồi hủy trên HUD
     await freshWin('rank', 'KeyR');

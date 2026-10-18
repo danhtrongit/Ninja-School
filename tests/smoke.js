@@ -7,6 +7,7 @@ const fs = require('fs');
 const { DATA, sleep, ok, fail, failCount, serverLog, startServer } = require('./lib/harness');
 const { passiveUnitTests, passiveBookTest, passiveRulesTest } = require('./features/passive');
 const { bossUnitTests, bossCleanupUnitTests, bossEventTest } = require('./features/boss');
+const { pkUnitTests } = require('./features/pk');
 const { gemUnitTests, gemTest } = require('./features/gems');
 const { petUnitTests, petTest } = require('./features/pets');
 const { mailUnitTests, mailTest } = require('./features/mail');
@@ -40,6 +41,7 @@ function unitTests() {
   audioUnitTests();
   boundUnit(ok);
   balanceUnitTests();
+  pkUnitTests();
 }
 
 async function main() {

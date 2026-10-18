@@ -643,6 +643,8 @@ export class UI {
     this.mmStatic = null;
     this.drawMinimap(true);
     this.toast(map.name, 'map');
+    // gói enterMap thay cả S.me (máu, chakra sau hồi sinh về làng) mà không kèm gói 'me'
+    this.updateStatus();
     if (this.winName === 'shop' || this.winName === 'upgrade') this.close();
   }
 
