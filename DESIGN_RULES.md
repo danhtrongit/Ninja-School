@@ -4,7 +4,7 @@ Quy chuẩn thiết kế bắt buộc cho mọi thay đổi về đồ họa, gi
 
 Các con số dưới đây lấy từ code hiện tại. Nếu cần đổi một quy chuẩn, sửa code **và** sửa file này trong cùng một commit.
 
-**Đang chuyển sang đồ họa chi tiết ×4** (mục 11, chốt 2026-10-19): mục 11 là chuẩn đích cho mọi hình vẽ **mới**. Nhóm nào chưa chuyển thì vẫn theo số liệu cũ ở các mục 1-7; nhóm nào đã chuyển thì mục 11 thắng khi hai bên khác nhau.
+**Đang chuyển sang đồ họa chi tiết ×3** (mục 11, chốt 2026-10-19): mục 11 là chuẩn đích cho mọi hình vẽ **mới**. Nhóm nào chưa chuyển thì vẫn theo số liệu cũ ở các mục 1-7; nhóm nào đã chuyển thì mục 11 thắng khi hai bên khác nhau.
 
 ---
 
@@ -13,8 +13,8 @@ Các con số dưới đây lấy từ code hiện tại. Nếu cần đổi m�
 1. **Phong cách**: game nhập vai ninja 2D di động kiểu Việt Nam cổ điển. Nhân vật chibi đầu to, viền tối, màu bão hòa tươi, bối cảnh làng Nhật Bản (mái ngói cong, đèn lồng, hoa anh đào), giao diện gỗ sơn mài viền vàng đồng.
 2. **Bản quyền**: mọi hình ảnh đều tự thiết kế. **Cấm** sao chép, can lại hay tải về sprite, logo, âm thanh của TeaMobi hoặc bất kỳ game nào. Tên NPC, bản đồ, kỹ năng cũng phải tự đặt.
 3. **Đồ họa**: chỉ hai nguồn sau được phép.
-   - **Ảnh ×4 do dự án tự tạo bằng AI** (hướng chính, mục 11): sprite nhân vật, NPC, quái, boss, thú và nền bản đồ làm từ ảnh sinh bằng Cloudflare Workers AI (FLUX.2 klein 4B, giấy phép Apache 2.0). Ảnh được cắt mảnh, dựng khung xương mảnh cứng rồi thu về pixel art chi tiết ×4. File đặt ở `src/client/art/`, nguồn từng file (model, prompt, seed, ngày) ghi ở `src/client/art/CREDITS.md`. Không dùng ảnh tải từ nơi khác. Prompt không được nêu tên game, họa sĩ hay thương hiệu khác, và không đưa ảnh của game khác vào làm ảnh tham chiếu.
-   - **Vẽ bằng code** (`fillRect`, chuỗi pixel art, canvas offscreen, CSS gradient, SVG nội tuyến `data:`): dùng cho toàn bộ đồ họa hiện có, hiệu ứng kỹ năng, khung giao diện và những phần phải đổi hình theo dữ liệu. Hình vẽ code của một nhóm được giữ cho tới khi nhóm đó chuyển xong sang ảnh ×4.
+   - **Ảnh ×3 do dự án tự tạo bằng AI** (hướng chính, mục 11): sprite nhân vật, NPC, quái, boss, thú và nền bản đồ làm từ ảnh sinh bằng Cloudflare Workers AI (FLUX.2 klein 4B, giấy phép Apache 2.0). Ảnh được cắt mảnh, dựng khung xương mảnh cứng rồi thu về pixel art chi tiết ×3. File đặt ở `src/client/art/`, nguồn từng file (model, prompt, seed, ngày) ghi ở `src/client/art/CREDITS.md`. Không dùng ảnh tải từ nơi khác. Prompt không được nêu tên game, họa sĩ hay thương hiệu khác, và không đưa ảnh của game khác vào làm ảnh tham chiếu.
+   - **Vẽ bằng code** (`fillRect`, chuỗi pixel art, canvas offscreen, CSS gradient, SVG nội tuyến `data:`): dùng cho toàn bộ đồ họa hiện có, hiệu ứng kỹ năng, khung giao diện và những phần phải đổi hình theo dữ liệu. Hình vẽ code của một nhóm được giữ cho tới khi nhóm đó chuyển xong sang ảnh ×3.
    **Âm thanh**: nhạc nền và tiếng hiệu ứng là file do dự án tự tạo bằng model sinh âm thanh (nhạc: ACE-Step 1.5, MIT; tiếng: Stable Audio 3 Small SFX, ghi "Powered by Stability AI"), đặt ở `src/client/audio/{music,sfx}/<id>.ogg` (+ `.m4a`) qua `tools/sync-audio.js`, nguồn từng file ghi ở `src/client/audio/CREDITS.md`. Không dùng file tải từ nơi khác. Thiếu file thì `core/sound.js` dùng tiếng tổng hợp WebAudio. Nhạc loop, nhỏ hơn tiếng hiệu ứng (bus nhạc × 0.55), đổi bài giảm dần 1.2 giây.
 4. **Nhất quán hơn ấn tượng**: một chi tiết đẹp nhưng lệch phong cách chung thì phải bỏ hoặc sửa cho khớp.
 
@@ -35,15 +35,16 @@ Các con số dưới đây lấy từ code hiện tại. Nếu cần đổi m�
 - **Chữ** (tên, số sát thương, bong bóng chat) vẽ trên canvas phân giải cao **sau khi** phóng to, không vẽ chữ trên lớp pixel.
 - Kích thước pixel của boss là `Math.round(scale)`, không dùng scale lẻ trên lớp pixel.
 
-### Lưới chi tiết ×4 (chuẩn đích, xem mục 11)
+### Lưới chi tiết ×3 (chuẩn đích, xem mục 11)
 
 | Quy chuẩn | Giá trị |
 |---|---|
-| Pixel nghệ thuật | 1 đơn vị thế giới = **4** pixel nghệ thuật (`ART = 4`). Tọa độ logic, hitbox, mặt đất, bục, tốc độ, tầm đánh, giao thức **không đổi** |
-| Lớp thế giới | canvas theo pixel thiết bị (`devicePixelRatio`); mỗi pixel nghệ thuật = `k` pixel thiết bị, `k = max(1, round(cao thiết bị / 960))`, `imageSmoothingEnabled = false` |
-| Khung nhìn | vẫn 216-260 đơn vị thế giới chiều cao (864-1040 pixel nghệ thuật). Màn quá thấp (đã `k = 1` mà khung nhìn vẫn dưới 216) thì thu nhỏ **cả lớp thế giới** đúng một lần mỗi khung khi dán ra màn hình. Không thu nhỏ từng sprite |
-| Làm tròn | tọa độ vẽ làm tròn theo pixel nghệ thuật: `Math.round(x * 4)`, không làm tròn theo đơn vị thế giới (sẽ giật 4 pixel một bước) |
-| Hình code cũ (×1) | vẽ lên lớp ×4 bằng cách phóng nguyên ×4 (mỗi pixel cũ thành khối 4×4), không làm mượt |
+| Pixel nghệ thuật | 1 đơn vị thế giới = **3** pixel nghệ thuật (`ART = 3`). Tọa độ logic, hitbox, mặt đất, bục, tốc độ, tầm đánh, giao thức **không đổi** |
+| Khung nhìn | vẫn 216-260 đơn vị thế giới chiều cao (648-780 pixel nghệ thuật) |
+| Tỉ lệ hiển thị | `s` = chiều cao vùng game theo pixel thiết bị (`devicePixelRatio`) / số pixel nghệ thuật của khung nhìn. Trên máy 1080p và điện thoại phổ biến `s` khoảng 1.3-1.7, MacBook/4K từ 2 trở lên. Không chọn khung nhìn để ép `s` nguyên |
+| Phóng nguyên rồi thu mượt | vẽ lớp thế giới vào canvas phụ ở tỉ lệ nguyên `k = ceil(s)`, `imageSmoothingEnabled = false`; rồi dán **cả lớp** ra màn hình đúng một lần mỗi khung với `imageSmoothingEnabled = true` (thu từ `k` về `s`). `s` nguyên thì vẽ thẳng, bỏ bước thu. **Không** phóng từng sprite theo tỉ lệ lẻ (pixel to nhỏ không đều, nhấp nháy khi chạy) |
+| Làm tròn | tọa độ vẽ làm tròn theo pixel nghệ thuật: `Math.round(x * 3)`, không làm tròn theo đơn vị thế giới (sẽ giật 3 pixel một bước) |
+| Hình code cũ (×1) | vẽ lên lớp ×3 bằng cách phóng nguyên ×3 (mỗi pixel cũ thành khối 3×3), không làm mượt |
 
 ---
 
@@ -51,7 +52,7 @@ Các con số dưới đây lấy từ code hiện tại. Nếu cần đổi m�
 
 - **Viền**: mọi sprite nhân vật, quái và icon có viền tối 1px. Màu viền chuẩn `#1d1424` (sprite) và `#120804` (giao diện), **không** dùng đen thuần `#000`.
 - **Đổ bóng**: 3 tông (sáng, gốc, tối) sinh từ màu gốc bằng `shade(color, f)` trong `sprites.js`. Ánh sáng chiếu từ **trên-trái**: mặt trên và trái sáng hơn, dưới và phải tối hơn.
-- **Ảnh ×4**: viền ngoài cùng vẫn là 1 pixel nghệ thuật `#1d1424`. Nét bên trong dùng tông tối nhất của chính vùng đó, không bắt buộc `#1d1424`. Bóng cel 3 tông, sáng trên-trái như trên. Mỗi sprite có **một** bảng màu cố định dùng chung cho mọi khung (ninja/quái/boss ≤ 40 màu, thú cưng/thú cưỡi ≤ 24). Ngũ hành, độ hiếm và bậc trang bị vẫn lấy màu từ các bảng dưới đây (đổi màu theo dải chỉ số, mục 11).
+- **Ảnh ×3**: viền ngoài cùng vẫn là 1 pixel nghệ thuật `#1d1424`. Nét bên trong dùng tông tối nhất của chính vùng đó, không bắt buộc `#1d1424`. Bóng cel 3 tông, sáng trên-trái như trên. Mỗi sprite có **một** bảng màu cố định dùng chung cho mọi khung (ninja/quái/boss ≤ 40 màu, thú cưng/thú cưỡi ≤ 24). Ngũ hành, độ hiếm và bậc trang bị vẫn lấy màu từ các bảng dưới đây (đổi màu theo dải chỉ số, mục 11).
 - **Ngũ hành** (`ELEMENT_COLORS`):
 
 | Hệ | Màu | Khắc |
@@ -76,7 +77,7 @@ Các con số dưới đây lấy từ code hiện tại. Nếu cần đổi m�
 
 ## 3. Nhân vật ninja (`src/client/js/render/sprites.js` + `sprites/`)
 
-- Chiều cao chuẩn `NINJA_H = 28`, rộng 18-20px. Đầu chiếm khoảng 40-45% chiều cao. Mắt to có điểm sáng. Bản ×4: cao 112 pixel nghệ thuật, rộng 72-80, tỉ lệ đầu giữ nguyên. `NINJA_H` (đơn vị thế giới) vẫn là 28 (mục 11).
+- Chiều cao chuẩn `NINJA_H = 28`, rộng 18-20px. Đầu chiếm khoảng 40-45% chiều cao. Mắt to có điểm sáng. Bản ×3: cao 84 pixel nghệ thuật, rộng 54-60, tỉ lệ đầu giữ nguyên. `NINJA_H` (đơn vị thế giới) vẫn là 28 (mục 11).
 - Kiểu tóc chọn theo băm tên: nam `spiky, neat, topknot, wild`, nữ `long, bun, pony, bob`.
 - Băng trán màu hệ, có miếng kim loại màu theo bậc **nón**. Áo theo bậc **áo**, quần theo bậc **quần**, thắt lưng và khăn quàng màu hệ.
 - Vũ khí theo phái: kiếm, phi tiêu, kunai, cung, đao, quạt. Cường hóa từ +5 lấp lánh, từ +8 phát sáng, từ +11 có hào quang.
@@ -121,7 +122,7 @@ Các con số dưới đây lấy từ code hiện tại. Nếu cần đổi m�
 | humanoid | 12×22 | | |
 
 - Mỗi kiểu có 3-4 khung đứng/đi và 1-2 khung tấn công (`st = 2`). `flyer` và `ghost` lơ lửng.
-- **Bản ×4** (mục 11): kích thước tính bằng đơn vị thế giới như bảng trên, ảnh lớn gấp 4 (Địa Ngục Khuyển cao 24 → 96 pixel nghệ thuật). Giới hạn 1.5 lần hitbox và các ngoại lệ bên dưới vẫn tính theo đơn vị thế giới. Mỗi loài là một ảnh riêng nên không còn bị buộc vào 11 kiểu sprite; `type` chỉ còn quyết định hitbox và kiểu di chuyển (bay/lơ lửng). Boss có atlas riêng vẽ đúng cỡ thật, **không** phóng to atlas quái thường bằng `scale`.
+- **Bản ×3** (mục 11): kích thước tính bằng đơn vị thế giới như bảng trên, ảnh lớn gấp 3 (Địa Ngục Khuyển cao 24 → 72 pixel nghệ thuật). Giới hạn 1.5 lần hitbox và các ngoại lệ bên dưới vẫn tính theo đơn vị thế giới. Mỗi loài là một ảnh riêng nên không còn bị buộc vào 11 kiểu sprite; `type` chỉ còn quyết định hitbox và kiểu di chuyển (bay/lơ lửng). Boss có atlas riêng vẽ đúng cỡ thật, **không** phóng to atlas quái thường bằng `scale`.
 - **Ngoại hình riêng theo id**: cùng một kiểu sprite, mỗi loài có thể có biến thể riêng qua bảng `VARIANT` (id → biến thể: `monkey`, `bee`, `scorp`, `tree`, `statue`, `coral`, `crystal`, `fox`, `serpent`, `worm`, `bone`...). Quái **người** (`humanoid`) có bộ trang phục và vũ khí riêng theo id trong bảng `HUM` (`bandit, pirate, skeleton, sandbandit, mummy, cursedmummy, rogue, iceninja, shadow, samurai, deathknight, celestial, voidknight, dragonguard`); id chưa có trong `HUM` dùng `bandit`. Thêm quái người mới thì **nên** thêm bộ riêng vào `HUM`.
 - **Boss**: pixel size `Math.round(scale)`, có hào quang động, mắt phát sáng, vương miện hoặc sừng. Mỗi boss có thiết kế riêng, không chỉ phóng to quái thường: biến thể `king` (boss_slime), `batK`, `wolfK`, `yetiK`, `oniK`, `fox9` (cáo chín đuôi), `crystalK`, `dragonK`; boss người `boss_god`, `boss_pharaoh`, `boss_heaven` nằm trong `HUM`. Chỉ `boss_slime, boss_wolf, boss_fox` đội vương miện vẽ thêm (`BOSS_CROWN`), các boss khác đã có sừng/mũ trong hình.
 - **Boss sự kiện Tà Thú** (`ev_*`, `event: true`) dùng lại biến thể boss (`ev_hacviem` → `wolfK`, `ev_bangphach` → `crystalK`, `ev_huyetnguyet` → `oniK`) nhưng bảng màu riêng tối và rực hơn, hào quang `AURA2` riêng. Thêm Tà Thú mới thì **phải** thêm vào `VARIANT` và `AURA2`.
@@ -316,26 +317,26 @@ Các con số dưới đây lấy từ code hiện tại. Nếu cần đổi m�
 - Không cấp phát mảng hay đối tượng lớn trong vòng lặp vẽ. Cache theo khóa chuỗi trong `Map`.
 - Server chạy 20 tick/giây, gửi trạng thái 10 lần/giây. Không gửi dữ liệu tĩnh trong gói trạng thái.
 - Mốc đo gần nhất (Chromium headless, 1280×720 và điện thoại 844×390 @2x): bản đồ 18-23 quái, auto đánh, ban đêm, thú cưỡi + thú cưng + đủ thời trang, thêm 8 hiệu ứng nổ/lốc/thiên thạch mỗi giây: 60fps, CPU mỗi khung (update + render + HUD) trung bình 3-4ms, p95 ≤ 5ms. Thêm vẽ mới mà vượt 8ms/khung ở kịch bản này là phải tối ưu.
-- **Ảnh ×4**: mỗi khung chỉ `drawImage` từ atlas hoặc ảnh ghép đã cache. Không đổi màu, không lọc, không `getImageData` trong vòng lặp vẽ. Ảnh của một bản đồ (quái, boss, NPC, nền) sau khi giải nén không quá khoảng 40MB. Lớp thế giới theo pixel thiết bị lớn hơn canvas cũ nhiều lần nên phải đo lại `npm run test:perf` ngay ở bước đầu tiên chuyển lớp thế giới, trên cả điện thoại @3x.
+- **Ảnh ×3**: mỗi khung chỉ `drawImage` từ atlas hoặc ảnh ghép đã cache. Không đổi màu, không lọc, không `getImageData` trong vòng lặp vẽ. Ảnh của một bản đồ (quái, boss, NPC, nền) sau khi giải nén không quá khoảng 30MB. Lớp thế giới vẽ ở tỉ lệ nguyên `k` (thường 2) lớn hơn canvas cũ nhiều lần, cộng một lần thu mượt toàn màn hình, nên phải đo lại `npm run test:perf` ngay ở bước đầu tiên chuyển lớp thế giới, trên cả điện thoại @3x.
 
 ---
 
-## 11. Đồ họa chi tiết ×4 từ ảnh AI (chuẩn đích)
+## 11. Đồ họa chi tiết ×3 từ ảnh AI (chuẩn đích)
 
-Chốt 2026-10-19 sau khi thử với Địa Ngục Khuyển: pixel art chi tiết ×4, chuyển động bằng khung xương **mảnh cứng** đơn giản. **Không** uốn lưới (mesh warp), không nội suy thêm khung, không dùng video AI: đã thử, không cần thiết.
+Chốt 2026-10-19 sau khi thử với Địa Ngục Khuyển: pixel art chi tiết ×3, chuyển động bằng khung xương **mảnh cứng** đơn giản. Chọn ×3 thay vì ×4 vì trên máy 1080p và điện thoại phổ biến, ×4 chỉ còn khoảng 1 pixel thiết bị mỗi pixel nghệ thuật nên mất chất pixel; ×3 giữ được 1.3-1.7 (xem mục 1). **Không** uốn lưới (mesh warp), không nội suy thêm khung, không dùng video AI: đã thử, không cần thiết.
 
 ### Kích thước
 
-| Nhóm | Pixel nghệ thuật (×4) | Ghi chú |
+| Nhóm | Pixel nghệ thuật (×3) | Ghi chú |
 |---|---|---|
-| Ninja, NPC | cao 112, rộng 72-80 | đầu 40-45%, mắt to có điểm sáng; NPC to con (`bulk`) rộng tới 96 |
-| Quái thường | hitbox × 4, thân chính ≤ 1.5 lần | ví dụ beast 24×14 → khung thân 96×56, cao vẽ 96 |
-| Boss | cỡ thật × 4 (đã nhân `scale`) | atlas riêng, có sừng/vương miện trong hình |
-| Thú cưng | khung 80×72, thân 40-56 | neo giữa đáy |
-| Thú cưỡi | theo cỡ thú, yên ở cùng độ cao như bản cũ × 4 | `mountOffset` vẫn tính bằng đơn vị thế giới |
-| Icon (đợt sau cùng) | vật phẩm 64, kỹ năng 96, giao diện 64 | hiển thị chỉ chia theo số nguyên (64 → 32 ở DPR 1) |
+| Ninja, NPC | cao 84, rộng 54-60 | đầu 40-45%, mắt to có điểm sáng; NPC to con (`bulk`) rộng tới 72 |
+| Quái thường | hitbox × 3, thân chính ≤ 1.5 lần | ví dụ beast 24×14 → khung thân 72×42, cao vẽ 72 |
+| Boss | cỡ thật × 3 (đã nhân `scale`) | atlas riêng, có sừng/vương miện trong hình |
+| Thú cưng | khung 60×54, thân 30-42 | neo giữa đáy |
+| Thú cưỡi | theo cỡ thú, yên ở cùng độ cao như bản cũ × 3 | `mountOffset` vẫn tính bằng đơn vị thế giới |
+| Icon (đợt sau cùng) | vật phẩm 48, kỹ năng 72, giao diện 48 | hiển thị theo bội nguyên của cỡ gốc; ô lệch cỡ thì phóng nguyên rồi thu mượt như lớp thế giới |
 
-`monsterHeight`, `NINJA_H`, `ninjaHeight`, `petHeight` vẫn trả **đơn vị thế giới**, bằng chiều cao ảnh chia 4, vì nhãn tên và thanh máu đặt theo các giá trị này.
+`monsterHeight`, `NINJA_H`, `ninjaHeight`, `petHeight` vẫn trả **đơn vị thế giới**, bằng chiều cao ảnh chia 3, vì nhãn tên và thanh máu đặt theo các giá trị này.
 
 ### Tạo ảnh
 
@@ -351,7 +352,7 @@ Chốt 2026-10-19 sau khi thử với Địa Ngục Khuyển: pixel art chi ti�
   - Bốn chân: `head, body, tail, leg_ff, leg_fn, leg_bf, leg_bn` (chân xa vẽ trước thân, chân gần vẽ sau thân).
   - Hai chân (ninja, quái người): `head, torso, arm_f, arm_n, leg_f, leg_n`, cộng `weapon` và tóc/khăn bay nếu có.
   - Bay: `body`, hai cánh, `tail`.
-- Mảnh chỉ xoay và dời quanh khớp. Sau khi thu về ×4, vết nối ở khớp không được lệch quá 1 pixel nghệ thuật. Khớp còn lộ vết thì sửa thứ tự chồng mảnh, không uốn ảnh.
+- Mảnh chỉ xoay và dời quanh khớp. Sau khi thu về ×3, vết nối ở khớp không được lệch quá 1 pixel nghệ thuật. Khớp còn lộ vết thì sửa thứ tự chồng mảnh, không uốn ảnh.
 
 | Hoạt ảnh | Quái, boss | Ninja, NPC |
 |---|---|---|
@@ -377,23 +378,23 @@ Chốt 2026-10-19 sau khi thử với Địa Ngục Khuyển: pixel art chi ti�
 
 - File `src/client/art/<nhóm>/<id>.png` + `<id>.json`, với nhóm là `monster, boss, ninja, npc, pet, mount, map`.
 - PNG là lưới đều: mỗi hàng một hoạt ảnh, ô `fw × fh`. JSON có dạng `{ fw, fh, foot, anims: { idle: { row, n, dur, loop, pts }, ... } }`, trong đó `foot` là y đáy chân trong ô (gốc giữa chân như mục 1).
-- PNG nén không mất màu bảng. Một atlas quái không quá khoảng 300KB.
+- PNG nén không mất màu bảng. Một atlas quái không quá khoảng 200KB.
 - Tải theo bản đồ trong `prewarmMonsters` (và hàm tương ứng cho NPC/nền). Thiếu file hoặc chưa tải xong thì vẽ hình code cũ trong giai đoạn chuyển, không chặn việc vào bản đồ.
 - Khi đưa atlas đầu tiên vào repo, phải thêm kiểm tra vào `tools/check-data.js`:
   - JSON đủ khóa.
-  - Chiều cao khớp `monsterHeight × 4`.
+  - Chiều cao khớp `monsterHeight × 3`.
   - Số màu không vượt trần.
   - Viền ngoài là `#1d1424`.
   - Mỗi loài có đủ 5 hoạt ảnh.
 
 ### Thứ tự chuyển đổi
 
-1. Lớp thế giới ×4 và bộ nạp atlas. Hình code cũ phóng nguyên ×4, đo lại hiệu năng.
+1. Lớp thế giới ×3 và bộ nạp atlas. Hình code cũ phóng nguyên ×3, đo lại hiệu năng.
 2. Quái và boss theo từng vùng bản đồ, bắt đầu từ Địa Ngục Khuyển.
 3. Ninja và NPC.
 4. Thú cưng, thú cưỡi, thời trang.
 5. Nền và địa hình bản đồ.
 6. Icon.
 
-- Mỗi đợt phát hành chuyển **trọn** một nhóm hoặc trọn một vùng bản đồ. Trong cùng một bản đồ, quái không được nửa ×1 nửa ×4 (mục 0.4).
+- Mỗi đợt phát hành chuyển **trọn** một nhóm hoặc trọn một vùng bản đồ. Trong cùng một bản đồ, quái không được nửa ×1 nửa ×3 (mục 0.4).
 - Nhóm nào chuyển xong và `npm run check` đạt thì xóa hình vẽ code cũ của nhóm đó, và cập nhật các mục 3-7 cho khớp.
