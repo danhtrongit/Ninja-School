@@ -172,8 +172,10 @@ async function bossEventTest(a) {
   const { MONSTERS, eventHpMul } = require('../../src/shared/data/monsters');
   const muls = Array.from({ length: 20 }, (_, i) => Math.round(MONSTERS.ev_hacviem.baseHp * eventHpMul(i + 1)));
   ok(muls.includes(boss.mhp), `HP Tà Thú theo số người online đủ cấp (${boss.mhp})`);
-  // G đứng ở mép trái (boss xuất hiện ở khoảng giữa bản đồ); A đứng bên phải boss để chiêu dải hướng ra xa G
-  await dash(g, 120);
+  // G đứng xa boss hơn tầm chiêu cột nhắm người thứ hai (360 px, startCast) và tầm phát hiện; A đứng bên phải boss để chiêu dải hướng ra xa G
+  const W = require('../../src/shared/data/maps').MAPS.wasteland.w;
+  const gx = boss.x - 450 >= 40 ? boss.x - 450 : Math.min(W - 40, boss.x + 450);
+  await dash(g, Math.round(gx));
   const gHp = g.me.hp;
 
   // Lần niệm 1: đứng yên trong vùng → bị trúng; G ở xa không mất máu.
@@ -205,18 +207,22 @@ async function bossEventTest(a) {
   await sleep(150);
   // quái thường quanh G có thể đánh G, nên chỉ cộng sát thương đến từ boss
   const fromBoss = g.msgs.filter((m) => m.t === 'hit' && m.a === `m${boss.id}`).flatMap((m) => m.list).filter(([tid, , , miss]) => tid === `p${g.me.id}` && !miss);
-  ok(gHp > 0 && !g.me.dead && fromBoss.length === 0, 'người đứng ngoài vùng không mất máu vì boss');
+  const bHits = g.msgs.filter((m) => m.t === 'hit' && m.a === `m${boss.id}` && m.list.some(([tid, , , miss]) => tid === `p${g.me.id}` && !miss));
+  ok(gHp > 0 && !g.me.dead && fromBoss.length === 0, `người đứng ngoài vùng không mất máu vì boss${fromBoss.length ? ` (G x=${g.x}, boss x=${a.monsters.get(boss.id) && a.monsters.get(boss.id).x}, ${bHits.map((m) => (m.bs ? 'chiêu ' + m.bs : 'đánh thường')).join(', ')})` : ''}`);
 
   // Lần niệm 2: chạy ra khỏi vùng trong lúc niệm → né được
   from = a.msgs.length;
   // quái thường quanh boss có thể hạ A trong lúc chờ: hồi đầy máu, gục thì hồi sinh tại chỗ rồi chờ tiếp
   a.send('chat', { ch: 'map', msg: '/lv 120' });
   let c2 = null;
-  for (let k = 0; k < 4 && !c2; k++) {
+  for (let k = 0; k < 6 && !c2; k++) {
     await revive(a);
-    // hồi sinh có thể đưa A ra xa: quay lại cạnh boss để boss còn mục tiêu mà niệm chiêu
+    if (k) a.send('chat', { ch: 'map', msg: '/lv 120' });
+    // hồi sinh có thể đưa A ra xa: quay lại cạnh boss, đứng cùng mặt đất và đánh một đòn để boss nhận A làm mục tiêu
     const bm = a.monsters.get(boss.id);
     if (bm && Math.abs(a.x - (bm.x + 30)) > 20) await dash(a, Math.round(bm.x + 30));
+    a.send('move', { x: a.x, y: 300, dir: -1, st: 0 });
+    a.send('skill', { sid: 'k0', tid: `m${boss.id}`, dir: -1 });
     c2 = await seek(a, 'bossCast', (m) => m.id === boss.id, from, 6000).catch(() => null);
   }
   if (!c2) throw new Error('A: hết thời gian chờ "bossCast" lần 2');

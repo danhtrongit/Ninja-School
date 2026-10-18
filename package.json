@@ -16,6 +16,7 @@
     "check:features": "node scripts/check-features.js",
     "test:visual": "node tests/e2e/gallery.js",
     "test:sfx": "node tests/e2e/sfx.js",
+    "test:audit": "node tests/e2e/ui-audit.js",
     "test:prod": "node tests/prod/smoke-prod.js",
     "test:load": "node tests/load/load.js"
   },

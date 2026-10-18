@@ -1,13 +1,13 @@
 'use strict';
 
-// Lệnh kiểm chứng một chạm: npm run verify [-- --quick | --floor | --no-browser | --no-load | --json <file> | --root <thư mục> | --out <thư mục>]
+// Lệnh kiểm chứng một chạm: npm run verify [-- --quick | --floor | --no-browser | --no-load | --prod | --json <file> | --root <thư mục> | --out <thư mục>]
 // Bước 1-6 kiểm tĩnh (cú pháp, dữ liệu, id DOM, API công khai, quy tắc tĩnh, sàn nội dung).
 // Bước 7-10 chạy kiểm thử: npm test, trình duyệt (test:ui, test:e2e máy tính + điện thoại, test:perf hai cỡ, test:visual)
 // với server tạm do script tự bật (cổng riêng, DATA_DIR tạm, ADMINS cho tài khoản test), test:load, check:features.
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const { spawn } = require('child_process');
+const { spawn, execFileSync } = require('child_process');
 
 const argv = process.argv.slice(2);
 const flag = (k) => argv.includes(k);
@@ -17,6 +17,8 @@ const QUICK = flag('--quick');
 const FLOOR = flag('--floor');
 const BROWSER = !QUICK && !flag('--no-browser');
 const LOAD = !QUICK && !flag('--no-load');
+// --prod: thêm bước smoke test máy chủ thật (npm run test:prod), dùng khi đã triển khai đúng commit này
+const PROD = !QUICK && flag('--prod');
 const OUT = path.resolve(opt('--out') || fs.mkdtempSync(path.join(os.tmpdir(), 'ns-verify-')));
 fs.mkdirSync(OUT, { recursive: true });
 
@@ -264,10 +266,10 @@ function playwrightPath() {
   return cands.find((d) => d && fs.existsSync(path.join(d, 'playwright', 'package.json'))) || null;
 }
 const PERF_BOTS = Array.from({ length: 30 }, (_, i) => `vfbot${String(i + 1).padStart(2, '0')}`);
-const ADMINS = ['duoalpha', 'duobravo', 'vfe2ed', 'vfe2em', 'vfperfd', 'vfperfm', 'vfvisual', ...PERF_BOTS];
+const ADMINS = ['duoalpha', 'duobravo', 'vfe2ed', 'vfe2em', 'vfperfd', 'vfperfm', 'vfvisual', 'vfaudit', ...PERF_BOTS];
 async function startServer(port, dataDir, logFile) {
   const ch = spawn(process.execPath, [path.join(ROOT, 'src', 'server', 'index.js')], {
-    cwd: ROOT, env: { ...process.env, PORT: String(port), DATA_DIR: dataDir, ADMINS: ADMINS.join(','), REG_LIMIT: '0', DEV_TOOLS: '1' }, stdio: ['ignore', 'pipe', 'pipe'],
+    cwd: ROOT, env: { ...process.env, PORT: String(port), DATA_DIR: dataDir, ADMINS: ADMINS.join(','), REG_LIMIT: '0', DEV_TOOLS: '1', NS_TEST: '1' }, stdio: ['ignore', 'pipe', 'pipe'],
   });
   let log = '';
   const lf = fs.createWriteStream(logFile);
@@ -299,7 +301,10 @@ async function stepCmd(name, cmd, args, o, pass) {
   if (QUICK) {
     for (const nm of ['7 Kiểm thử bot (npm test)', '8 Trình duyệt', '9 Tải (test:load)', '10 Sổ tính năng (check:features)']) report(nm, null, ['bỏ qua (--quick)']);
   } else {
-    await stepCmd('7 Kiểm thử bot (npm test)', process.execPath, [path.join(ROOT, 'tests', 'smoke.js')], { log: path.join(OUT, 'smoke.log'), timeout: 900000 }, (r) => r.code === 0 && r.out.includes('TẤT CẢ KIỂM TRA ĐỀU ĐẠT'));
+    // bản sao sạch (không có thay đổi chưa commit): repoUnitTests kiểm thêm git status
+    let clean = false;
+    try { clean = execFileSync('git', ['status', '--porcelain'], { cwd: ROOT }).toString() === ''; } catch (e) { /* không phải repo git */ }
+    await stepCmd('7 Kiểm thử bot (npm test)', process.execPath, [path.join(ROOT, 'tests', 'smoke.js')], { env: clean ? { NS_CLEAN_CLONE: '1' } : {}, log: path.join(OUT, 'smoke.log'), timeout: 900000 }, (r) => r.code === 0 && r.out.includes('TẤT CẢ KIỂM TRA ĐỀU ĐẠT'));
     if (BROWSER) {
       const pw = playwrightPath();
       if (!pw) report('8 Trình duyệt', false, ['không tìm thấy Playwright: cài bằng "npm i -g playwright && npx playwright install chromium" hoặc đặt NODE_PATH']);
@@ -317,15 +322,19 @@ async function stepCmd(name, cmd, args, o, pass) {
         await stepCmd('8e test:perf điện thoại 844×390', process.execPath, ['tests/e2e/perf.js'], { env: { ...env, ACC: 'vfperfm', MOBILE: '1', BOTS: PERF_BOTS.join(','), OUT: path.join(OUT, 'perf') }, log: path.join(OUT, 'perf-m.log'), timeout: 900000 }, okNoErr);
         await stepCmd('8f test:visual (gallery + mốc băm)', process.execPath, ['tests/e2e/gallery.js'], { env: { ...env, ACC: 'vfvisual', OUT: path.join(OUT, 'visual') }, log: path.join(OUT, 'visual.log'), timeout: 600000 }, okNoErr);
         await stepCmd('8g test:sfx (chất lượng tiếng hiệu ứng)', process.execPath, ['tests/e2e/sfx.js'], { env, log: path.join(OUT, 'sfx.log'), timeout: 300000 }, okNoErr);
+        await stepCmd('8h test:audit (giao diện theo cảnh, 4 cỡ màn)', process.execPath, ['tests/e2e/ui-audit.js'], { env: { ...env, ACC: 'vfaudit', OUT: path.join(OUT, 'audit') }, log: path.join(OUT, 'ui-audit.log'), timeout: 600000 }, (r) => r.code === 0 && r.out.includes('UI-AUDIT ĐẠT') && r.out.includes('OK no console errors'));
         await srv.stop();
         const bad = srv.log().split('\n').filter((l) => /\[ws\] Lỗi xử lý|Error:|TypeError|ReferenceError/.test(l));
-        report('8h server trong lúc kiểm thử trình duyệt không lỗi', bad.length === 0, bad.slice(0, 10));
+        report('8i server trong lúc kiểm thử trình duyệt không lỗi', bad.length === 0, bad.slice(0, 10));
         fs.rmSync(dataDir, { recursive: true, force: true });
       }
     } else report('8 Trình duyệt', null, ['bỏ qua (--no-browser)']);
     if (LOAD) await stepCmd('9 Tải (test:load)', process.execPath, ['tests/load/load.js'], { env: { OUT: path.join(OUT, 'load') }, log: path.join(OUT, 'load.log'), timeout: 2 * 3600000 }, (r) => r.code === 0 && r.out.includes('TẢI ĐẠT'));
     else report('9 Tải (test:load)', null, ['bỏ qua (--no-load)']);
-    await stepCmd('10 Sổ tính năng (check:features)', process.execPath, ['scripts/check-features.js'], { env: { VERIFY_LOGS: OUT }, log: path.join(OUT, 'features.log'), timeout: 600000 }, (r) => r.code === 0);
+    if (PROD) await stepCmd('9b Production (test:prod)', process.execPath, ['tests/prod/smoke-prod.js'], { log: path.join(OUT, 'prod.log'), timeout: 600000 }, (r) => r.code === 0 && r.out.includes('PRODUCTION ĐẠT'));
+    // bước bị tắt bằng cờ (CI: --no-browser --no-load) thì check:features bỏ qua bằng chứng nằm trong log của bước đó
+    const skip = [...(BROWSER ? [] : ['e2e-d.log', 'e2e-m.log', 'ui.log', 'perf-d.log', 'perf-m.log', 'visual.log', 'sfx.log', 'ui-audit.log']), ...(LOAD ? [] : ['load.log']), ...(PROD ? [] : ['prod.log'])];
+    await stepCmd('10 Sổ tính năng (check:features)', process.execPath, ['scripts/check-features.js'], { env: { VERIFY_LOGS: OUT, VERIFY_SKIP: skip.join(',') }, log: path.join(OUT, 'features.log'), timeout: 600000 }, (r) => r.code === 0);
   }
 
   const failed = steps.filter((s) => s.ok === false);

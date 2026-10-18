@@ -11,7 +11,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
       - run: npm install
-      - run: npm run check
-      - run: npm test
+      # bước trình duyệt (mốc ảnh theo máy darwin-arm64) và tải 60 phút chạy ở máy dev: docs/DECISIONS.md D-06
+      - run: npm run verify -- --no-browser --no-load

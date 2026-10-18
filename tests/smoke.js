@@ -8,6 +8,7 @@ const { DATA, sleep, ok, fail, failCount, serverLog, startServer } = require('./
 const { passiveUnitTests, passiveBookTest, passiveRulesTest } = require('./features/passive');
 const { bossUnitTests, bossCleanupUnitTests, bossEventTest } = require('./features/boss');
 const { pkUnitTests } = require('./features/pk');
+const { repoUnitTests } = require('./features/repo');
 const { gemUnitTests, gemTest } = require('./features/gems');
 const { petUnitTests, petTest } = require('./features/pets');
 const { mailUnitTests, mailTest } = require('./features/mail');
@@ -42,6 +43,7 @@ function unitTests() {
   boundUnit(ok);
   balanceUnitTests();
   pkUnitTests();
+  repoUnitTests();
 }
 
 async function main() {

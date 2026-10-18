@@ -29,6 +29,12 @@ Ghi các quyết định lệch hoặc bổ sung so với `GDD.md` / `ROADMAP.md
 
 - Người dùng hỏi vì sao client không dùng Phaser để tránh bấm nhầm nút. Luật 4 và `CLAUDE.md` cấm thêm thư viện/CDN khi GDD chưa có ADR. Nút giao diện là DOM nằm trên canvas, đổi khung vẽ không sửa được lỗi bấm nhầm. Lỗi bấm nhầm được xử lý như lỗi giao diện (tìm đúng nút, vùng chạm ≥ 44 px trên điện thoại theo `DESIGN_RULES.md`).
 
+## D-06 (2026-10-19) CI chạy verify không có bước trình duyệt và tải; ảnh tính năng lưu ở docs/shots
+
+- Mốc băm ảnh của `test:visual` lưu theo nền tảng (`darwin-arm64`), máy CI là `linux-x64` nên không so được. `test:load` chạy 60 phút. Vì vậy CI (`.github/workflows/ci.yml`, Node 24) chạy `npm run verify -- --no-browser --no-load`: kiểm tĩnh, `npm test`, `check:features` (bằng chứng nằm trong log trình duyệt / tải được ghi "bỏ qua", không tính là đạt). Lần kiểm chứng xác nhận xong việc chạy `npm run verify` đầy đủ trên bản clone sạch ở máy dev M1.
+- `npm run verify -- --prod` thêm bước `test:prod` (smoke test https://ninja.iqx.vn, kiểm `/api/status.commit` trùng main). Chỉ dùng sau khi đã triển khai đúng commit.
+- Luật 6 của mục tiêu yêu cầu lưu ảnh ở `docs/shots/<id>/`, còn `CLAUDE.md` cấm commit "ảnh chụp kiểm tra". Hiểu là: ảnh tạm khi kiểm tra không commit; ảnh minh họa tính năng (JPEG, điện thoại thu về rộng 844 px) thì commit trong `docs/shots/<id>/` để `docs/REPORT.md` dẫn tới. `tests/features/repo.js` chặn ảnh nằm ngoài `docs/shots`, `src/client`, `tests/baseline`.
+
 ## Mục "blocked"
 
 Chưa có.

@@ -159,6 +159,8 @@ body.touch .qc-go::after, body.touch .hb-status .btn::after { content: ''; posit
 }
 @media (max-width: 720px) {
   .inv-wrap, .upg-wrap, .trade-wrap, .store-wrap, .char-cols, .inspect-cols, .shop-list { grid-template-columns: 1fr; }
+  /* xếp một cột: túi đồ lên trước để mở hành trang là thấy đồ, trang bị cuộn xuống */
+  .inv-wrap > .inv-right { order: -1; }
   .gift-grid { grid-template-columns: repeat(4, 1fr); }
   .trade-inv { grid-column: span 1; }
   .class-list { grid-template-columns: repeat(3, 1fr); }

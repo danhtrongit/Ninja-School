@@ -12,6 +12,8 @@ const { spawnSync } = require('child_process');
 
 const ROOT = path.join(__dirname, '..');
 const LOGS = process.env.VERIFY_LOGS || null;
+// log của bước không chạy (verify --no-browser / --no-load): bằng chứng trong đó không kiểm, chỉ ghi chú
+const SKIP = new Set((process.env.VERIFY_SKIP || '').split(',').filter(Boolean));
 const PRIORITY = ['Must', 'Should', 'Could', "Won't"];
 const STATUS = ['todo', 'doing', 'done', 'blocked'];
 const errs = [];
@@ -26,11 +28,13 @@ const LOG_OF = {
   'tests/e2e/perf.js': ['perf-d.log', 'perf-m.log'],
   'tests/e2e/gallery.js': ['visual.log'],
   'tests/e2e/sfx.js': ['sfx.log'],
+  'tests/e2e/ui-audit.js': ['ui-audit.log'],
+  'tests/prod/smoke-prod.js': ['prod.log'],
   'tests/load/load.js': ['load.log'],
   'tests/features/verify.js': ['verify-self.log'],
 };
 const logsFor = (file) => LOG_OF[file] || (file.startsWith('tests/features/') ? ['smoke.log'] : null);
-const BROWSER_LOGS = new Set(['e2e-d.log', 'e2e-m.log', 'ui.log', 'perf-d.log', 'perf-m.log', 'visual.log', 'sfx.log', 'load.log']);
+const BROWSER_LOGS = new Set(['e2e-d.log', 'e2e-m.log', 'ui.log', 'perf-d.log', 'perf-m.log', 'visual.log', 'sfx.log', 'ui-audit.log', 'load.log', 'prod.log']);
 
 let fj;
 try { fj = JSON.parse(fs.readFileSync(path.join(ROOT, 'docs', 'features.json'), 'utf8')); } catch (e) {
@@ -83,6 +87,7 @@ if (needLogs.has('verify-self.log')) runTo('verify-self.log', ['tests/features/v
 const passLines = {};
 for (const l of needLogs) {
   const p = path.join(logDir, l);
+  if (!fs.existsSync(p) && SKIP.has(l)) { console.log(`  – bỏ qua bằng chứng trong ${l} (bước không chạy)`); passLines[l] = []; continue; }
   if (!fs.existsSync(p)) { err(`chưa có log ${l}${BROWSER_LOGS.has(l) ? ' (test trình duyệt/tải: chạy qua npm run verify)' : ''}`); passLines[l] = []; continue; }
   passLines[l] = fs.readFileSync(p, 'utf8').split('\n').filter((x) => /^\s*✔/.test(x));
 }

@@ -112,27 +112,34 @@ export default {
   },
 
   // ---------------- Hộp xác nhận (thay confirm() của trình duyệt: cùng khung gỗ, chạy được trên điện thoại)
-  // text: chuỗi hoặc mảng nút DOM; trả về Promise<boolean>. Enter = đồng ý, Esc / bấm ra ngoài = hủy
+  // text: chuỗi hoặc mảng nút DOM; trả về Promise<boolean>. Enter = đồng ý (hộp danger: Enter = hủy), Esc / bấm ra ngoài = hủy
   ask({ title = 'Xác nhận', text = '', ok = 'Đồng ý', cancel = 'Thôi', danger = false, icon } = {}) {
     this.closeAsk(false);
     return new Promise((resolve) => {
       const done = (v) => this.closeAsk(v);
       const okBtn = h('button', { class: `btn ${danger ? 'danger' : 'primary'}`, 'data-act': 'ask-ok', onclick: () => done(true) }, ok);
+      const noBtn = h('button', { class: 'btn', 'data-act': 'ask-cancel', onclick: () => done(false) }, cancel);
       const box = h('div', { class: `ask-box${danger ? ' danger' : ''}`, role: 'alertdialog', 'aria-modal': 'true', 'aria-label': title },
         h('div', { class: 'ask-head' }, icon ? ico(icon) : null, h('span', null, title)),
-        h('div', { class: 'ask-text' }, ...[].concat(text)),
-        h('div', { class: 'ask-btns' }, h('button', { class: 'btn', 'data-act': 'ask-cancel', onclick: () => done(false) }, cancel), okBtn));
+        h('div', { class: 'ask-text' }, ...[].concat(text).map((x) => (typeof x === 'string' ? h('div', null, x) : x))),
+        h('div', { class: 'ask-btns' }, noBtn, okBtn));
       const back = h('div', { class: 'ask-back' }, box);
       back.addEventListener('pointerdown', (e) => { if (e.target === back) done(false); });
-      // chặn phím tới vòng lặp game khi hộp đang mở (bắt ở pha capture của window)
+      // chặn phím tới vòng lặp game khi hộp đang mở (bắt ở pha capture của window); Tab chỉ xoay vòng trong hộp
       const key = (e) => {
-        if (e.key === 'Escape') { e.preventDefault(); done(false); } else if (e.key === 'Enter' && !(e.target.tagName === 'BUTTON' && box.contains(e.target))) { e.preventDefault(); done(true); }
-        if (e.key !== 'Tab') e.stopPropagation();
+        if (e.key === 'Escape') { e.preventDefault(); done(false); } else if (e.key === 'Enter' && !(e.target.tagName === 'BUTTON' && box.contains(e.target))) { e.preventDefault(); done(!danger); } else if (e.key === 'Tab') {
+          const f = [...box.querySelectorAll('button, input, select, textarea')].filter((x) => !x.disabled);
+          const i = f.indexOf(document.activeElement);
+          e.preventDefault();
+          f[i < 0 ? 0 : (i + (e.shiftKey ? -1 : 1) + f.length) % f.length].focus();
+        }
+        e.stopPropagation();
       };
       window.addEventListener('keydown', key, true);
       document.body.appendChild(back);
       this.askEl = { back, key, resolve };
-      okBtn.focus();
+      // hộp nguy hiểm (hủy, xóa) mặc định nút Thôi để Enter vô tình không làm mất đồ
+      (danger ? noBtn : okBtn).focus();
     });
   },
 

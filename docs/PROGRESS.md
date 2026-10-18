@@ -2,7 +2,34 @@
 
 Ghi sau mỗi tính năng / mỗi lần đổi mốc ảnh. Mới nhất ở trên.
 
-## 2026-10-18
+## 2026-10-19
+
+### GĐ0: ui-ask-dialog, ui-bag-expand, ui-bag-bulkdrop, ops-commit-restructure, core-restructure → done
+
+- Khung `tests/e2e/ui-audit.js` (`npm run test:audit`, bước 8h của verify) kiểm từng cảnh ở 4 cỡ màn: 1280×720, 844×390, 740×360, 667×375. Có 4 cảnh: `ask`, `ask-danger`, `bag-pages`, `bag-pick`.
+- Lỗi khung test tìm ra và đã sửa:
+  - nút của hộp `ask()` trên cảm ứng chỉ cao 27 px, nay ≥ 44 px;
+  - hộp `danger` trả `true` khi bấm Enter: nay nút Thôi được focus sẵn và Enter là hủy;
+  - Tab thoát ra khỏi hộp: nay xoay vòng trong hộp;
+  - mảng chuỗi trong `text` bị dính liền: nay mỗi chuỗi một dòng;
+  - hàng nút chuyển trang của túi bị cắt trên màn cao 390: điện thoại nay dùng bộ ◀ n/N ▶ trên hàng tiêu đề;
+  - màn 667 px đẩy túi xuống dưới trang bị: màn hẹp nay xếp túi lên trước.
+- Còn lại cho `ui-mobile-pass`: cửa sổ Hành trang ở màn cao ≤ 390 px vẫn phải cuộn để xem hết cột trang bị.
+- `tests/features/repo.js` kiểm:
+  - lịch sử main theo D-01 (8 nhóm commit đúng thứ tự);
+  - không có commit tạm, không có file cấm;
+  - cây của nhóm âm thanh trùng a4b4a0a;
+  - DESIGN_RULES khớp hằng số;
+  - CI dùng Node 24 và verify;
+  - `git status` sạch khi chạy trên bản clone.
+- CI chạy `npm run verify -- --no-browser --no-load` (D-06). `check:features` bỏ qua bằng chứng nằm trong log của bước không chạy. `--prod` thêm bước `test:prod`.
+- Test chập chờn đã sửa:
+  - boss "lần niệm 2": thêm hồi máu, đứng đúng mặt đất, đánh một đòn để boss nhận mục tiêu;
+  - người thứ hai G đứng ngoài tầm 360 px của chiêu cột;
+  - Dùng nhiều chọn chồng lớn nhất.
+- Ảnh: `docs/shots/ui-ask-dialog`, `ui-bag-expand`, `ui-bag-bulkdrop`, `item-use-many`, `cmb-auto-plus`.
+
+## 2026-10-18 (tiếp)
 
 ### Smoke test production (`npm run test:prod`)
 

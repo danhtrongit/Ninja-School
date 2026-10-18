@@ -5,7 +5,15 @@ const { sleep, ok } = require('../lib/harness');
 const { INV_SIZE, INV_EXPAND, invSize, USE_MANY } = require('../../src/shared/constants');
 
 function bagUnitTests() {
-  console.log('Hành trang (kiểm tra đơn vị): số ô theo lần mở rộng');
+  console.log('Hành trang (kiểm tra đơn vị): số ô theo lần mở rộng, hủy nhanh khi đang giao dịch');
+  const { Inventory } = require('../../src/server/modules/inventory');
+  const inv = [{ id: 'hp1', q: 3 }, { id: 'mp1', q: 2 }];
+  const p = { trade: { with: 2 }, c: { inv }, markInv() {}, notice() {}, onInventoryChanged() {} };
+  Inventory.prototype.discardMany.call({ world: {} }, p, { items: [[0, 'hp1'], [1, 'mp1']] });
+  const kept = !!(inv[0] && inv[1]);
+  p.trade = null;
+  Inventory.prototype.discardMany.call({ world: {} }, p, { items: [[0, 'hp1'], [1, 'mp1']] });
+  ok(kept && !inv[0] && !inv[1], 'hủy nhanh bị chặn khi đang giao dịch (túi giữ nguyên), hết giao dịch thì hủy được');
   ok(invSize({}) === INV_SIZE && invSize({ invExt: 2 }) === INV_SIZE + 2 * INV_EXPAND.step, 'số ô = gốc + bước × số lần mở rộng');
   ok(invSize({ invExt: 999 }) === INV_SIZE + INV_EXPAND.step * INV_EXPAND.cost.length && invSize({ invExt: -3 }) === INV_SIZE && invSize({ invExt: '5' }) === INV_SIZE, 'số lần mở rộng hỏng bị chặn trong giới hạn');
 }
@@ -21,6 +29,16 @@ async function bagTest(a) {
   a.send('invExpand');
   await sleep(250);
   ok(slots() === n0 + INV_EXPAND.step && a.me.luong === l0 - INV_EXPAND.cost[(n0 - INV_SIZE) / INV_EXPAND.step], 'mở rộng hành trang trừ đúng lượng, thêm ô trống');
+  // mở rộng tới tối đa (6 lần × 10 ô), lần thứ 7 báo tối đa và không trừ lượng
+  a.send('chat', { ch: 'map', msg: '/luong 5000' });
+  await a.wait('chat', (m) => /\+5000 lượng/.test(m.msg));
+  for (let k = slots(); k < INV_SIZE + INV_EXPAND.step * INV_EXPAND.cost.length; k += INV_EXPAND.step) { a.send('invExpand'); await sleep(150); }
+  await sleep(200);
+  const l7 = a.me.luong;
+  const from7 = a.msgs.length;
+  a.send('invExpand');
+  await sleep(250);
+  ok(slots() === INV_SIZE + INV_EXPAND.step * INV_EXPAND.cost.length && a.me.luong === l7 && a.msgs.slice(from7).some((m) => m.t === 'notice' && /mở rộng tối đa/.test(m.msg)), `lần mở rộng thứ ${INV_EXPAND.cost.length + 1} báo đã tối đa, không trừ lượng (${slots()} ô)`);
 
   a.send('chat', { ch: 'map', msg: '/item food_atk 2' });
   a.send('chat', { ch: 'map', msg: '/item w_kiem_11 1' });
@@ -49,7 +67,8 @@ async function bagTest(a) {
 async function useManyTest(a) {
   console.log('Hành trang: dùng nhiều (rương, đồ ăn, bí kíp nhân đôi)');
   const count = (id) => a.inv.inv.reduce((n, it) => n + (it && it.id === id ? it.q : 0), 0);
-  const at = (id) => a.inv.inv.findIndex((it) => it && it.id === id);
+  // chồng lớn nhất của món (rương mở ra có thể tạo chồng nhỏ riêng)
+  const at = (id) => a.inv.inv.reduce((b, it, i) => (it && it.id === id && (b < 0 || it.q > a.inv.inv[b].q) ? i : b), -1);
   const use = async (id, n, re) => {
     const from = a.msgs.length;
     a.send('useItem', { slot: at(id), n });

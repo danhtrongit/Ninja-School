@@ -77,7 +77,8 @@ export default {
 
   // Lưới hành trang chia trang INV_PAGE ô (túi mở rộng tới 100 ô); trang đang xem dùng chung cho túi, kho, cửa hàng, giao dịch.
   // dim(it) đúng: ô mờ, không bấm được (vd đồ khóa/có hạn trong giao dịch)
-  invGrid(onclick, mark, dim) {
+  // out: trên điện thoại bộ chuyển trang gọn được trả qua out.pager để đặt lên hàng tiêu đề (hàng nút dưới lưới bị cắt khi màn thấp)
+  invGrid(onclick, mark, dim, out) {
     const pages = Math.max(1, Math.ceil(S.inv.length / INV_PAGE));
     const pg = Math.min(this.invPage || 0, pages - 1);
     const from = pg * INV_PAGE;
@@ -98,6 +99,10 @@ export default {
       grid.appendChild(h('div', { class: `slot empty slot-locked${canExpand ? ' can' : ''}`, title: canExpand ? 'Ô chưa mở · bấm để mở rộng hành trang' : 'Ô chưa mở',
         onclick: canExpand ? () => this.askExpand() : null }));
     }
+    if (out && this.touch) {
+      out.pager = this.invPager(pages, pg);
+      return h('div', { class: 'inv-paged' }, grid);
+    }
     const nav = h('div', { class: 'inv-pages' }, ...Array.from({ length: pages }, (_, p) => {
       const part = S.inv.slice(p * INV_PAGE, (p + 1) * INV_PAGE);
       const used = part.filter(Boolean).length;
@@ -107,6 +112,15 @@ export default {
       `Trang ${p + 1}`, h('span', { class: `ip-n${used === part.length ? ' full' : ''}` }, picked ? `✓${picked}` : `${used}/${part.length}`));
     }));
     return h('div', { class: 'inv-paged' }, grid, nav);
+  },
+
+  // ◀ 1/3 ▶: nút 44 px cho màn cảm ứng
+  invPager(pages, pg) {
+    const go = (p) => { this.invPage = (p + pages) % pages; this.refresh(); };
+    return h('div', { class: 'inv-pager' },
+      h('button', { class: 'btn small', 'data-act': 'inv-prev', 'aria-label': 'Trang trước', onclick: () => go(pg - 1) }, '◀'),
+      h('span', { class: 'ipg-n', 'data-act': 'inv-pg' }, `${pg + 1}/${pages}`),
+      h('button', { class: 'btn small', 'data-act': 'inv-next', 'aria-label': 'Trang sau', onclick: () => go(pg + 1) }, '▶'));
   },
 
   renderInv() {
@@ -119,23 +133,25 @@ export default {
       // túi vừa đổi (dùng, sắp xếp, nhận đồ): bỏ các ô không còn đúng món đã chọn
       for (const [i, id] of pick) if (!S.inv[i] || S.inv[i].id !== id) pick.delete(i);
     }
+    const out = {};
+    const onItem = pick
+      ? (it, i) => { if (pick.has(i)) pick.delete(i); else pick.set(i, it.id); this.refresh(); }
+      : (it, i) => this.showItem(it, { from: 'inv', slot: i });
+    const grid = this.invGrid(onItem, pick ? new Set(pick.keys()) : null, null, out);
     const top = pick
       ? h('div', { class: 'row between inv-top inv-pick' },
-        h('span', { class: 'sub-title', title: 'Bấm vào món để chọn / bỏ chọn' }, `Đã chọn ${pick.size}`),
+        out.pager || h('span', { class: 'sub-title', title: 'Bấm vào món để chọn / bỏ chọn' }, `Đã chọn ${pick.size}`),
         h('span', { class: 'row' },
           h('button', { class: 'btn small', 'data-act': 'pick-plain', onclick: () => this.pickPlain() }, 'Chọn đồ thường'),
           h('button', { class: 'btn small danger', 'data-act': 'pick-discard', disabled: !pick.size, onclick: () => this.discardPicked() }, `Hủy ${pick.size || ''} món`),
           h('button', { class: 'btn small', 'data-act': 'pick-done', onclick: () => { this.invPick = null; this.refresh(); } }, 'Xong')))
-      : h('div', { class: 'row between inv-top' }, h('span', { class: 'sub-title' }, `Hành trang ${S.inv.length - free}/${S.inv.length}`),
-        h('span', { class: 'row' }, this.invExpandBtn(),
+      : h('div', { class: 'row between inv-top' }, h('span', { class: 'sub-title' }, out.pager ? `${S.inv.length - free}/${S.inv.length}` : `Hành trang ${S.inv.length - free}/${S.inv.length}`),
+        h('span', { class: 'row' }, out.pager, this.invExpandBtn(),
           h('button', { class: 'btn small', 'data-act': 'pick-start', title: 'Chọn nhiều món rồi hủy một lần', onclick: () => { this.hideItem(); this.invPick = new Map(); this.refresh(); } }, 'Hủy nhanh'),
           h('button', { class: 'btn small', onclick: () => this.net.send('sortInv') }, 'Sắp xếp')));
-    const onItem = pick
-      ? (it, i) => { if (pick.has(i)) pick.delete(i); else pick.set(i, it.id); this.refresh(); }
-      : (it, i) => this.showItem(it, { from: 'inv', slot: i });
     this.frameWin('Hành Trang', h('div', { class: 'inv-wrap' },
       h('div', { class: 'inv-left' }, this.eqTabs(), this.equipGrid(S.equip, true, fig)),
-      h('div', { class: 'inv-right' }, top, this.invGrid(onItem, pick ? new Set(pick.keys()) : null))),
+      h('div', { class: 'inv-right' }, top, grid)),
     moneyLine());
   },
 

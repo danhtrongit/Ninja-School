@@ -118,14 +118,15 @@
     "phase": 0,
     "title": "Cấu trúc mã src/ (lõi server, module, client chia vùng, tests/features), chưa commit",
     "priority": "Must",
-    "status": "todo",
+    "status": "done",
     "acceptance": [
       "npm test in 'TẤT CẢ KIỂM TRA ĐỀU ĐẠT' và npm run check sạch trên cây đã commit",
       "git status --short src tests tools rỗng sau commit; git log origin/main có commit tái cấu trúc thuần tiếng Việt (nhóm 1 của T0.02, sau cherry-pick 5a50602)",
       "npm run test:e2e desktop và MOBILE=1 in 'E2E ĐẠT' và 'OK no console errors'; npm run test:ui đạt; npm run test:perf giữ ~60 fps"
     ],
     "tests": [
-      "tests/smoke.js",
+      "tests/features/repo.js",
+      "tools/check-data.js",
       "tests/e2e/e2e.js",
       "tests/e2e/ui-multiplayer.js",
       "tests/e2e/perf.js"
@@ -145,7 +146,22 @@
     "section": "docs/gdd/10-ky-thuat-van-hanh.md",
     "size": "L",
     "depends": [],
-    "notes": "Tiến độ 18-10-2026: tái cấu trúc src/ xong, nằm trong git index của thư mục làm việc (221 file), chưa commit main (HEAD 8fac3bb có 0 file dưới src/); đã chạy trên https://ninja.iqx.vn (triển khai từ nhánh mốc checkpoint/am-thanh). npm run check: đạt. Cây tái cấu trúc thuần là commit 920700a trên nhánh feat/bag."
+    "notes": "Tái cấu trúc ở commit a7b0a2d trên main.",
+    "proof": [
+      [
+        "tools/check-data.js :: Dữ liệu hợp lệ",
+        "tests/features/repo.js :: git status --short src tests tools rỗng trên bản sao"
+      ],
+      [
+        "tests/features/repo.js :: git status --short src tests tools rỗng trên bản sao",
+        "tests/features/repo.js :: main có đủ 8 nhóm commit D-01"
+      ],
+      [
+        "tests/e2e/e2e.js :: auto đánh hạ quái (EXP tăng)",
+        "tests/e2e/ui-multiplayer.js :: giao dịch thành công qua giao diện",
+        "tests/e2e/perf.js :: CPU mỗi khung trung bình"
+      ]
+    ]
   },
   {
     "id": "core-save",
@@ -377,21 +393,19 @@
     "phase": 0,
     "title": "Chốt commit lên main: đợt 1-2B (5a50602), tái cấu trúc, túi đồ, âm thanh (bỏ tên commit tạm), đưa production về main",
     "priority": "Must",
-    "status": "todo",
+    "status": "done",
     "acceptance": [
       "git log origin/main có đúng 4 nhóm commit theo thứ tự: (0) cherry-pick 5a50602 'Điểm khôi phục: sau đợt 1, 2A, 2B' (43 file: lôi đài, hộp thư, lễ hội, ngọc, thú cưng, thời trang, bản đồ thế giới, nội tại, Tà Thú); (1) tái cấu trúc thuần = cây của 920700a (tên 'tạm: ảnh chụp' nhưng chứa tái cấu trúc 210 file, không có ảnh) với thông điệp mới; (2) túi đồ fdd1297 + 4b0ff52; (3) âm thanh 25428b0 + phần còn lại của mốc a4b4a0a (Range ở services/http.js, tests/e2e/e2e.js) + thư mục src/client/audio/ kèm CREDITS.md",
       "Không có commit mang tên 'tạm: ảnh chụp', không có NOTE.md, data/, ảnh chụp",
       "Cây sau nhóm (3) trùng cây a4b4a0a cộng src/client/audio/ (git diff rỗng ngoài thư mục âm thanh)",
       "Sau 4 nhóm: phần đã chạy production (đồ họa d8161c2, xu khóa + cân bằng 8f389c3) vào main thành commit riêng (docs/DECISIONS.md D-01); git diff giữa main và index ngày 18-10-2026 rỗng (không mất việc)",
-      "CI xanh trên main với node-version 24 (ADR-10-5)",
-      "nội dung app/ trên production (hoặc /api/status.version sau ops-deploy) khớp commit trên main",
+      "CI chạy npm run verify -- --no-browser --no-load với node-version 24 (ADR-10-5) và xanh; bước trình duyệt + tải chạy ở máy dev (DECISIONS D-06)",
+      "nội dung app/ trên production: /api/status.commit khớp commit trên main (npm run test:prod)",
       "notes của ui-bag-expand, ui-bag-bulkdrop, ui-ask-dialog, snd-audio-files ghi 'đã gộp main' kèm mã commit; id nào đạt đủ acceptance còn lại thì đổi done"
     ],
     "tests": [
-      "tests/smoke.js",
-      "tests/features/inventory.js",
-      "tests/features/audio.js",
-      "tests/e2e/e2e.js"
+      "tests/features/repo.js",
+      "tests/prod/smoke-prod.js"
     ],
     "files": [
       "thao tác git",
@@ -408,7 +422,32 @@
       "core-restructure"
     ],
     "parent": "core-restructure",
-    "notes": "R-23, R-24; gộp âm thanh sau khi chốt ADR-01-1. Tiến độ 18-10-2026: chưa commit. main (HEAD 8fac3bb) còn thiếu cả commit 5a50602 (đợt 1, 2A, 2B; nằm trên nhánh checkpoint/truoc-tai-cau-truc). Index của thư mục làm việc (221 file) trộn tái cấu trúc + túi + âm thanh với việc GĐ1/GĐ2 (màu bậc 12-19, icon 18 kỹ năng, 3 theme + 39 biến thể từ mốc d8161c2; xu khóa + cân bằng từ dot3/*), nên không commit thẳng từ index mà dựng lại từ chuỗi commit có sẵn. Nhánh mốc checkpoint/am-thanh (d8161c2) là bản đang chạy production."
+    "notes": "main dựng theo D-01 (52785f1 → a15d609). ui-bag-expand, ui-bag-bulkdrop, ui-ask-dialog: đã gộp main (5236e74, dcd9af6) và done; snd-audio-files: đã gộp main (6738525).",
+    "proof": [
+      [
+        "tests/features/repo.js :: main có đủ 8 nhóm commit D-01 theo đúng thứ tự"
+      ],
+      [
+        "tests/features/repo.js :: không có commit mang tên 'tạm: ảnh chụp'",
+        "tests/features/repo.js :: repo không chứa NOTE.md, data/, node_modules/"
+      ],
+      [
+        "tests/features/repo.js :: cây sau nhóm âm thanh trùng cây a4b4a0a ngoài src/client/audio",
+        "tests/features/repo.js :: nhóm âm thanh có src/client/audio"
+      ],
+      [
+        "tests/features/repo.js :: main có đủ 8 nhóm commit D-01 theo đúng thứ tự"
+      ],
+      [
+        "tests/features/repo.js :: CI chạy npm run verify với node 24"
+      ],
+      [
+        "tests/prod/smoke-prod.js :: /api/status.commit trùng commit main"
+      ],
+      [
+        "tests/features/repo.js :: main có đủ 8 nhóm commit D-01 theo đúng thứ tự"
+      ]
+    ]
   },
   {
     "id": "ops-crash-guard",
@@ -579,7 +618,7 @@
     "phase": 0,
     "title": "Hộp xác nhận ask() thay hộp của trình duyệt (đã làm trên nhánh feat/bag, chờ gộp; còn lỗi A1-A5)",
     "priority": "Must",
-    "status": "todo",
+    "status": "done",
     "acceptance": [
       "grep -rnE '\\b(confirm|alert|prompt)\\(' src/client/js chỉ còn dòng chú thích, không có lời gọi",
       "Tạo khung tests/e2e/ui-audit.js (Playwright qua NODE_PATH, server riêng, in 'UI-AUDIT ĐẠT') có cảnh 'ask' và 'ask-danger'; ui-mobile-pass (T7.04), ui-tutorial, ui-item-compare, ui-hud-banners chỉ thêm cảnh vào khung này",
@@ -590,7 +629,9 @@
     ],
     "tests": [
       "tests/e2e/ui-audit.js",
-      "tests/features/inventory.js"
+      "tests/features/inventory.js",
+      "tests/features/verify.js",
+      "tests/features/repo.js"
     ],
     "files": [
       "src/client/js/ui/windows/dialog.js",
@@ -609,21 +650,55 @@
       "ops-commit-restructure"
     ],
     "branch": "feat/bag",
-    "notes": "Đã làm trên nhánh feat/bag (fdd1297) Tiến độ 18-10-2026: hộp ask() có trong windows/dialog.js, không còn lời gọi confirm/alert/prompt; nằm trong git index của thư mục làm việc (221 file), chưa commit main; đã chạy trên https://ninja.iqx.vn (triển khai từ nhánh mốc checkpoint/am-thanh). Còn thiếu: lỗi A1-A5, khung tests/e2e/ui-audit.js (chưa có, tests/e2e chỉ có e2e.js, perf.js, ui-multiplayer.js), commit main."
+    "notes": "Đã gộp main (5236e74). Sửa thêm: Enter ở hộp danger là hủy (nút Thôi focus sẵn), Tab xoay vòng trong hộp, nút ≥ 44 px trên cảm ứng, chuỗi trong mảng text mỗi chuỗi một dòng. Ảnh: docs/shots/ui-ask-dialog/.",
+    "proof": [
+      [
+        "tests/features/verify.js :: --quick trên cây hiện tại: mã 0",
+        "tests/features/verify.js :: thêm confirm( vào một cửa sổ → mã 1"
+      ],
+      [
+        "tests/e2e/ui-audit.js :: ask 1280x720: hộp nằm gọn trong khung nhìn",
+        "tests/e2e/ui-audit.js :: ask-danger 1280x720: Esc → false"
+      ],
+      [
+        "tests/e2e/ui-audit.js :: ask 844x390: nút cao ≥ 44px",
+        "tests/e2e/ui-audit.js :: ask 740x360: nút cao ≥ 44px",
+        "tests/e2e/ui-audit.js :: ask 667x375: nút cao ≥ 44px",
+        "tests/e2e/ui-audit.js :: ask 667x375: hộp nằm gọn trong khung nhìn"
+      ],
+      [
+        "tests/e2e/ui-audit.js :: ask({ danger: true }) + Enter → false",
+        "tests/e2e/ui-audit.js :: ask({}) + Enter → true",
+        "tests/e2e/ui-audit.js :: Esc → false",
+        "tests/e2e/ui-audit.js :: chạm nền → false",
+        "tests/e2e/ui-audit.js :: Tab / Shift+Tab không thoát khỏi hộp"
+      ],
+      [
+        "tests/features/inventory.js :: hủy nhanh đúng các món đã chọn",
+        "tests/features/inventory.js :: mở rộng hành trang trừ đúng lượng"
+      ],
+      [
+        "tests/features/repo.js :: main có đủ 8 nhóm commit D-01",
+        "tests/features/repo.js :: DESIGN_RULES.md mục 8 có lớp z-index 90 cho hộp xác nhận",
+        "tests/e2e/ui-audit.js :: ask 1280x720: lớp z-index 90"
+      ]
+    ]
   },
   {
     "id": "ui-bag-bulkdrop",
     "phase": 0,
     "title": "Hủy nhanh nhiều món (discardMany, chế độ chọn, hỏi bằng ask())",
     "priority": "Should",
-    "status": "todo",
+    "status": "done",
     "acceptance": [
       "bagTest đạt: discardMany hủy đúng món, bỏ qua id lệch ô, ô trùng và dữ liệu rác, chặn khi giao dịch",
-      "ảnh chế độ chọn desktop + mobile: true in 'OK no console errors'",
+      "ảnh chế độ chọn desktop + điện thoại (tests/e2e/ui-audit.js cảnh 'bag-pick') in 'OK no console errors'",
       "đã commit lên main"
     ],
     "tests": [
-      "tests/features/inventory.js"
+      "tests/features/inventory.js",
+      "tests/e2e/ui-audit.js",
+      "tests/features/repo.js"
     ],
     "files": [
       "src/server/modules/inventory/index.js",
@@ -640,22 +715,39 @@
       "ui-ask-dialog"
     ],
     "branch": "feat/bag",
-    "notes": "Đã làm trên nhánh feat/bag (fdd1297, 4b0ff52); nội dung nằm trong git index của thư mục làm việc (221 file), chưa commit main (HEAD 8fac3bb có 0 file dưới src/); đã chạy trên https://ninja.iqx.vn (triển khai từ nhánh mốc checkpoint/am-thanh). Giữ todo vì tiêu chí \"đã commit lên main\" chỉ đạt khi T0.02 xong (01-tam-nhin mục 5.2). Còn thiếu: commit main."
+    "notes": "Đã gộp main (5236e74). Ảnh: docs/shots/ui-bag-bulkdrop/.",
+    "proof": [
+      [
+        "tests/features/inventory.js :: hủy nhanh đúng các món đã chọn, bỏ qua dữ liệu rác",
+        "tests/features/inventory.js :: hủy nhanh bỏ qua ô có id không khớp",
+        "tests/features/inventory.js :: gói hủy nhanh sai kiểu không làm hỏng túi",
+        "tests/features/inventory.js :: hủy nhanh bị chặn khi đang giao dịch"
+      ],
+      [
+        "tests/e2e/ui-audit.js :: bag-pick 1280x720: hỏi bằng ask() rồi hủy đúng 2 món đã chọn",
+        "tests/e2e/ui-audit.js :: bag-pick 844x390: chế độ chọn đếm đúng 2 món"
+      ],
+      [
+        "tests/features/repo.js :: main có đủ 8 nhóm commit D-01"
+      ]
+    ]
   },
   {
     "id": "ui-bag-expand",
     "phase": 0,
     "title": "Mở rộng túi bằng lượng (INV_EXPAND 6 lần × 10 ô), túi chia trang 40 ô",
     "priority": "Should",
-    "status": "todo",
+    "status": "done",
     "acceptance": [
       "npm test gồm bagUnitTests và bagTest: invExpand trừ đúng lượng, thêm 10 ô, lần thứ 7 báo tối đa",
-      "tools/shot.js túi 100 ô ở 1280×720 và mobile: true in 'OK no console errors', nút trang ≥ 44 px trên điện thoại",
+      "tests/e2e/ui-audit.js cảnh 'bag-pages' (túi 100 ô) ở 1280×720 và 3 cỡ điện thoại in 'OK no console errors', nút trang ≥ 44 px trên điện thoại (thay tools/shot.js: cùng ảnh chụp, thêm đo kích thước)",
       "DESIGN_RULES.md mục 9 có hàng 'Hành trang' ghi INV_EXPAND và giá từng lần",
       "đã commit lên main"
     ],
     "tests": [
-      "tests/features/inventory.js"
+      "tests/features/inventory.js",
+      "tests/e2e/ui-audit.js",
+      "tests/features/repo.js"
     ],
     "files": [
       "src/shared/constants.js",
@@ -672,7 +764,25 @@
       "ops-commit-restructure"
     ],
     "branch": "feat/bag",
-    "notes": "Đã làm trên nhánh feat/bag (fdd1297, 4b0ff52); nội dung nằm trong git index của thư mục làm việc (221 file), chưa commit main (HEAD 8fac3bb có 0 file dưới src/); đã chạy trên https://ninja.iqx.vn (triển khai từ nhánh mốc checkpoint/am-thanh). Giữ todo vì tiêu chí \"đã commit lên main\" chỉ đạt khi T0.02 xong (01-tam-nhin mục 5.2). Còn thiếu: commit main; nút trang túi trên điện thoại còn bị khung cắt (câu hỏi mở H7)."
+    "notes": "Đã gộp main (5236e74, dcd9af6). Điện thoại: bộ chuyển trang ◀ n/N ▶ lên hàng tiêu đề (hàng nút dưới lưới bị cắt khi màn cao 390); màn hẹp < 720 px xếp túi lên trước trang bị. Ảnh: docs/shots/ui-bag-expand/.",
+    "proof": [
+      [
+        "tests/features/inventory.js :: mở rộng hành trang trừ đúng lượng",
+        "tests/features/inventory.js :: báo đã tối đa, không trừ lượng",
+        "tests/features/inventory.js :: số ô = gốc + bước × số lần mở rộng"
+      ],
+      [
+        "tests/e2e/ui-audit.js :: bag-pages 1280x720: túi mở rộng đủ 100 ô",
+        "tests/e2e/ui-audit.js :: bag-pages 844x390: bộ chuyển trang ◀ 3/3 ▶ trên hàng tiêu đề, nút cao ≥ 44px",
+        "tests/e2e/ui-audit.js :: bag-pages 667x375: trang 40 ô, nút chuyển trang nằm trọn trong cửa sổ"
+      ],
+      [
+        "tests/features/repo.js :: DESIGN_RULES.md mục 9 có hàng 'Hành trang' ghi INV_EXPAND"
+      ],
+      [
+        "tests/features/repo.js :: main có đủ 8 nhóm commit D-01"
+      ]
+    ]
   },
   {
     "id": "art-anim-standard",
