@@ -3,6 +3,7 @@
 // Chat các kênh (bản đồ, thế giới, nhóm, gia tộc, mật) và lệnh gõ bằng '/'
 const { clean } = require('../../core/util');
 const { find } = require('../invites');
+const { testMode } = require('../admin');
 
 class Chat {
   constructor(world) {
@@ -49,7 +50,8 @@ class Chat {
     switch (cmd.toLowerCase()) {
       case 'help':
         sys('Lệnh: /w <tên> <tin> (mật), /p <tin> (nhóm), /g <tin> (gia tộc), /a <tin> (thế giới), /online, /moi <tên> (mời nhóm), /gd <tên> (giao dịch), /td <tên> (thách đấu), /xem <tên>');
-        if (isAdmin) sys('Admin: /lv <n>, /item <id> [sl] [hiếm] [ngày], /hethan [giây], /plus <n> (cường hóa vũ khí), /thu <cấp> [thân mật] (thú cưng), /xu <n>, /luong <n>, /tp <map>, /boss, /bosshp <%>, /event tathu [boss] [map] | /event stop, /all <tin>, /kick <tên>');
+        if (isAdmin) sys('Admin: /item <id> [sl] [hiếm] [ngày], /xu <n>, /luong <n>, /tp <map>, /boss, /event tathu [boss] [map] | /event stop, /all <tin>, /kick <tên>');
+        if (isAdmin && testMode()) sys('Kiểm thử: /lv <n>, /hethan [giây], /plus <n> (cường hóa vũ khí), /thu <cấp> [thân mật] (thú cưng), /xuk <n>, /bosshp <%>, /chet, /tieunhi done|reset');
         if (isAdmin) sys('Admin: /mail <tên|all> <xu> <lượng> [vật phẩm] [sl] [ngày] (gửi thư quà), /code <MÃ> <xu> <lượng> [vật phẩm] [sl] [giờ=24] [lượt] (tạo giftcode tạm), /code (danh sách), /code xoa <MÃ>, /sukien [mã mùa|tat|auto] (ép bật/tắt lễ hội), /arena [reward|elo <điểm>] (lôi đài: trao thưởng tuần ngay, đặt điểm)');
         return;
       case 'w': return this.chat(p, { ch: 'pm', to: args[0], msg: args.slice(1).join(' ') });

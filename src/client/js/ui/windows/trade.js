@@ -14,6 +14,9 @@ export default {
     const offer = (side) => h('div', { class: 'trade-items' }, ...side.items.filter(Boolean).map((it) => itemIcon(it, { onclick: () => this.showItem(it, { from: 'view' }) })),
       ...Array.from({ length: Math.max(0, 5 - side.items.length) }, () => h('div', { class: 'slot empty' })));
     const state = (side) => [side.lock ? h('span', { class: 'badge lock' }, 'Đã khóa') : null, side.ok ? h('span', { class: 'badge ok' }, 'Đồng ý') : null];
+    // mình đưa đồ/xu mà bên kia không đặt gì: cảnh báo ngay trên nút (chỉ là chữ, server không đổi luật)
+    const gives = (side) => side.items.some(Boolean) || side.xu > 0;
+    const oneSided = gives(mine) && !gives(theirs);
     const xuIn = h('input', { type: 'number', min: 0, value: this.tradeXu || 0, class: 'in short', disabled: mine.lock });
     const pushSet = () => this.net.send('tradeSet', { slots: [...this.tradeSel], xu: +xuIn.value || 0 });
     // giữ số đang gõ: cửa sổ dựng lại mỗi khi bên kia đổi đồ, không được xóa mất số xu đang nhập
@@ -31,7 +34,8 @@ export default {
       h('div', { class: 'trade-inv' }, h('div', { class: 'muted tiny' }, 'Bấm vật phẩm để thêm/bỏ. Vật phẩm khóa (ổ khóa) và có hạn không giao dịch được; xu khóa không đưa vào giao dịch.'), inv)),
     h('div', { class: 'row' },
       h('button', { class: 'btn', disabled: mine.lock, onclick: () => this.net.send('tradeLock') }, 'Khóa'),
-      h('button', { class: 'btn primary', disabled: !mine.lock || !theirs.lock || mine.ok, onclick: () => this.net.send('tradeOk') }, 'Đồng ý'),
+      h('button', { class: `btn ${oneSided ? 'danger' : 'primary'}`, 'data-act': 'trade-ok', disabled: !mine.lock || !theirs.lock || mine.ok, onclick: () => this.net.send('tradeOk') },
+        oneSided ? 'Xác nhận (bạn không nhận gì)' : 'Xác nhận'),
       h('button', { class: 'btn danger', onclick: () => this.net.send('tradeCancel') }, 'Hủy')));
   },
 };

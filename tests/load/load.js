@@ -42,7 +42,7 @@ async function metrics() {
   fs.mkdirSync(OUT, { recursive: true });
   console.log(`Đo tải: ${N} bot, ${MIN} phút, cổng ${PORT}, ${fields.length} bãi luyện, dữ liệu ${DATA}`);
   const srv = spawn(process.execPath, [path.join(__dirname, '..', '..', 'src', 'server', 'index.js')], {
-    env: { ...process.env, PORT: String(PORT), DATA_DIR: DATA, ADMINS: users.join(','), REG_LIMIT: '0', METRICS_TOKEN: TOKEN, TATHU: '0' }, stdio: ['ignore', 'pipe', 'pipe'],
+    env: { ...process.env, PORT: String(PORT), DATA_DIR: DATA, ADMINS: users.join(','), NS_TEST: '1', REG_LIMIT: '0', METRICS_TOKEN: TOKEN, TATHU: '0' }, stdio: ['ignore', 'pipe', 'pipe'],
   });
   let log = '';
   srv.stdout.on('data', (d) => { log += d; });

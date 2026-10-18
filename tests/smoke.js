@@ -17,8 +17,8 @@ const { accountTest } = require('./features/account');
 const { questTest } = require('./features/quest');
 const { combatTest } = require('./features/combat');
 const { skillsTest } = require('./features/skills');
-const { socialTest } = require('./features/social');
-const { dailyTest } = require('./features/daily');
+const { socialTest, tradeUnitTests } = require('./features/social');
+const { dailyTest, dailyTaskTest, dailyTaskUnitTests } = require('./features/daily');
 const { endgameTest } = require('./features/endgame');
 const { bagUnitTests, bagTest, useManyTest } = require('./features/inventory');
 const { audioUnitTests, audioHttpTest } = require('./features/audio');
@@ -28,6 +28,7 @@ const { saveTest, reloadTest } = require('./features/persistence');
 const { unit: boundUnit, bot: boundBot } = require('./features/bound');
 const { balanceUnitTests, balanceBotTest } = require('./features/balance');
 const { devtoolsTest } = require('./features/devtools');
+const { adminTest } = require('./features/admin');
 
 // Kiểm thử không cần server (thế giới giả hoặc gọi thẳng công thức)
 function unitTests() {
@@ -44,6 +45,8 @@ function unitTests() {
   balanceUnitTests();
   pkUnitTests();
   repoUnitTests();
+  tradeUnitTests();
+  dailyTaskUnitTests();
 }
 
 async function main() {
@@ -59,6 +62,7 @@ async function main() {
     await skillsTest(ctx);
     await socialTest(ctx);
     await dailyTest(ctx);
+    await dailyTaskTest();
     await endgameTest(ctx);
     await passiveBookTest(ctx);
     await passiveRulesTest(ctx);
@@ -74,6 +78,7 @@ async function main() {
     await useManyTest(ctx.a);
     await audioHttpTest();
     await devtoolsTest();
+    await adminTest();
 
     await boundBot();
     await balanceBotTest(ctx);

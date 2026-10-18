@@ -4,6 +4,16 @@
 const { int } = require('../../core/util');
 const { find, invite, takeInvite } = require('../invites');
 const { canTransfer } = require('../../../shared/bound');
+const { XU_MAX } = require('../../../shared/constants');
+
+const NEAR = 250;
+// lý do không được giao dịch khi đang đấu; p.bf (chiến trường), p.cw (chiến gia tộc) là cờ của tính năng sau
+const battleBlock = (p, o) => {
+  if (p.match || o.match) return 'Không thể giao dịch trên lôi đài.';
+  if (p.bf || o.bf || p.cw || o.cw) return 'Không thể giao dịch trong chiến trường.';
+  return '';
+};
+const near = (p, o) => o.map === p.map && Math.abs(o.x - p.x) <= NEAR;
 
 class Trade {
   constructor(world) {
@@ -13,8 +23,9 @@ class Trade {
   tradeReq(p, m) {
     const o = find(this.world, m.name);
     if (!o || o === p) return p.notice('Người chơi không online.');
-    if (o.map !== p.map || Math.abs(o.x - p.x) > 250) return p.notice('Phải đứng gần nhau để giao dịch.');
-    if (p.match || o.match) return p.notice('Không thể giao dịch trên lôi đài.');
+    if (!near(p, o)) return p.notice('Phải đứng gần nhau để giao dịch.');
+    const why = battleBlock(p, o);
+    if (why) return p.notice(why);
     if (p.trade || o.trade) return p.notice('Một bên đang giao dịch.');
     if (p.lv < 5 || o.lv < 5) return p.notice('Cần cấp 5 để giao dịch.');
     invite(p, o, 'trade');
@@ -24,9 +35,10 @@ class Trade {
   tradeAccept(p, m) {
     const o = find(this.world, m.from);
     if (!o || !takeInvite(p, 'trade', m.from)) return p.notice('Lời mời đã hết hạn.');
-    if (o.map !== p.map || Math.abs(o.x - p.x) > 250) return p.notice('Phải đứng gần nhau để giao dịch.');
+    if (!near(p, o)) return p.notice('Phải đứng gần nhau để giao dịch.');
     // lời mời gửi trước khi vào trận vẫn còn hạn: kiểm tra lại lúc nhận
-    if (p.match || o.match) return p.notice('Không thể giao dịch trên lôi đài.');
+    const why = battleBlock(p, o);
+    if (why) return p.notice(why);
     if (p.trade || o.trade) return;
     p.trade = { other: o.id, slots: [], items: [], xu: 0, lock: false, ok: false };
     o.trade = { other: p.id, slots: [], items: [], xu: 0, lock: false, ok: false };
@@ -78,10 +90,17 @@ class Trade {
       return snap && it && it === snap.it && it.q === snap.q && canTransfer(it) && JSON.stringify(it.gems || null) === snap.g;
     });
     if (!same(p) || !same(o)) return this.cancelTrade(p, 'Vật phẩm đã thay đổi, giao dịch bị hủy.');
+    // khóa xong vẫn đi xa / chết / vào trận được: kiểm lại lúc chốt
+    if (!near(p, o) || p.dead || o.dead) return this.cancelTrade(p, 'Hai bên phải đứng gần nhau.');
+    const why = battleBlock(p, o);
+    if (why) return this.cancelTrade(p, why);
     const take = (pl) => pl.trade.slots.map((s) => pl.c.inv[s]);
     const a = take(p);
     const b = take(o);
     if (p.c.xu < p.trade.xu || o.c.xu < o.trade.xu) return this.cancelTrade(p, 'Không đủ xu.');
+    // không kẹp (người nhận sẽ mất phần vượt): hủy cả giao dịch, hai bên giữ nguyên
+    const over = p.c.xu - p.trade.xu + o.trade.xu > XU_MAX ? p : o.c.xu - o.trade.xu + p.trade.xu > XU_MAX ? o : null;
+    if (over) return this.cancelTrade(p, `Vượt giới hạn xu mang theo (2 tỉ) của ${over.name}.`);
     const freeA = p.freeSlots() + a.length;
     const freeB = o.freeSlots() + b.length;
     if (freeA < b.length || freeB < a.length) return this.cancelTrade(p, 'Hành trang không đủ chỗ.');

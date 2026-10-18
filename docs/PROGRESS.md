@@ -30,6 +30,13 @@ Ghi sau mỗi tính năng / mỗi lần đổi mốc ảnh. Mới nhất ở tr�
 - Ảnh: `docs/shots/ui-ask-dialog`, `ui-bag-expand`, `ui-bag-bulkdrop`, `item-use-many`, `cmb-auto-plus`.
 
 ## 2026-10-18 (tiếp)
+### GĐ0: soc-trade, quest-daily-task, ops-admin-guard
+
+- `soc-trade`: `tradeOk` hủy giao dịch khi xu một bên sau khi chuyển vượt `XU_MAX` (2e9, mới trong `src/shared/constants.js`); kiểm lại lúc chốt hai bên cùng bản đồ, cách ≤ 250 px, không ai gục, không ở lôi đài/chiến trường. `tradeReq`/`tradeAccept` chặn cờ `p.bf`/`p.cw` (tính năng sau đặt cờ). Cửa sổ giao dịch: nút "Xác nhận" (trước là "Đồng ý"), mình đưa mà bên kia không đặt gì thì thành "Xác nhận (bạn không nhận gì)" màu đỏ, có `data-act="trade-ok"`. Kiểm thử: `tradeUnitTests` (thế giới giả, quét 784 tổ hợp xu thay cho `gddwork/lab/soc/trade-cap.js` không có trong repo), bot đi xa 400 px trong `socialTest`, bước nút cảnh báo trong `test:ui`.
+- `quest-daily-task`: lệnh admin `/tieunhi done|reset`; `dailyTaskTest` (bot riêng `tieunhiqa`, cấp 80) + `dailyTaskUnitTests` (`DAILY.reward(120).exp === 46560`, khớp công thức hiện tại).
+- `ops-admin-guard`: lệnh kiểm thử (`/lv /item /hethan /plus /thu /xu /xuk /luong /tp /boss /bosshp /chet /event /tieunhi`) chỉ chạy khi `NS_TEST=1`; lệnh vận hành (`/mail /code /sukien /arena /all /kick /mobs`) luôn chạy. Mỗi lệnh admin in `[ADMIN] <tài khoản> /<lệnh> <tham số>`. Gói `register` từ chối tên có trong `ADMINS` mà chưa có tài khoản (in `[ALERT]`), trừ server `NS_TEST=1`. `tests/lib/harness.js`, `tests/features/devtools.js`, `tests/load/load.js` đặt `NS_TEST=1`; `tests/features/admin.js` chạy server riêng không `NS_TEST`. Production **không** đặt `NS_TEST`.
+
+## 2026-10-18
 
 ### Smoke test production (`npm run test:prod`)
 
