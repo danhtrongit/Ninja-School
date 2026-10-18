@@ -2,14 +2,16 @@
   "name": "ninja-school",
   "version": "1.0.0",
   "description": "Game nhập vai ninja pixel 2D online nhiều người chơi (HTML5 + Node.js WebSocket)",
-  "main": "server/index.js",
+  "main": "src/server/index.js",
   "private": true,
   "scripts": {
-    "start": "node server/index.js",
-    "dev": "node --watch server/index.js",
-    "test": "node test/smoke.js",
+    "start": "node src/server/index.js",
+    "dev": "node --watch src/server/index.js",
+    "test": "node tests/smoke.js",
     "check": "node tools/check-data.js",
-    "test:ui": "node tools/ui-multiplayer.js"
+    "test:ui": "node tests/e2e/ui-multiplayer.js",
+    "test:e2e": "node tests/e2e/e2e.js",
+    "test:perf": "node tests/e2e/perf.js"
   },
   "engines": {
     "node": ">=18"

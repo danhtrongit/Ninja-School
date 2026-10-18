@@ -113,7 +113,7 @@ curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash - && sudo apt-ge
 git clone https://github.com/danhtrongit/Ninja-School.git ~/ninja && cd ~/ninja
 npm ci --omit=dev
 sudo npm i -g pm2
-PORT=3000 DATA_DIR=$HOME/ninja-data ADMINS=tentaikhoan_admin pm2 start server/index.js --name ninja
+PORT=3000 DATA_DIR=$HOME/ninja-data ADMINS=tentaikhoan_admin pm2 start src/server/index.js --name ninja
 pm2 save && pm2 startup        # tự chạy lại khi VPS khởi động
 ```
 

@@ -3,9 +3,8 @@ WORKDIR /app
 ENV NODE_ENV=production
 COPY package.json package-lock.json* ./
 RUN npm ci --omit=dev || npm install --omit=dev
-COPY server ./server
-COPY public ./public
+COPY src ./src
 ENV PORT=3000 DATA_DIR=/data
 VOLUME ["/data"]
 EXPOSE 3000
-CMD ["node", "server/index.js"]
+CMD ["node", "src/server/index.js"]

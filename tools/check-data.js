@@ -2,15 +2,31 @@
 
 // Kiểm tra chéo dữ liệu game: mọi tham chiếu (vật phẩm, quái, bản đồ, nhiệm vụ, kỹ năng) phải hợp lệ.
 // Chạy: npm run check
-const { ITEMS, SHOPS, TIERS, TIER_NAMES, TIER_LV, TIER_COLORS, RARITY, SLOTS, FASHION_SLOTS, STAT_LABELS, GEM, GEM_TYPES, gemHoles } = require('../server/data/items');
-const { MONSTERS } = require('../server/data/monsters');
-const { MAPS, NPC_TYPES, clientMaps } = require('../server/data/maps');
-const { MAIN_QUESTS } = require('../server/data/quests');
-const { SKILLS, PASSIVE_STATS, classSkills } = require('../server/data/skills');
-const { CLASSES } = require('../server/data/classes');
-const { CHECKIN, WHEEL, TATHU, MAIL, GIFTCODES, CODE_LIMIT, SEASONS, ARENA } = require('../server/data/extras');
-const { eventMaps } = require('../server/game/event');
-const { PET, PET_SKILLS, PETS, PET_FOOD } = require('../server/data/pets');
+const { ITEMS, SHOPS, TIERS, TIER_NAMES, TIER_LV, TIER_COLORS, RARITY, SLOTS, FASHION_SLOTS, STAT_LABELS, GEM, GEM_TYPES, gemHoles } = require('../src/shared/data/items');
+const { MONSTERS } = require('../src/shared/data/monsters');
+const { MAPS, NPC_TYPES, clientMaps } = require('../src/shared/data/maps');
+const { MAIN_QUESTS } = require('../src/shared/data/quests');
+const { SKILLS, PASSIVE_STATS, classSkills } = require('../src/shared/data/skills');
+const { CLASSES } = require('../src/shared/data/classes');
+const { CHECKIN, WHEEL, TATHU, MAIL, GIFTCODES, CODE_LIMIT, SEASONS, ARENA } = require('../src/shared/data/extras');
+const { eventMaps } = require('../src/server/modules/events');
+const { PET, PET_SKILLS, PETS, PET_FOOD } = require('../src/shared/data/pets');
+
+// Đọc mã nguồn client để dò tên hình vẽ. File vào (render/icons.js) đã tách phần thân ra thư mục
+// con (render/icons/*.js) nên đọc gộp cả file lẫn thư mục đó.
+const CLIENT_JS = require('path').join(__dirname, '..', 'src', 'client', 'js');
+const PART_DIRS = { 'render/maprender.js': 'render/map', 'render/monsterart.js': 'render/monster' };
+function clientSrc(rel) {
+  const fs = require('fs');
+  const path = require('path');
+  const file = path.join(CLIENT_JS, rel);
+  const dir = path.join(CLIENT_JS, PART_DIRS[rel] || rel.replace(/\.js$/, ''));
+  let code = fs.readFileSync(file, 'utf8');
+  if (fs.existsSync(dir) && fs.statSync(dir).isDirectory()) {
+    for (const f of fs.readdirSync(dir).filter((n) => n.endsWith('.js')).sort()) code += '\n' + fs.readFileSync(path.join(dir, f), 'utf8');
+  }
+  return code;
+}
 
 const ICON_KINDS = new Set(['sword', 'blade', 'kunai', 'shuriken', 'bow', 'fan', 'hat', 'armor', 'gloves', 'pants', 'shoes', 'necklace', 'ring',
   'amulet', 'potion', 'scroll', 'book', 'stone', 'charm', 'chest', 'card', 'material', 'food', 'pet', 'xu', 'mask', 'cloak', 'costume', 'mount', 'gem', 'petfood', 'mooncake']);
@@ -43,7 +59,7 @@ if (!WHEEL.prizes.some((p) => p.fashion)) err('Vòng quay: thiếu ô thưởng 
 // Ngọc khảm: đủ 10 cấp mỗi loại, chỉ số tăng dần, chỉ số có nhãn, icon có hình theo loại, tỉ lệ ghép giảm dần
 {
   const GEM_STATS = new Set(['atk', 'hp', 'def', 'dodge', 'crit', 'lifesteal']);
-  const icSrc = require('fs').readFileSync(require('path').join(__dirname, '..', 'public', 'js', 'icons.js'), 'utf8');
+  const icSrc = clientSrc('render/icons.js');
   const gemShapes = new Set([...((icSrc.match(/const GEM_SHAPES = \{([\s\S]*?)\n\};/) || ['', ''])[1].matchAll(/^ {2}([a-z_]+):/gm))].map((m) => m[1]));
   if (GEM.rate.length !== GEM.max - 1) err(`Ngọc: GEM.rate cần ${GEM.max - 1} mốc (ghép 1→2 … ${GEM.max - 1}→${GEM.max})`);
   GEM.rate.forEach((r, i) => { if (!(r > 0 && r <= 100) || (i && r > GEM.rate[i - 1])) err(`Ngọc: tỉ lệ ghép mốc ${i + 1} (${r}%) phải trong 1-100 và giảm dần`); });
@@ -70,9 +86,9 @@ if (!WHEEL.prizes.some((p) => p.fashion)) err('Vòng quay: thiếu ô thưởng 
 // Thú cưng: mã hình có trong petart.js (PET_ART), kỹ năng hợp lệ, chỉ số có nhãn, thức ăn bán ở cửa hàng
 {
   const fs = require('fs');
-  const pa = fs.readFileSync(require('path').join(__dirname, '..', 'public', 'js', 'petart.js'), 'utf8');
+  const pa = clientSrc('render/petart.js');
   const art = new Set([...((pa.match(/export const PET_ART = \{([\s\S]*?)\n\};/) || ['', ''])[1].matchAll(/^ {2}([a-z_]+):/gm))].map((m) => m[1]));
-  const ic = fs.readFileSync(require('path').join(__dirname, '..', 'public', 'js', 'icons.js'), 'utf8');
+  const ic = clientSrc('render/icons.js');
   const foodIcons = new Set([...((ic.match(/const PETFOOD_ICONS = \{([\s\S]*?)\n\};/) || ['', ''])[1].matchAll(/^ {2}([a-z_]+):/gm))].map((m) => m[1]));
   if (!art.size) err('Không đọc được PET_ART trong petart.js');
   const looks = new Set();
@@ -172,7 +188,7 @@ if (TATHU.rewards[TATHU.rewards.length - 1].to !== 0) err('Thưởng Tà Thú: m
 {
   const fs = require('fs');
   const path = require('path');
-  const src = (f) => fs.readFileSync(path.join(__dirname, '..', 'public', 'js', f), 'utf8');
+  const src = clientSrc;
   // lấy khóa cấp 1 của một object literal "const NAME = { ... };" (đủ cho cách viết trong các file này)
   const keysOf = (code, name) => {
     const i = code.indexOf(`const ${name} = {`);
@@ -180,8 +196,8 @@ if (TATHU.rewards[TATHU.rewards.length - 1].to !== 0) err('Thưởng Tà Thú: m
     const body = code.slice(i, code.indexOf('\n};', i));
     return new Set([...body.matchAll(/^ {2}([a-z_]+):/gm)].map((m) => m[1]));
   };
-  const mr = src('maprender.js');
-  const wm = src('worldmap.js');
+  const mr = src('render/maprender.js');
+  const wm = src('ui/worldmap.js');
   const thClient = keysOf(mr, 'THEMES');
   const scClient = keysOf(mr, 'SCENES');
   const wmRegion = new Set([...(wm.match(/const REGION = \{([\s\S]*?)\};/) || ['', ''])[1].matchAll(/([a-z_]+):/g)].map((m) => m[1]));
@@ -192,8 +208,8 @@ if (TATHU.rewards[TATHU.rewards.length - 1].to !== 0) err('Thưởng Tà Thú: m
   }
   if (!thClient || !scClient) err('Không đọc được THEMES/SCENES trong maprender.js');
   // Thời trang + thú cưỡi: mã hình (look) phải có cách vẽ trong sprites.js và icon trong icons.js
-  const sp = src('sprites.js');
-  const ic = src('icons.js');
+  const sp = src('render/sprites.js');
+  const ic = src('render/icons.js');
   const LOOKS = {
     mask: [keysOf(sp, 'MASKS'), keysOf(ic, 'MASK_ICONS')],
     cloak: [keysOf(sp, 'CLOAKS'), null],
@@ -341,9 +357,9 @@ if (RARITY.length !== 5) err('RARITY phải có 5 bậc');
   }
   const fs = require('fs');
   const path = require('path');
-  const sp = fs.readFileSync(path.join(__dirname, '..', 'public', 'js', 'sprites.js'), 'utf8');
-  const mr = fs.readFileSync(path.join(__dirname, '..', 'public', 'js', 'maprender.js'), 'utf8');
-  const ic = fs.readFileSync(path.join(__dirname, '..', 'public', 'js', 'icons.js'), 'utf8');
+  const sp = clientSrc('render/sprites.js');
+  const mr = clientSrc('render/maprender.js');
+  const ic = clientSrc('render/icons.js');
   for (const t of Object.keys(NPC_TYPES)) {
     if (!new RegExp(`^ {2}${t}\\(sp(, pal)?\\) \\{`, 'm').test(sp)) err(`NPC ${t}: chưa có ngoại hình trong NPCS của sprites.js`);
     if (!new RegExp(`^ {2}${t}: \\{`, 'm').test(mr)) err(`NPC ${t}: chưa có nhà (SHOP) trong maprender.js`);

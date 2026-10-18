@@ -63,6 +63,8 @@ Kiểm thử tự động (bật server tạm và cho 2 bot chơi thử qua WebS
 npm test
 npm run check
 npm run test:ui    # giao diện 2 người chơi thật (cần Playwright, server chạy với ADMINS=duoalpha,duobravo)
+npm run test:e2e   # tìm đường, bản đồ thế giới, hệ thống mới (cần Playwright, BASE_URL + ACC là tài khoản admin)
+npm run test:perf  # đo khung hình trên bản đồ đông quái (cần Playwright, BASE_URL + ACC là tài khoản admin)
 ```
 
 Khi phát triển thêm, xem **[DESIGN_RULES.md](DESIGN_RULES.md)** (quy chuẩn đồ họa, giao diện, cân bằng) và **[CLAUDE.md](CLAUDE.md)** (quy tắc làm việc cho người và agent AI).
@@ -131,7 +133,7 @@ Bấm vào NPC để nói chuyện, bấm vào quái để chọn mục tiêu, b
 Lệnh chat: `/w tên tin` (nhắn riêng), `/p` (nhóm), `/g` (gia tộc), `/a` (thế giới), `/moi tên`, `/gd tên`, `/td tên`, `/xem tên`, `/online`, `/help`.
 Lệnh admin: `/lv n`, `/item id sl [độ hiếm] [số ngày hạn]`, `/hethan [giây]` (mọi đồ có hạn trên người hết hạn sau n giây, để thử), `/plus n` (cường hóa vũ khí), `/thu cấp [thân mật]` (cấp và thân mật thú đang mang), `/xu n`, `/luong n`, `/tp map`, `/boss`, `/bosshp %` (đặt máu boss trên bản đồ đang đứng, để thử cuồng nộ), `/event tathu [boss] [bản đồ]` (gọi Tà Thú ngay), `/event stop`, `/all tin`, `/kick tên`, `/mail <tên|all> <xu> <lượng> [vật phẩm] [sl] [ngày]` (gửi thư quà, người offline nhận khi vào game), `/code <MÃ> <xu> <lượng> [vật phẩm] [sl] [giờ=24] [lượt]` (tạo giftcode tạm), `/code` (danh sách), `/code xoa <MÃ>`, `/sukien <mã mùa|tat|auto>` (ép bật/tắt lễ hội để thử), `/arena` (xem hàng chờ lôi đài), `/arena reward` (trao thưởng lôi đài tuần ngay), `/arena elo n` (đặt điểm lôi đài của mình).
 
-Giftcode cố định, lịch lễ hội và luật/thưởng lôi đài nằm trong `server/data/extras.js` (`GIFTCODES`, `SEASONS`, `ARENA`).
+Giftcode cố định, lịch lễ hội và luật/thưởng lôi đài nằm trong `src/shared/data/extras.js` (`GIFTCODES`, `SEASONS`, `ARENA`).
 
 ### Chiêu boss và sự kiện Tà Thú
 
@@ -141,39 +143,47 @@ Giftcode cố định, lịch lễ hội và luật/thưởng lôi đài nằm t
 ## Cấu trúc mã nguồn
 
 ```
-server/
-  index.js          HTTP tĩnh + WebSocket, đăng nhập, tạo nhân vật
-  db.js             Lưu trữ JSON (ghi nguyên tử, tự lưu định kỳ)
-  data/             Dữ liệu game: phái, kỹ năng, vật phẩm, quái, bản đồ, nhiệm vụ, thú cưng
-  game/
-    world.js        Vòng lặp 20 tick/giây, vào/ra bản đồ, xếp hạng
-    map.js          Bản đồ: người chơi, quái, vật phẩm rơi, đồng bộ trạng thái
-    monster.js      AI quái & boss
-    combat.js       Kỹ năng, sát thương, ngũ hành, rơi đồ, chết/hồi sinh
-    dungeon.js      Phó bản Hang Động Thử Thách (bản sao riêng theo nhóm)
-    player.js       Nhân vật, chỉ số, túi đồ, kinh nghiệm
-    actions.js      NPC, cửa hàng, cường hóa, khảm/ghép ngọc, nhiệm vụ, thủ kho, điểm danh, vòng quay
-    social.js       Chat, nhóm, bạn bè, giao dịch, thách đấu, gia tộc, lệnh admin
-    event.js        Sự kiện Tà Thú: lịch, gọi boss, xếp hạng sát thương, trao thưởng
-    mail.js         Hộp thư hệ thống (gửi cả người offline), giftcode, chống dò mã
-    season.js       Sự kiện theo mùa: rơi vật phẩm sự kiện, đổi quà ở Sứ Giả Lễ Hội
-    arena.js        Lôi đài xếp hạng: hàng chờ, ghép cặp Elo, phòng đấu riêng, thưởng trận và thưởng tuần
-public/
-  index.html, css/style.css, css/worldmap.css
-  js/
-    main.js         Màn hình đăng nhập / chọn nhân vật, vòng lặp
-    game.js         Vật lý, dự đoán phía client, chiến đấu, tự động đánh, tìm đường, vẽ
-    sprites.js      Sprite pixel: ninja, NPC, mặt nạ, áo choàng, trang phục, thú cưỡi
-    petart.js       Thú cưng đi theo: 6 loài, hoạt ảnh chạy/bay, cache khung
-    monsterart.js   Quái và boss: 11 kiểu sprite, ngoại hình riêng theo loài
-    maprender.js    23 chủ đề bản đồ, parallax, trang trí, hạt thời tiết, ngày/đêm theo giờ Việt Nam
-    fx.js           Hiệu ứng kỹ năng, chiêu boss, rung màn hình, số sát thương
-    icons.js        Icon vật phẩm, kỹ năng, giao diện
-    pathfind.js     Tìm đường giữa các bản đồ và nhảy bục trong bản đồ
-    worldmap.js     Bản đồ thế giới dạng tranh cuộn
-    ui.js           HUD và các cửa sổ
-    sound.js        Hiệu ứng âm thanh WebAudio
-test/smoke.js       Kiểm thử tự động end-to-end
+src/
+  server/                 Node.js (CommonJS)
+    index.js              Đọc cấu hình, tạo DB + World, nối HTTP và WebSocket
+    core/                 Engine dùng chung
+      world.js            Vòng lặp 20 tick/giây, vào/ra bản đồ, xếp hạng
+      map.js, monster.js  Bản đồ (người chơi, quái, đồ rơi, đồng bộ trạng thái), AI quái & boss
+      combat.js           Kỹ năng, sát thương, ngũ hành, rơi đồ, chết/hồi sinh
+      player.js           Nhân vật, chỉ số (recalc), túi đồ, kinh nghiệm, thú cưng
+      router.js           Bảng hành động: gói { t } của máy khách → handler của module
+      modules.js          Nạp module, điểm móc (hook) giữa lõi và module, NPC theo loại
+      gateway.js          Sảnh đăng nhập / tạo nhân vật và kết nối WebSocket
+      gamedata.js         Gói 'data' (dữ liệu tĩnh gửi máy khách)
+      npc.js, util.js     nearNpc/dialog; int, clean, own
+    services/             db.js (lưu JSON nguyên tử), http.js (phục vụ src/client), reward.js (trao thưởng)
+    modules/<tên>/        Mỗi tính năng một thư mục (index.js): movement, inventory, buffs, skills, fashion,
+                          pets, npc, quest, shop, smith, gems, storage, checkin, wheel, invites, chat, admin,
+                          friends, party, pk, trade, clan, rank, dungeon, events, season, mail, arena
+  shared/                 CommonJS, server và tools dùng (máy khách nhận qua gói 'data')
+    constants.js          MAX_LEVEL, INV_SIZE, STORAGE_SIZE, HOTBAR...
+    formulas.js           expNeed, vnDay
+    data/                 classes, skills, monsters, maps, quests, extras, pets, items/ (base, equipment,
+                          consumables, pets, fashion, books, gems, shops)
+  client/                 Thư mục tĩnh (ES module, không build)
+    index.html, manifest.webmanifest, favicon.svg, fonts/ (VT323, OFL)
+    css/                  style, hud, windows, features, touch, worldmap, screens, fonts
+    js/
+      main.js             Màn hình đăng nhập / chọn nhân vật, khởi động game
+      core/               net.js (WebSocket), store.js (trạng thái + S.G), input.js, sound.js
+      game/               game.js (vật lý, dự đoán, chiến đấu, tự đánh, vẽ), pathfind.js (tìm đường)
+      render/             File vào giữ API công khai, phần thân tách trong thư mục con:
+                          sprites.js + sprites/ (ninja, NPC, thời trang, thú cưỡi), monsterart.js + monster/,
+                          maprender.js + map/ (23 chủ đề, ngày/đêm), fx.js + fx/, icons.js + icons/,
+                          petart.js (thú cưng), titleart.js (màn hình mở đầu)
+      ui/                 ui.js (HUD, khung cửa sổ, chat), dom.js (h, $), common.js, worldmap.js,
+                          windows/<cửa sổ>.js (túi đồ, kỹ năng, rèn, thư, lôi đài...)
+tests/
+  smoke.js                npm test: bộ chạy (server tạm + bot WebSocket), gọi lần lượt các phần
+  lib/                    harness.js (ok, server tạm), bot.js (bot WebSocket), helpers.js
+  features/<tính năng>.js Kiểm thử từng tính năng (công thức + kịch bản WebSocket)
+  e2e/                    Trình duyệt thật (Playwright): e2e.js, perf.js, ui-multiplayer.js
+tools/                    check-data.js (npm run check), shot.js (chụp ảnh giao diện)
 ```
 
 Server quyết định mọi kết quả (sát thương, rơi đồ, giao dịch, tiền tệ). Client chỉ gửi ý định hành động, server kiểm tra tầm đánh, hồi chiêu, chakra, tốc độ di chuyển, độ cao nhảy (không lơ lửng được trên không) và khoảng cách NPC.

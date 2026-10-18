@@ -1,0 +1,190 @@
+/* Cảm ứng và màn hình nhỏ: ghi đè cho HUD và cửa sổ (nạp sau hud.css, windows.css) */
+/* ================= CẢM ỨNG ================= */
+body.touch .mbtn::after { display: none; }
+body.touch .sbtn small { display: none; }
+body.touch .sbtn.act { display: none; }
+body.touch #hud-dpad { display: block; position: absolute; left: 0; bottom: 0; width: 236px; height: 196px; pointer-events: none; }
+body.touch .dp {
+  position: absolute; width: 64px; height: 64px; border-radius: 50%; padding: 0; pointer-events: auto; touch-action: none;
+  display: flex; align-items: center; justify-content: center; color: #fff;
+  background: radial-gradient(circle at 50% 38%, rgba(90, 50, 30, 0.75), rgba(20, 10, 6, 0.65) 75%);
+  border: 2px solid rgba(18, 8, 4, 0.85); box-shadow: inset 0 0 0 2px rgba(226, 174, 79, 0.75), 0 3px 6px rgba(0, 0, 0, 0.45);
+}
+body.touch .dp img { width: 32px; height: 32px; pointer-events: none; }
+body.touch .dp.arrow::before {
+  content: ''; width: 0; height: 0; border: 13px solid transparent; filter: drop-shadow(0 2px 0 rgba(0, 0, 0, 0.6));
+}
+body.touch .dp[data-act='left']::before { border-right: 18px solid #ffe7a0; border-left: none; margin-left: -4px; }
+body.touch .dp[data-act='right']::before { border-left: 18px solid #ffe7a0; border-right: none; margin-left: 4px; }
+body.touch .dp[data-act='jump']::before { border-bottom: 18px solid #ffe7a0; border-top: none; margin-top: -4px; }
+body.touch .dp[data-act='down']::before { border-top: 13px solid #ffe7a0; border-bottom: none; border-width: 9px; border-top-width: 13px; margin-top: 3px; }
+body.touch .dp.down { background: radial-gradient(circle at 50% 38%, rgba(240, 200, 105, 0.8), rgba(150, 90, 30, 0.7) 75%); transform: scale(0.94); }
+body.touch .dp[data-act='left'] { left: 12px; bottom: 34px; }
+body.touch .dp[data-act='right'] { left: 124px; bottom: 34px; }
+body.touch .dp[data-act='down'] { left: 78px; bottom: 2px; width: 46px; height: 46px; }
+body.touch .dp[data-act='jump'] { left: 68px; bottom: 92px; }
+body.touch .dp.small { width: 46px; height: 46px; }
+body.touch .dp[data-act='talk'] { left: 14px; bottom: 120px; }
+body.touch .dp[data-act='pick'] { left: 140px; bottom: 120px; }
+body.touch .dp[data-act='target'] { left: 186px; bottom: 76px; }
+body.touch #hud-chat { left: 50%; transform: translateX(-50%); bottom: auto; top: 8px; width: auto; max-width: 48vw; }
+body.touch #hud-chat:not(.collapsed) { width: 48vw; top: 86px; z-index: 3; background: linear-gradient(rgba(12, 7, 4, 0.78), rgba(12, 7, 4, 0.86)); }
+body.touch #hud-chat.collapsed { top: 6px; left: auto; right: 486px; transform: none; padding: 0; }
+body.touch #hud-target { top: 86px; }
+/* cảm ứng màn cao (máy tính bảng): khối tìm đường cùng hàng khung mục tiêu, dưới nút chat; có mục tiêu thì xuống dưới */
+body.touch #hud-travel { top: 86px; }
+body.touch.tg-on #hud-travel { top: 142px; }
+body.touch.tg-boss #hud-travel { top: 160px; }
+body.touch:not(.win-open) #toasts { top: 132px; }
+body.touch.travel-on:not(.win-open) #toasts { top: 134px; }
+body.touch.travel-on.tg-on:not(.win-open) #toasts { top: 190px; }
+body.touch.travel-on.tg-boss:not(.win-open) #toasts { top: 208px; }
+/* nút AUTO nằm trong cụm kỹ năng trên điện thoại */
+#hud-skills .mbtn.auto {
+  position: absolute; right: calc(var(--cx) + var(--R) + 14px); bottom: 104px; width: 54px; height: 54px; border-radius: 50%;
+  flex-direction: column; gap: 0; border-width: 2px;
+}
+#hud-skills .mbtn.auto img { width: 32px; height: 32px; margin-top: 2px; }
+#hud-skills .mbtn.auto > span { display: block; font-size: 15px; line-height: 11px; }
+body.touch #dialogs { bottom: 6px; }
+body.touch #hud-event { bottom: 6px; max-width: 300px; min-height: 44px; }
+/* điện thoại: viên nằm giữa khoảng trống từ mép phải D-pad (236px) tới bình thuốc của cụm kỹ năng, không đè nút nào */
+body.touch #hud-arena {
+  bottom: 6px; left: 240px; right: 310px; margin: 0 auto; transform: none; min-width: 0; max-width: calc(100vw - 550px); min-height: 44px;
+}
+body.touch.ev-on #hud-arena { bottom: 56px; }
+body.touch .ar-btn, body.touch .ar-join, body.touch .arr-foot .btn { min-height: 44px; }
+body.touch .ar-oinfo { display: none; }
+body.touch #arena-cd { font-size: 80px; top: 32%; }
+/* "ĐẤU!" (1 giây) hiện cùng lúc khung mục tiêu tự chọn đối thủ: điện thoại tạm ẩn khung mục tiêu cho khỏi bị chữ đè */
+body.touch.ar-go #hud-target { visibility: hidden; }
+body.touch .ev-sfx { display: none; }
+/* khung mục tiêu hẹp: lúc cuồng nộ nhãn CUỒNG NỘ thay chỗ nhãn BOSS và tên hệ (đã có huy hiệu đầu lâu) để không cắt tên boss */
+body.touch #hud-target.rage #tg-el, body.touch #hud-target.rage .tg-head::before { display: none; }
+/* cảm ứng: một nút tròn 44px, chạm để sang bộ kế tiếp */
+body.touch .hb-sets { right: 186px; bottom: 180px; padding: 0; gap: 0; border: none; background: none; box-shadow: none; }
+body.touch .hbs-lab, body.touch .hbs:not(.on) { display: none; }
+body.touch .hbs.on {
+  width: 44px; height: 44px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 22px; line-height: 16px;
+  border: 2px solid var(--ink); box-shadow: inset 0 0 0 1px #fff8da, 0 2px 0 rgba(0, 0, 0, 0.5), 0 0 8px rgba(240, 200, 105, 0.6);
+}
+body.touch .hbs.on::before { content: 'Bộ'; font-size: 13px; line-height: 12px; }
+body.touch .tv-x { min-height: 34px; }
+body.touch .tv-x::after { content: ''; position: absolute; inset: -6px -4px; }
+body.touch .qt-go { width: 28px; height: 26px; border-radius: 13px; }
+/* vùng chạm 44px cho nút nhỏ mà không làm phình bố cục */
+body.touch .qc-go::after, body.touch .hb-status .btn::after { content: ''; position: absolute; inset: -10px -4px; }
+
+/* màn hình thấp: menu thành 2 hàng phía trên, cạnh bản đồ nhỏ */
+@media (max-height: 680px) {
+  #hud-menu { bottom: auto; top: 4px; right: 222px; grid-template-columns: repeat(7, 38px); gap: 4px; }
+  .mbtn { width: 38px; height: 36px; border-radius: 7px; }
+  .mbtn img { width: 32px; height: 32px; }
+  .mbtn small { display: none; }
+  .mbtn.wide { grid-column: span 1; width: 38px; }
+  .mbtn.wide > span { display: none; }
+  .mbtn.pk img { width: 16px; height: 16px; }
+  .mbtn.pk > span { font-size: 14px; }
+  .mbtn::after { right: 50%; top: calc(100% + 6px); transform: translateX(50%); }
+  #hud-target { top: 86px; }
+  #toasts { top: 132px; }
+  #invites { top: 86px; }
+  #hud-travel { top: 86px; }
+  body.tg-on #hud-travel { top: 142px; }
+  body.tg-boss #hud-travel { top: 160px; }
+  body.travel-on:not(.win-open) #toasts { top: 134px; }
+  body.travel-on.tg-on:not(.win-open) #toasts { top: 190px; }
+  body.travel-on.tg-boss:not(.win-open) #toasts { top: 208px; }
+}
+@media (max-height: 520px) {
+  html, body { font-size: 18px; }
+  #hud-status { left: 6px; top: 4px; transform: scale(0.84); transform-origin: 0 0; }
+  #hud-buffs { left: 6px; top: 96px; }
+  #hud-buffs .buff { width: 28px; height: 28px; }
+  #hud-buffs .buff img { width: 16px; height: 16px; }
+  #hud-party { left: 6px; top: 136px; width: 150px; gap: 3px; }
+  .pm { padding: 1px 6px 2px; font-size: 15px; }
+  .pmm { display: none; }
+  #hud-map { right: 6px; top: 4px; width: 176px; }
+  .mm-head { height: 20px; }
+  #minimap { width: 160px; height: 38px; }
+  #map-info { font-size: 14px; line-height: 14px; }
+  #hud-quest { right: 6px; top: 92px; width: 176px; font-size: 15px; padding: 1px 6px 3px; }
+  .qt .qs { font-size: 14px; line-height: 14px; }
+  .qt-head { display: none; }
+  .qt .pbar { height: 8px; margin: 1px 0 0; }
+  .qt .pbar > span { display: none; }
+  #hud-menu { right: 188px; }
+  #hud #hud-skills { right: 4px; bottom: 4px; --cx: 54px; --cy: 54px; --A: 84px; --R: 126px; --s: 48px; --ps: 42px; }
+  .sbtn[data-act='s1'] { right: 152px; bottom: 0; }
+  .sbtn[data-act='s2'] { right: 154px; bottom: 48px; }
+  .sbtn[data-act='s3'] { right: 138px; bottom: 94px; }
+  .sbtn[data-act='s4'] { right: 105px; bottom: 131px; }
+  .sbtn[data-act='s5'] { right: 61px; bottom: 152px; }
+  .sbtn[data-act='s6'] { right: 12px; bottom: 155px; }
+  .sbtn .sk-img { width: 32px; height: 32px; }
+  .sbtn .cdt { font-size: 22px; }
+  .sbtn.pot.hp { right: calc(var(--cx) + var(--R) + 40px); bottom: 6px; }
+  .sbtn.pot.mp { right: calc(var(--cx) + var(--R) + 40px); bottom: 54px; }
+  .hb-sets { right: 168px; bottom: 176px; }
+  body.touch .hb-sets { right: 166px; bottom: 166px; }
+  #hud-travel { max-width: min(380px, 44vw); }
+  .hb-box { top: -4px; display: flex; flex-wrap: wrap; align-items: center; justify-content: center; column-gap: 14px; padding-top: 4px; }
+  .hb-head { order: 2; margin: 0; border: none; }
+  .hb-head .sec-title { display: none; }
+  .hb-tabs .tab { top: 0; min-width: 56px; border-radius: 7px; border-bottom: 1px solid var(--ink); padding: 3px 8px; }
+  .hb-row { order: 1; gap: 8px; padding: 4px 0 2px; }
+  .hb-status, .hb-hint { order: 3; flex-basis: 100%; }
+  .hb-slot { width: 52px; height: 52px; }
+  .hb-slot .sk-img, .hb-basic .sk-img { width: 32px; height: 32px; }
+  .hb-basic { width: 52px; height: 52px; }
+  .hb-sep { height: 36px; }
+  .hb-status { font-size: 16px; min-height: 22px; }
+  .hb-hint { font-size: 15px; }
+  .win { max-height: 96vh; border-width: 12px; border-image-width: 12px; }
+  .win-head { margin-top: -22px; }
+  .win-body { padding: 4px 6px 6px; }
+  .win-title { font-size: 23px; }
+  #chat-log { height: 96px; }
+  #hud-target.boss { width: 360px; }
+  .toast.k-map { font-size: 32px; }
+  .doll { grid-template-rows: repeat(4, 58px); }
+  .gift-day { min-height: 104px; }
+  .dialog { grid-template-columns: 72px 1fr; border-width: 12px; border-image-width: 12px; }
+  .dlg-por { width: 72px; height: 72px; padding: 4px; }
+  .dlg-por canvas { width: 62px; height: 62px; }
+  .dlg-text { max-height: 30vh; font-size: 18px; margin: 4px 0 6px; padding: 4px 8px; }
+  .logo-top { font-size: 52px; }
+  .logo-bot { font-size: 42px; }
+}
+@media (max-width: 720px) {
+  .inv-wrap, .upg-wrap, .trade-wrap, .store-wrap, .char-cols, .inspect-cols, .shop-list { grid-template-columns: 1fr; }
+  .gift-grid { grid-template-columns: repeat(4, 1fr); }
+  .trade-inv { grid-column: span 1; }
+  .class-list { grid-template-columns: repeat(3, 1fr); }
+  #hud-chat { width: 300px; }
+}
+@media (orientation: portrait) and (pointer: coarse) {
+  #rotate-hint.ingame { display: flex; }
+}
+
+/* Khi có cửa sổ mở: thông báo chuyển xuống đáy giữa để không đè tiêu đề và nội dung cửa sổ */
+body.win-open #toasts { top: auto; bottom: 14px; flex-direction: column-reverse; }
+/* điện thoại, cửa sổ Thợ Rèn/Thư/Lễ hội/Thú cưng: nút thao tác nằm sát đáy nên thông báo kết quả hiện đè lên băng tiêu đề thay vì đáy */
+body.touch.win-open:has(.win-upgrade) #toasts, body.touch.win-open:has(.win-mail) #toasts, body.touch.win-open:has(.win-event) #toasts,
+body.touch.win-open:has(.win-pet) #toasts { top: 4px; bottom: auto; flex-direction: column; }
+body.win-open .toast { max-width: min(520px, 92vw); }
+body.win-open .toast.k-map { display: none; }
+/* bảng kết quả Tà Thú đã có đủ nội dung thông báo kết liễu (vẫn còn trong khung chat): ẩn cho khỏi đè nút Đóng */
+body.evr-open .toast.k-boss, body.evr-open .toast.k-world { display: none; }
+/* Hội thoại NPC che phần phải khung chat trên màn hình vừa: ẩn chat tạm thời cho gọn */
+@media (max-width: 1499px) {
+  body.dlg-open:not(.touch) #hud-chat { opacity: 0; pointer-events: none; transition: opacity 0.15s; }
+}
+/* Tooltip menu nằm dưới lớp cửa sổ (z 20 < 50) nên bị cắt: ẩn khi có cửa sổ mở */
+body.win-open .mbtn::after { display: none; }
+/* nhãn ô trang bị: không để ô hàng dưới đè mất phần chân chữ (g, y, Q) */
+.eq-cell label { position: relative; z-index: 1; padding-bottom: 1px; }
+@media (max-height: 520px) {
+  .doll { grid-template-rows: repeat(4, 61px); }
+}

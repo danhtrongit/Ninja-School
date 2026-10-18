@@ -1,0 +1,34 @@
+'use strict';
+
+// Danh sách module tính năng. Thứ tự ở đây là thứ tự mặc định khi gọi điểm móc (móc nào cần thứ tự riêng
+// thì khai báo { order, fn }); xem core/modules.js.
+module.exports = [
+  require('./movement'),
+  require('./inventory'),
+  require('./buffs'),
+  require('./skills'),
+  require('./fashion'),
+  require('./pets'),
+  require('./npc'),
+  require('./quest'),
+  require('./shop'),
+  require('./smith'),
+  require('./gems'),
+  require('./storage'),
+  require('./checkin'),
+  require('./wheel'),
+  require('./invites'),
+  require('./chat'),
+  require('./admin'),
+  require('./friends'),
+  require('./party'),
+  require('./pk'),
+  require('./trade'),
+  require('./clan'),
+  require('./rank'),
+  require('./dungeon'),
+  require('./events'),
+  require('./season'),
+  require('./mail'),
+  require('./arena'),
+];

@@ -1,0 +1,163 @@
+/* Ninja School - giao diện: khung gỗ sơn mài, viền vàng đồng (đồ họa vẽ bằng SVG/CSS nội tuyến) */
+:root {
+  --frame-win: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='48' height='48'> <defs> <linearGradient id='a' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%23fff4c6'/><stop offset='.4' stop-color='%23e8b452'/><stop offset='1' stop-color='%237a4a12'/></linearGradient> <radialGradient id='j' cx='.35' cy='.35' r='.7'><stop offset='0' stop-color='%23ff9a7a'/><stop offset='.5' stop-color='%23c62d1a'/><stop offset='1' stop-color='%235a0d06'/></radialGradient> <g id='c'> <path d='M.5 .5h15v6h-9v9h-6z' fill='url(%23a)' stroke='%23120804'/> <path d='M2 2h12M2 2v12' stroke='%23fff8dc' stroke-opacity='.7'/> <circle cx='4.5' cy='4.5' r='2.6' fill='url(%23j)' stroke='%232a0603' stroke-width='.8'/> <circle cx='11.5' cy='3.5' r='1' fill='%235a3510'/><circle cx='3.5' cy='11.5' r='1' fill='%235a3510'/> </g> </defs> <g fill='none' shape-rendering='crispEdges'> <rect x='.5' y='.5' width='47' height='47' stroke='%23120804'/> <rect x='1.5' y='1.5' width='45' height='45' stroke='%23efc36a'/> <rect x='2.5' y='2.5' width='43' height='43' stroke='%237a4a12'/> <rect x='3.5' y='3.5' width='41' height='41' stroke='%23b4452a'/> <rect x='6' y='6' width='36' height='36' stroke='%237a2410' stroke-width='4'/> <rect x='8.5' y='8.5' width='31' height='31' stroke='%234a1309'/> <rect x='9.5' y='9.5' width='29' height='29' stroke='%237a4a12'/> <rect x='10.5' y='10.5' width='27' height='27' stroke='%23e2ae4f'/> <rect x='11.5' y='11.5' width='25' height='25' stroke='%23120804'/> <rect x='12.5' y='12.5' width='23' height='23' stroke='%23000' stroke-opacity='.4'/> <rect x='13.5' y='13.5' width='21' height='21' stroke='%23000' stroke-opacity='.18'/> </g> <use href='%23c'/><use href='%23c' transform='matrix(-1 0 0 1 48 0)'/><use href='%23c' transform='matrix(1 0 0 -1 0 48)'/><use href='%23c' transform='matrix(-1 0 0 -1 48 48)'/> </svg>");
+  --frame-hud: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24'> <defs> <linearGradient id='a' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%23fff1bf'/><stop offset='.5' stop-color='%23d9a243'/><stop offset='1' stop-color='%236d4210'/></linearGradient> <g id='c'><rect x='.5' y='.5' width='6' height='6' fill='url(%23a)' stroke='%23120804'/><rect x='2.5' y='2.5' width='2' height='2' fill='%238e2414'/></g> </defs> <g fill='none' shape-rendering='crispEdges'> <rect x='.5' y='.5' width='23' height='23' stroke='%23120804'/> <rect x='1.5' y='1.5' width='21' height='21' stroke='%23d9a548'/> <rect x='3' y='3' width='18' height='18' stroke='%235e2a14' stroke-width='2'/> <rect x='4.5' y='4.5' width='15' height='15' stroke='%239a6a2c'/> <rect x='5.5' y='5.5' width='13' height='13' stroke='%23120804' stroke-opacity='.8'/> <rect x='6.5' y='6.5' width='11' height='11' stroke='%23000' stroke-opacity='.25'/> </g> <use href='%23c'/><use href='%23c' transform='matrix(-1 0 0 1 24 0)'/><use href='%23c' transform='matrix(1 0 0 -1 0 24)'/><use href='%23c' transform='matrix(-1 0 0 -1 24 24)'/> </svg>");
+  --frame-boss: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24'> <defs> <linearGradient id='a' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%23fff1bf'/><stop offset='.5' stop-color='%23f0b43c'/><stop offset='1' stop-color='%237a3a08'/></linearGradient> <g id='c'><path d='M.5 .5h7l-2 2v3l-3 2h-2z' fill='url(%23a)' stroke='%23120804'/></g> </defs> <g fill='none' shape-rendering='crispEdges'> <rect x='.5' y='.5' width='23' height='23' stroke='%23120804'/> <rect x='1.5' y='1.5' width='21' height='21' stroke='%23ffd36a'/> <rect x='3' y='3' width='18' height='18' stroke='%23a3160c' stroke-width='2'/> <rect x='4.5' y='4.5' width='15' height='15' stroke='%23ff6a3c'/> <rect x='5.5' y='5.5' width='13' height='13' stroke='%23120804'/> <rect x='6.5' y='6.5' width='11' height='11' stroke='%23000' stroke-opacity='.3'/> </g> <use href='%23c'/><use href='%23c' transform='matrix(-1 0 0 1 24 0)'/><use href='%23c' transform='matrix(1 0 0 -1 0 24)'/><use href='%23c' transform='matrix(-1 0 0 -1 24 24)'/> </svg>");
+  --ribbon: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='72' height='36'> <defs> <linearGradient id='r' x1='0' y1='0' x2='0' y2='1'><stop offset='0' stop-color='%23ea6044'/><stop offset='.45' stop-color='%23b52a18'/><stop offset='1' stop-color='%236e140a'/></linearGradient> <linearGradient id='t' x1='0' y1='0' x2='0' y2='1'><stop offset='0' stop-color='%239a2414'/><stop offset='1' stop-color='%234a0c06'/></linearGradient> </defs> <path d='M.5 8.5h18v27h-18l6-13.5z' fill='url(%23t)' stroke='%23120804'/> <path d='M71.5 8.5h-18v27h18l-6-13.5z' fill='url(%23t)' stroke='%23120804'/> <path d='M2.5 10.5h14M55.5 10.5h14' stroke='%23e8b452' stroke-opacity='.8'/> <path d='M12.5 30.5l6 5v-5z' fill='%232a0603' stroke='%23120804'/> <path d='M59.5 30.5l-6 5v-5z' fill='%232a0603' stroke='%23120804'/> <rect x='12.5' y='.5' width='47' height='30' fill='url(%23r)' stroke='%23120804'/> <path d='M13 3.5h46M13 27.5h46' stroke='%23f0c869' shape-rendering='crispEdges'/> <path d='M13 4.5h46' stroke='%23fff' stroke-opacity='.22' shape-rendering='crispEdges'/> </svg>");
+  --ribbon-gold: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='48' height='24'> <defs><linearGradient id='g' x1='0' y1='0' x2='0' y2='1'><stop offset='0' stop-color='%236e4a22'/><stop offset='.5' stop-color='%234a2e14'/><stop offset='1' stop-color='%232a180a'/></linearGradient></defs> <path d='M.5 .5h47l-5 11.5 5 11.5h-47l5-11.5z' fill='url(%23g)' stroke='%23120804'/> <path d='M4 2.5h40M4 21.5h40' stroke='%23d9a548' shape-rendering='crispEdges'/> </svg>");
+  --grain: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'> <filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/> <feColorMatrix values='0 0 0 0 .08  0 0 0 0 .05  0 0 0 0 .02  0 0 0 -1.1 .62'/></filter> <rect width='180' height='180' filter='url(%23n)'/> </svg>");
+  --grain-light: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'> <filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.05 .6' numOctaves='3' stitchTiles='stitch'/> <feColorMatrix values='0 0 0 0 1  0 0 0 0 .85  0 0 0 0 .6  0 0 0 .9 -.42'/></filter> <rect width='160' height='160' filter='url(%23n)'/> </svg>");
+}
+
+:root {
+  --bg: #1a1226;
+  --panel: rgba(30, 18, 12, 0.93);
+  --panel2: rgba(52, 34, 22, 0.95);
+  --line: #1a0d06;
+  --ink: #120804;
+  --gold: #f0c869;
+  --gold2: #b07d33;
+  --gold3: #6d4815;
+  --lac: #8e2414;
+  --lac2: #5a140a;
+  --text: #f8eedb;
+  --muted: #c2ab8a;
+  --good: #8be28b;
+  --bad: #ff7b7b;
+  --warn: #ffb74d;
+  --hp: #e53935;
+  --mp: #1e88e5;
+  --exp: #ffc107;
+  --xu: #ffd54f;
+  --luong: #80deea;
+  --r1: #5ab4ff;
+  --r2: #ffd23c;
+  --r3: #c77dff;
+  --r4: #ff8a3c;
+  --outline: 1px 0 0 #120804, -1px 0 0 #120804, 0 1px 0 #120804, 0 -1px 0 #120804, 1px 1px 0 #120804;
+  --leather: radial-gradient(ellipse at 50% -20%, rgba(255, 190, 110, 0.13), transparent 55%), var(--grain), linear-gradient(#33211a, #1f140e);
+  --plate: linear-gradient(rgba(62, 34, 20, 0.94), rgba(30, 17, 11, 0.94));
+  --plate-line: inset 0 0 0 1px #c99a45, inset 0 0 0 2px #2a1206, inset 0 1px 0 2px rgba(255, 210, 150, 0.12);
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body {
+  margin: 0; height: 100%; overflow: hidden; background: var(--bg); color: var(--text);
+  font-family: 'VT323', 'Courier New', monospace; font-size: 20px; line-height: 1.12;
+  user-select: none; -webkit-user-select: none; touch-action: none;
+}
+canvas, img { image-rendering: pixelated; image-rendering: crisp-edges; }
+#game { position: fixed; inset: 0; display: block; z-index: 0; }
+.hidden { display: none !important; }
+button { font-family: inherit; font-size: inherit; color: inherit; cursor: pointer; }
+input, select, textarea { font-family: inherit; font-size: inherit; user-select: text; -webkit-user-select: text; }
+h2, h3 { margin: 4px 0 8px; font-weight: normal; color: var(--gold); letter-spacing: 1px; }
+.ico { width: 16px; height: 16px; vertical-align: -3px; flex: none; }
+.gold { color: var(--gold); }
+.grow { flex: 1; min-width: 0; }
+
+/* thanh cuộn kiểu gỗ */
+* { scrollbar-width: thin; scrollbar-color: #b07d33 rgba(0, 0, 0, 0.3); }
+::-webkit-scrollbar { width: 9px; height: 9px; }
+::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.35); border-radius: 5px; }
+::-webkit-scrollbar-thumb { background: linear-gradient(90deg, #e2ae4f, #8a5a1c); border: 1px solid var(--ink); border-radius: 5px; }
+
+/* ---------- Khung chung */
+.panel {
+  border: 8px solid transparent;
+  border-image: var(--frame-hud) 8 / 8px stretch;
+  background: var(--grain), linear-gradient(rgba(48, 30, 20, 0.95), rgba(26, 16, 10, 0.95));
+  padding: 6px 8px;
+}
+.btn {
+  position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 5px;
+  background: var(--grain-light), linear-gradient(#bb8a4e 0%, #925f30 47%, #74461f 53%, #5a3519 100%);
+  border: 1px solid var(--ink); border-radius: 4px;
+  box-shadow: inset 0 1px 0 rgba(255, 232, 180, 0.6), inset 0 -2px 0 rgba(30, 14, 4, 0.5), inset 1px 0 0 rgba(255, 220, 160, 0.18), inset -1px 0 0 rgba(255, 220, 160, 0.18), 0 2px 0 var(--ink), 0 3px 4px rgba(0, 0, 0, 0.35);
+  padding: 3px 12px 4px; color: #fff4dc; white-space: nowrap; line-height: 1.05;
+  text-shadow: 0 1px 0 #2a1206, 1px 0 0 #2a1206, -1px 0 0 #2a1206, 0 -1px 0 #2a1206;
+  transition: filter 0.1s;
+}
+.btn .ico { width: 16px; height: 16px; }
+.btn:hover:not(:disabled) { filter: brightness(1.15) saturate(1.05); }
+.btn:active:not(:disabled) { transform: translateY(2px); box-shadow: inset 0 1px 0 rgba(255, 232, 180, 0.4), inset 0 -1px 0 rgba(30, 14, 4, 0.5), 0 0 0 var(--ink); }
+.btn:disabled { filter: grayscale(0.75) brightness(0.72); cursor: default; }
+.btn.primary {
+  background: linear-gradient(#ffe39a 0%, #f4b744 46%, #dc8d21 54%, #b2671a 100%);
+  color: #3a1804; text-shadow: 0 1px 0 rgba(255, 244, 210, 0.7);
+  box-shadow: inset 0 1px 0 #fff8da, inset 0 -2px 0 rgba(110, 50, 0, 0.5), inset 1px 0 0 rgba(255, 250, 220, 0.4), inset -1px 0 0 rgba(255, 250, 220, 0.4), 0 2px 0 var(--ink), 0 3px 4px rgba(0, 0, 0, 0.35);
+}
+.btn.danger { background: linear-gradient(#f07a5e 0%, #c83e26 47%, #a82a16 53%, #701608 100%); }
+.btn.on { background: linear-gradient(#93eb9c 0%, #45ad57 47%, #2f8f43 53%, #1b5e2a 100%); }
+.btn.small { padding: 1px 8px 2px; font-size: 18px; }
+.btn.big { padding: 6px 18px; font-size: 24px; width: 100%; letter-spacing: 1px; }
+.tiny-btn { padding: 0 6px; font-size: 17px; }
+.x {
+  position: relative; width: 32px; height: 32px; flex: none; border-radius: 50%; padding: 0; border: 2px solid var(--ink);
+  display: inline-flex; align-items: center; justify-content: center;
+  background: radial-gradient(circle at 38% 30%, #ff9a7a, #c62d1a 50%, #6e140a 100%);
+  box-shadow: 0 0 0 2px #e8b452, 0 0 0 3px var(--ink), 0 3px 4px rgba(0, 0, 0, 0.55), inset 0 2px 0 rgba(255, 255, 255, 0.3);
+}
+.x .ico { width: 16px; height: 16px; filter: drop-shadow(1px 1px 0 rgba(0, 0, 0, 0.6)); }
+.x:hover { filter: brightness(1.2); }
+.x:active { transform: scale(0.92); }
+.in {
+  background: linear-gradient(#0d0705, #1c110b); color: var(--text); border: 1px solid var(--ink); border-radius: 3px;
+  box-shadow: 0 0 0 1px #7a5328, inset 0 2px 3px rgba(0, 0, 0, 0.6); padding: 4px 8px; outline: none; width: 100%; min-width: 0;
+}
+.in:focus { box-shadow: 0 0 0 1px var(--gold), 0 0 6px rgba(240, 200, 105, 0.55), inset 0 2px 3px rgba(0, 0, 0, 0.6); }
+.in:disabled { opacity: 0.6; }
+.in.short { width: 90px; flex: none; }
+select.in { padding: 3px 4px; }
+textarea.in { resize: vertical; }
+.row { display: flex; gap: 6px; align-items: center; margin: 4px 0; }
+.row.wrap { flex-wrap: wrap; }
+.row.between { justify-content: space-between; }
+.muted { color: var(--muted); }
+.tiny { font-size: 17px; }
+.good { color: var(--good); }
+.bad { color: var(--bad); }
+.warn { color: var(--warn); }
+.err { color: var(--bad); min-height: 22px; margin-top: 4px; }
+.xu, .xu b { color: var(--xu); }
+.luong, .luong b { color: var(--luong); }
+.tabs { display: flex; gap: 3px; margin-bottom: 8px; padding: 0 4px; border-bottom: 2px solid #b07d33; box-shadow: 0 1px 0 var(--ink); }
+.tab {
+  flex: 1; position: relative; top: 2px; background: linear-gradient(#4f3420, #2c1b10); border: 1px solid var(--ink); border-bottom: none; border-radius: 7px 7px 0 0;
+  padding: 4px 6px 3px; color: var(--muted); box-shadow: inset 0 1px 0 rgba(255, 220, 160, 0.18);
+}
+.tab:hover { color: var(--text); }
+.tab.on {
+  background: linear-gradient(#d24f30, #8e2414 70%, #6e1a0c); color: #ffe7a0; text-shadow: var(--outline);
+  box-shadow: inset 0 1px 0 rgba(255, 200, 150, 0.55), inset 0 0 0 1px rgba(240, 200, 105, 0.5); z-index: 1;
+}
+
+/* ---------- Màn hình đăng nhập */
+.screen {
+  position: fixed; inset: 0; z-index: 10; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 14px; padding: 16px; overflow-y: auto; touch-action: pan-y;
+}
+.logo { text-align: center; text-shadow: 0 4px 0 #3b1b0b, 4px 0 0 #3b1b0b, -4px 0 0 #3b1b0b, 0 -4px 0 #3b1b0b, 4px 4px 0 #3b1b0b; }
+.logo-top { font-size: 72px; color: #ffd54f; letter-spacing: 8px; line-height: 0.9; }
+.logo-bot { font-size: 60px; color: #ff7043; letter-spacing: 10px; line-height: 0.9; }
+.logo-sub { font-size: 24px; color: #fff3e0; margin-top: 6px; }
+.login-box { width: min(360px, 100%); }
+.login-box form { display: flex; flex-direction: column; gap: 8px; }
+.credit { text-shadow: 0 2px 0 #000; }
+
+.chars-box { width: min(760px, 100%); max-height: 100%; overflow-y: auto; }
+.char-list { display: flex; gap: 10px; flex-wrap: wrap; }
+.char-card {
+  width: 150px; background: var(--panel2); border: 2px solid var(--line); box-shadow: inset 0 0 0 1px var(--gold2);
+  padding: 8px; text-align: center; display: flex; flex-direction: column; gap: 4px; align-items: center;
+}
+.char-card canvas { width: 72px; height: 96px; background: rgba(0, 0, 0, 0.25); }
+.char-card.new { justify-content: center; color: var(--muted); cursor: pointer; min-height: 190px; font-size: 26px; }
+.char-card.new:hover { color: var(--gold); }
+.class-list { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; margin: 8px 0; }
+.class-card {
+  background: #241830; border: 2px solid var(--line); padding: 4px; text-align: center; cursor: pointer; display: flex; flex-direction: column; align-items: center;
+}
+.class-card canvas { width: 54px; height: 72px; }
+.class-card.on { border-color: var(--gold); box-shadow: inset 0 0 0 1px var(--gold); background: #3b2716; }
+.class-card .el { font-size: 16px; }

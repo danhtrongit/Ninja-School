@@ -10,7 +10,7 @@ Các con số dưới đây lấy từ code hiện tại. Nếu cần đổi m�
 
 1. **Phong cách**: game nhập vai ninja 2D di động kiểu Việt Nam cổ điển. Nhân vật chibi đầu to, viền tối, màu bão hòa tươi, bối cảnh làng Nhật Bản (mái ngói cong, đèn lồng, hoa anh đào), giao diện gỗ sơn mài viền vàng đồng.
 2. **Bản quyền**: mọi hình ảnh đều tự thiết kế. **Cấm** sao chép, can lại hay tải về sprite, logo, âm thanh của TeaMobi hoặc bất kỳ game nào. Tên NPC, bản đồ, kỹ năng cũng phải tự đặt.
-3. **Vẽ bằng code**: không có file ảnh hay âm thanh bên ngoài. Đồ họa dùng `fillRect`, chuỗi pixel art, canvas offscreen, CSS gradient hoặc SVG nội tuyến (`data:`). Âm thanh dùng WebAudio tổng hợp (`public/js/sound.js`).
+3. **Vẽ bằng code**: không có file ảnh hay âm thanh bên ngoài. Đồ họa dùng `fillRect`, chuỗi pixel art, canvas offscreen, CSS gradient hoặc SVG nội tuyến (`data:`). Âm thanh dùng WebAudio tổng hợp (`src/client/js/core/sound.js`).
 4. **Nhất quán hơn ấn tượng**: một chi tiết đẹp nhưng lệch phong cách chung thì phải bỏ hoặc sửa cho khớp.
 
 ---
@@ -54,18 +54,18 @@ Các con số dưới đây lấy từ code hiện tại. Nếu cần đổi m�
 | 3 | Sử thi | `#c77dff` |
 | 4 | Huyền thoại | `#ff8a3c` |
 
-- **Bậc trang bị** (12 bậc, mỗi bậc 10 cấp): Gỗ, Đồng, Sắt, Bạc, Vàng, Ngọc, Huyền, Long, Thiên, Thần, Tiên, Thánh. Màu kim loại nằm ở `TIER_METAL`, màu áo ở `TIER_OUTFIT`, màu viền ở `TIER_TRIM` trong `sprites.js`; màu icon ở `TIER_COLORS` trong `server/data/items.js`. Thêm bậc mới thì **phải** thêm màu vào cả 4 mảng.
+- **Bậc trang bị** (12 bậc, mỗi bậc 10 cấp): Gỗ, Đồng, Sắt, Bạc, Vàng, Ngọc, Huyền, Long, Thiên, Thần, Tiên, Thánh. Màu kim loại nằm ở `TIER_METAL`, màu áo ở `TIER_OUTFIT`, màu viền ở `TIER_TRIM` trong `src/client/js/render/sprites/color.js`; màu icon ở `TIER_COLORS` trong `src/shared/data/items/base.js`. Thêm bậc mới thì **phải** thêm màu vào cả 4 mảng.
 
 ---
 
-## 3. Nhân vật ninja (`public/js/sprites.js`)
+## 3. Nhân vật ninja (`src/client/js/render/sprites.js` + `sprites/`)
 
 - Chiều cao chuẩn `NINJA_H = 28`, rộng 18-20px. Đầu chiếm khoảng 40-45% chiều cao. Mắt to có điểm sáng.
 - Kiểu tóc chọn theo băm tên: nam `spiky, neat, topknot, wild`, nữ `long, bun, pony, bob`.
 - Băng trán màu hệ, có miếng kim loại màu theo bậc **nón**. Áo theo bậc **áo**, quần theo bậc **quần**, thắt lưng và khăn quàng màu hệ.
 - Vũ khí theo phái: kiếm, phi tiêu, kunai, cung, đao, quạt. Cường hóa từ +5 lấp lánh, từ +8 phát sáng, từ +11 có hào quang.
 - Số khung hoạt ảnh: `idle 4, walk 6, jump 2, attack 3, dead 1`. Nháy trắng khi trúng đòn (`flash`).
-- NPC dùng `drawNinja(..., { npcType })` với ngoại hình riêng từng loại: `elder, potion, smith, task, tele, clan, storage, dungeon, arena, event`. Thêm loại NPC mới thì phải vẽ ngoại hình mới, không dùng lại ninja thường (`npm run check` kiểm tra mỗi loại trong `NPC_TYPES` có hàm trong `NPCS` của `sprites.js` và nhà trong `SHOP` của `maprender.js`).
+- NPC dùng `drawNinja(..., { npcType })` với ngoại hình riêng từng loại: `elder, potion, smith, task, tele, clan, storage, dungeon, arena, event`. Thêm loại NPC mới thì phải vẽ ngoại hình mới, không dùng lại ninja thường (`npm run check` kiểm tra mỗi loại trong `NPC_TYPES` có hàm trong `NPCS` của `render/sprites/npc.js` và nhà trong `SHOP` của `render/map/village.js`).
   - `arena` (Võ Sư Thiết Quyền ở Đấu Trường, đăng ký lôi đài xếp hạng): võ sư vạm vỡ (`bulk`), cởi trần tay, tóc rối, khăn hachimaki trên trán, dây chéo ngực, đeo đao lớn bậc 7.
   - `event` (Sứ Giả Lễ Hội, đổi quà sự kiện theo mùa): nữ, áo dài đỏ thắm có hoa văn chấm kem và viền gấu kem, đai lưng vàng rộng thắt nơ sau lưng (`festivalObi`), tóc dài cài hoa hồng nhụy vàng, mặt nạ thỏ trắng má đỏ buộc lệch sau đầu (`gearFestival`), tay cầm đèn ông sao đỏ năm cánh trên cán tre có ruột nến vàng (`propStarLantern`). Mọi chi tiết nằm trong `NINJA_H`.
 - Mọi tổ hợp (kiểu, khung, hướng, look, palette) chỉ vẽ **một lần** vào canvas offscreen rồi dùng lại.
@@ -77,7 +77,7 @@ Các con số dưới đây lấy từ code hiện tại. Nếu cần đổi m�
   - Mọi nhãn trên đầu (tên, thanh máu, bóng chat, chữ sát thương/hồi máu/lên cấp) dùng `ninjaHeight(look)` = `NINJA_H + mountOffset(look)`. Vệt chém (`slash`) và điểm phóng (`proj`) của người cưỡi cũng nâng theo `lift`; hiệu ứng có vòng mặt đất (`burst`, `wave`, `whirl`, `aura`, `heal`) giữ ở chân thú. Đầu/mào thú cưỡi phải cách mũi mặt nạ dài (Thiên Cẩu) ít nhất 1px (cổ hạc vươn ra trước). Nhãn NPC bị đẩy lên trên tên người chơi khi chồng nhau.
   - Hiệu ứng: đang cưỡi và chạy trên mặt đất thì `fx.mountDust` mỗi ~0.09s sau vó; vừa khoác trang phục Sử thi trở lên thì `fx.costumeSparkle`, Huyền thoại thì lấp lánh lại mỗi 7-10s.
 
-### Thú cưng đi theo (`public/js/petart.js`)
+### Thú cưng đi theo (`src/client/js/render/petart.js`)
 
 - 6 mã hình (`PET_ART`): `slime, bunny, fox` chạy/nhảy dưới đất; `bat, ghost, dragon` bay (`fly` px trên mặt đất, nhấp nhô `bob`). Gửi qua `look.pet` (mã hình) và `look.pl` (cấp thú); **không** dùng id vật phẩm.
 - Khung gốc 20×18, neo giữa-đáy (x=10). Thân 10-14px, vẽ bằng elip đổ bóng 4 tông (sáng trên-trái), viền tự động `#1d1424`, mắt to có điểm sáng. Hai trạng thái: đứng (`fps[0]`) và chạy/bay (`fps[1]`), mỗi trạng thái 4 khung. Mọi khung (kể cả bản lật trái) chỉ vẽ **một lần** vào canvas offscreen.
@@ -89,7 +89,7 @@ Các con số dưới đây lấy từ code hiện tại. Nếu cần đổi m�
 
 ---
 
-## 4. Quái vật và boss (`public/js/monsterart.js`)
+## 4. Quái vật và boss (`src/client/js/render/monsterart.js` + `monster/`)
 
 - 11 kiểu sprite: `slime, bunny, mushroom, imp, flyer, humanoid, crab, golem, ghost, beast, snowman`. Quái mới **phải** dùng một kiểu có sẵn với bảng màu riêng. Chỉ thêm kiểu mới khi không kiểu nào phù hợp.
 - Bảng màu quái `pal = [chính, phụ, nhấn]`; mọi tông sáng tối đều sinh từ 3 màu này.
@@ -116,7 +116,7 @@ Các con số dưới đây lấy từ code hiện tại. Nếu cần đổi m�
 
 ---
 
-## 5. Bản đồ (`public/js/maprender.js`)
+## 5. Bản đồ (`src/client/js/render/maprender.js` + `map/`)
 
 - Mỗi bản đồ có một `theme` trong `THEMES` (bảng màu, trang trí) và `SCENES` (cảnh nền nhiều lớp). Bản đồ mới **ưu tiên dùng lại** chủ đề có sẵn: `village_fire, village_water, village_wind, grass_fire, lake, grass_wind, bamboo, beach, cave, desert, mist, snow, ice, dark_forest, lava, hell, arena, heaven, dragon_palace, abyss, sakura, ruins, crystal`.
 - 6 chủ đề riêng cho bản đồ nhánh phụ và hậu kỳ:
@@ -145,7 +145,7 @@ Các con số dưới đây lấy từ code hiện tại. Nếu cần đổi m�
 
 ---
 
-## 6. Hiệu ứng kỹ năng (`public/js/fx.js`)
+## 6. Hiệu ứng kỹ năng (`src/client/js/render/fx.js` + `fx/`)
 
 - Hiệu ứng theo `skill.fx.k`: `slash, proj, burst, wave, rain, meteor, whirl, aura, heal, dash`. Đạn (`p`): `shuriken, arrow, kunai, wind, fire, water, ice`.
 - Bảng màu theo hệ `EP`:
@@ -179,7 +179,7 @@ Các con số dưới đây lấy từ code hiện tại. Nếu cần đổi m�
 
 ---
 
-## 7. Icon (`public/js/icons.js`)
+## 7. Icon (`src/client/js/render/icons.js` + `icons/`)
 
 | Loại | Kích thước gốc | Hiển thị |
 |---|---|---|
@@ -196,7 +196,7 @@ Các con số dưới đây lấy từ code hiện tại. Nếu cần đổi m�
 
 ---
 
-## 8. Giao diện (`public/css/style.css`, `public/css/screens.css`, `public/js/ui.js`)
+## 8. Giao diện (`src/client/css/*.css`, `src/client/js/ui/ui.js`, `src/client/js/ui/windows/*.js`)
 
 - **Token màu** (`:root` trong `style.css`):
   - Nền chung: `--ink #120804`, `--text #f8eedb`, `--muted #c2ab8a`.
@@ -207,7 +207,7 @@ Các con số dưới đây lấy từ code hiện tại. Nếu cần đổi m�
 
   Không viết mã màu mới trực tiếp khi đã có token phù hợp.
 - **Khung**: cửa sổ dùng `--frame-win` với nền da thuộc `--leather`. Bảng HUD dùng `--frame-hud`, khung boss dùng `--frame-boss`, tiêu đề dùng dải lụa `--ribbon`. Màn hình mở đầu dùng các token `--sc-*` trong `screens.css`.
-- **Font**: VT323 (lưu kèm game trong `public/fonts/`, giấy phép OFL, khai báo ở `public/css/fonts.css`, không tải từ Google Fonts), cỡ chữ gốc 20px; chữ nhỏ (`.tiny`) không dưới 15px.
+- **Font**: VT323 (lưu kèm game trong `src/client/fonts/`, giấy phép OFL, khai báo ở `src/client/css/fonts.css`, không tải từ Google Fonts), cỡ chữ gốc 20px; chữ nhỏ (`.tiny`) không dưới 15px.
 - **Nút**: bấm thì lún xuống 1-2px. Nút chính (`.primary`) màu cam vàng, nút nguy hiểm (`.danger`) màu đỏ sơn mài. Nút kỹ năng **tròn**, hồi chiêu dạng quét tròn kèm số giây.
 - **Bố cục HUD cố định**:
   - Trên trái: trạng thái (avatar tròn, huy hiệu cấp, thanh HP/MP/EXP, xu và lượng).
@@ -220,7 +220,7 @@ Các con số dưới đây lấy từ code hiện tại. Nếu cần đổi m�
   - Dưới giữa (lôi đài): viên `#hud-arena` cùng kiểu biểu ngữ (huy hiệu tròn icon `arena`). Đang chờ ghép (`.queue`): "LÔI ĐÀI", thời gian chờ đếm lên, "Đang chờ ghép trận · n người chờ", nút "Hủy". Trong trận (`.prep/.fight/.end`, nền đỏ sẫm): "LÔI ĐÀI" (hoặc "GIAO HỮU"), "Chuẩn bị" / đồng hồ còn lại (dưới 30 giây đỏ nhấp nháy) / "Kết thúc", "VS tên đối thủ · Lv phái · Elo" (điện thoại ẩn phần Lv), nút đỏ "Rời" phải bấm 2 lần trong 3 giây (lần 1 đổi thành "Chắc?" nhấp nháy). Khi biểu ngữ Tà Thú đang hiện thì viên nằm ngay trên (`body.ev-on`). Ẩn khi có cửa sổ hoặc hội thoại mở. Bấm "Rời" lần 2 (hoặc trận kết thúc) thì xóa ngay thông báo cảnh báo "Bấm lần nữa để rời". Điện thoại: viên nằm giữa khoảng trống từ mép phải D-pad (`left: 240px`) tới bình thuốc của cụm kỹ năng (`right: 310px`, màn thấp ≤ 520px `right: 272px`), không bao giờ đè bình thuốc; nút Hủy/Rời cao 44px; màn ≤ 760px rút "Đang chờ ghép trận" thành "Đang chờ", ≤ 729px bỏ huy hiệu và chữ "LÔI ĐÀI" (khoảng trống chỉ còn ~155px). Đo lại ở 667×375, 740×360, 844×390 khi đổi cụm kỹ năng hay D-pad.
   - Camera trong phòng đấu canh vào điểm giữa hai đấu thủ (mình luôn cách mép khung ≥ 60), hai bên xuất phát cách giữa sàn 45px: cả hai đứng trong vùng trống giữa D-pad và cụm kỹ năng (điện thoại) / giữa khung chat và lưới menu (máy tính 1280×720), không ai nằm dưới nút HUD.
   - Đếm ngược vào trận `#arena-cd`: số 5 → 1 rồi "ĐẤU!" (1 giây) cỡ 120px (điện thoại 80px) giữa màn hình (máy tính `top: 44%`, điện thoại `top: 32%` để không đè tên nhân vật và băng tên bản đồ), viền chữ đỏ sẫm, phóng to mờ dần mỗi số, không nhận chạm. Lúc "ĐẤU!" hiện (`body.ar-go`) điện thoại tạm ẩn `#hud-target` (khung mục tiêu tự chọn đối thủ đúng lúc đó, chữ sẽ đè), hết "ĐẤU!" thì khung hiện lại. Vào trận thì dọn thông báo cũ (`#toasts`) để số không bị che.
-- **Lôi đài** (cửa sổ, `ui.js`): bảng xếp hạng có tab thứ tư "Lôi đài" (`[data-rktab=arena]`): thẻ của mình (huy hiệu, Elo cỡ lớn, nhãn "Hạng N"/"Chưa xếp hạng", thắng/thua/hòa, danh vọng, thanh "Tuần này n/3 trận"), nút "Đăng ký thi đấu" / "Hủy đăng ký" / "Đang thi đấu" / "Cần cấp 20" (`.ar-join`, điện thoại cao 44px), luật tóm tắt, top 30 (hạng, tên, Lv phái, `nT nB`, Elo), dòng thưởng tuần. Cửa sổ kết quả `arenares` tự mở sau trận (trừ khi đang giao dịch/cường hóa/mua bán): huy hiệu tròn vàng (thắng) / xám (thua) / xanh (hòa), chữ THẮNG/THUA/HÒA lớn, đối thủ, lý do (hạ gục, hết giờ kèm % sinh lực hai bên, rời trận, mất kết nối), "Điểm lôi đài trước → sau ±d" (giao hữu thì ghi không đổi điểm), xu + danh vọng nhận được, chuỗi thắng; chân: "Bảng xếp hạng", "Đấu trận mới", "Đóng" (điện thoại cao 44px). Trận không tính (`nc`) ghi "Trận không tính: chưa bên nào ra đòn" thay dòng điểm, người bỏ thấy số giây phải chờ để đăng ký lại. Lớp kết quả dùng `.arr-head.r-win/r-lose/r-draw` (**không** dùng `.win`, đã là lớp khung cửa sổ). Trong phòng đấu, tên đối thủ hiện đỏ như người đang PK; khung bản đồ nhỏ ghi "Lôi đài xếp hạng", đầu khung đỏ như khu PK.
+- **Lôi đài** (cửa sổ, `ui/windows/arena.js`, `ui/windows/rank.js`): bảng xếp hạng có tab thứ tư "Lôi đài" (`[data-rktab=arena]`): thẻ của mình (huy hiệu, Elo cỡ lớn, nhãn "Hạng N"/"Chưa xếp hạng", thắng/thua/hòa, danh vọng, thanh "Tuần này n/3 trận"), nút "Đăng ký thi đấu" / "Hủy đăng ký" / "Đang thi đấu" / "Cần cấp 20" (`.ar-join`, điện thoại cao 44px), luật tóm tắt, top 30 (hạng, tên, Lv phái, `nT nB`, Elo), dòng thưởng tuần. Cửa sổ kết quả `arenares` tự mở sau trận (trừ khi đang giao dịch/cường hóa/mua bán): huy hiệu tròn vàng (thắng) / xám (thua) / xanh (hòa), chữ THẮNG/THUA/HÒA lớn, đối thủ, lý do (hạ gục, hết giờ kèm % sinh lực hai bên, rời trận, mất kết nối), "Điểm lôi đài trước → sau ±d" (giao hữu thì ghi không đổi điểm), xu + danh vọng nhận được, chuỗi thắng; chân: "Bảng xếp hạng", "Đấu trận mới", "Đóng" (điện thoại cao 44px). Trận không tính (`nc`) ghi "Trận không tính: chưa bên nào ra đòn" thay dòng điểm, người bỏ thấy số giây phải chờ để đăng ký lại. Lớp kết quả dùng `.arr-head.r-win/r-lose/r-draw` (**không** dùng `.win`, đã là lớp khung cửa sổ). Trong phòng đấu, tên đối thủ hiện đỏ như người đang PK; khung bản đồ nhỏ ghi "Lôi đài xếp hạng", đầu khung đỏ như khu PK.
 - **Tự động và người chơi khác**: auto đánh, chiêu tự chọn mục tiêu khi bật auto và việc tự đuổi theo (`chase`) **chỉ** nhắm quái, đối thủ lôi đài đang trong trận, hoặc đối thủ thách đấu. Người chơi khác ở khu PK chỉ đánh khi tự bấm chọn và đã trong tầm (ngoài tầm thì báo "Mục tiêu ở quá xa", không tự tìm đường). Trong phòng đấu không tự uống bình thuốc.
 - **Khung mục tiêu boss**: cuồng nộ thêm lớp `.rage` (nhãn `CUỒNG NỘ`, thanh máu đỏ rực, viền đập 0.5s). Điện thoại: lúc cuồng nộ ẩn nhãn `BOSS` và tên hệ để tên boss không bị cắt. Khi boss niệm chiêu hiện thanh `#tg-cast` "Đang niệm: <tên chiêu>" chạy đầy theo thời gian niệm.
 - **Hiệu ứng xấu** (buff có khóa `bs_*` do chiêu boss): ô buff viền đỏ `.buff.debuff`, icon giao diện riêng.
@@ -240,7 +240,7 @@ Các con số dưới đây lấy từ code hiện tại. Nếu cần đổi m�
 
 ---
 
-## 9. Thiết kế nội dung và cân bằng (`server/data/*`)
+## 9. Thiết kế nội dung và cân bằng (`src/shared/data/*`)
 
 | Hạng mục | Quy chuẩn |
 |---|---|
@@ -259,7 +259,7 @@ Các con số dưới đây lấy từ code hiện tại. Nếu cần đổi m�
 | Sách kỹ năng | Tiệm Thuốc: 30 / 60 / 100 lượng (req 15 / 35 / 50), chỉ bày sách đúng phái. Boss rơi mỗi cuốn 2-3.5% (6 phái: khoảng 12-20% ra ít nhất 1 cuốn): boss dưới cấp 30 rơi sách req 15, cấp 42 rơi req 15-35, cấp 60-85 rơi req 35-50, cấp 100+ rơi req 50. Bán lại cho NPC giá `req·50` xu. Mỗi lần mua chỉ 1 cuốn (không có ô số lượng) |
 | Thời trang | 4 ô `mask, cloak, costume, mount` (`FASHION_SLOTS`), không tính vào 9 ô chiến đấu, không cường hóa, độ hiếm cố định theo `grade` (1 Tốt - 4 Huyền thoại). Chỉ số nhỏ: `expPct` ≤ 10, `hpPct` ≤ 8, `crit`/`dodge` ≤ 3, công 40-150, thủ 30-80, sinh lực 100-600. Mặt nạ 40-90 lượng, áo choàng 30-120, trang phục 50-100; món Huyền thoại (`tengu, snow, dragon, qilin`) **không bán**, chỉ ra từ rương/vòng quay |
 | Thú cưỡi | `stats.spd` 15 (ngựa, Tốt) / 20 (sói, Hiếm) / 25 (hạc, Sử thi) / 28 (hổ, Sử thi) / 35 (kỳ lân, Huyền thoại), cộng **ngoài** trần 60% tốc chạy của trang bị + nội tại, tổng tối đa 100%. Giá 50 / 120 / 250 / 400 lượng. Server nhận tốc cũ thêm 2.5s sau khi tháo/hết hạn để gói di chuyển đang bay không bị kéo lại |
-| Thú cưng | `server/data/pets.js`. Cấp 1-50, EXP cần `20·lv² + 80·lv`. Diệt quái: thú nhận `10% × (1 + thân mật/100)` EXP gốc của chủ (thân mật 100 = 20%), vẫn nhận khi chủ đã max cấp. Chỉ số lưu trên món đồ (`it.plv`, `it.pexp`, `it.love`; **không** dùng `it.exp` vì đó là hạn sử dụng); mỗi cấp +3% chỉ số cộng thẳng, +1.5% chỉ số phần trăm (`PET_PCT`), cấp 50 ≈ ×2.47 / ×1.74. `expPct` cấp 1 trong 1-25. Thân mật 0-100, bắt đầu 50, giảm 1 mỗi 10 phút mang theo; dưới 20 thú dỗi, không dùng kỹ năng. Kỹ năng: Tha Đồ (`pick`, mỗi 1.5s nhặt 1 món của chủ/không chủ trong `60 + 2·cấp` px; bỏ qua món hành trang không chứa nổi để còn nhặt xu/món khác, chỉ tính hồi chiêu khi nhặt được), Hồi Xuân (`heal`, mỗi 4s khi chủ dưới 70% sinh lực hồi `1 + 0.06·(cấp−1)`% sinh lực tối đa). Thú không cường hóa, không có lỗ khảm. Giá 20 / 40 / 70 / 120 / 160 lượng, Rồng Con chỉ rơi từ boss |
+| Thú cưng | `src/shared/data/pets.js`. Cấp 1-50, EXP cần `20·lv² + 80·lv`. Diệt quái: thú nhận `10% × (1 + thân mật/100)` EXP gốc của chủ (thân mật 100 = 20%), vẫn nhận khi chủ đã max cấp. Chỉ số lưu trên món đồ (`it.plv`, `it.pexp`, `it.love`; **không** dùng `it.exp` vì đó là hạn sử dụng); mỗi cấp +3% chỉ số cộng thẳng, +1.5% chỉ số phần trăm (`PET_PCT`), cấp 50 ≈ ×2.47 / ×1.74. `expPct` cấp 1 trong 1-25. Thân mật 0-100, bắt đầu 50, giảm 1 mỗi 10 phút mang theo; dưới 20 thú dỗi, không dùng kỹ năng. Kỹ năng: Tha Đồ (`pick`, mỗi 1.5s nhặt 1 món của chủ/không chủ trong `60 + 2·cấp` px; bỏ qua món hành trang không chứa nổi để còn nhặt xu/món khác, chỉ tính hồi chiêu khi nhặt được), Hồi Xuân (`heal`, mỗi 4s khi chủ dưới 70% sinh lực hồi `1 + 0.06·(cấp−1)`% sinh lực tối đa). Thú không cường hóa, không có lỗ khảm. Giá 20 / 40 / 70 / 120 / 160 lượng, Rồng Con chỉ rơi từ boss |
 | Thức ăn thú | Bánh Gạo Linh Thú +300 EXP +3 thân mật (600 xu), Cá Khô Ngân Lân +2.500 EXP +6 (4.000 xu), Linh Thú Đan +15.000 EXP +15 (5 lượng). Phải đang mang thú; cấp 50 và thân mật đầy thì từ chối. EXP tăng dần theo giá (`npm run check` kiểm) |
 | Hạn sử dụng | đồ từ Rương Báu (5%) và Vòng Quay (ô "Thời trang": ~1% khi quay xu, ~4.8% khi quay lượng) có hạn **7 ngày** (`it.exp`, ms). Trọng số chọn món theo grade 6/4/2/1 (Huyền thoại ~9%). Hết hạn: server dọn lúc tải nhân vật và mỗi 5 giây khi online (trên người, túi, thủ kho, đồ giữ hộ), tính lại chỉ số, báo "Hết hạn sử dụng: …". Đồ có hạn **không giao dịch được**; `tradeOk` so đúng món + số lượng đã đặt (`trade.items`), ô bị tráo sau khi đặt (dùng/tháo đồ rơi vào ô đó) thì hủy giao dịch. Màn chọn nhân vật (`lookOf`) bỏ qua món đã hết hạn lúc offline. Đồ mua bằng lượng là vĩnh viễn |
 | Hộp thư | `MAIL` trong `extras.js`: tối đa 30 thư mỗi nhân vật, thư quá 30 ngày tự xóa (kể cả còn quà), tối đa 6 món đính kèm mỗi thư (nhiều hơn thì tách thành nhiều thư "(1/2)"). Hộp đầy thì bỏ thư cũ nhất đã đọc và không còn quà; toàn thư còn quà thì không nhận thêm. Nhận quà kiểm tra đủ chỗ cho **mọi** món (tính cộng dồn), thiếu chỗ thì từ chối cả thư. Thư lưu trong dữ liệu nhân vật (`c.mail`) nên người offline vẫn nhận. Dùng cho: quà admin (`/mail`), giftcode khi túi đầy, thưởng Tà Thú khi túi đầy (hộp thư đầy quà thì mới chuyển thủ kho) |
