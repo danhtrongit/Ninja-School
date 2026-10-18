@@ -4,6 +4,9 @@ const { ITEMS, UPGRADE, makeItem } = require('../data/items');
 const { MAPS } = require('../data/maps');
 const { MONSTERS } = require('../data/monsters');
 const { MAX_LEVEL } = require('./player');
+const { PET } = require('../data/pets');
+const { MAIL } = require('../data/extras');
+const { rewardItems, rewardLabel, normCode } = require('./mail');
 
 const PARTY_MAX = 6;
 // Cấp gia tộc: góp xu → kinh nghiệm gia tộc (1 điểm / 100 xu). Mỗi cấp +5 chỗ và +1% EXP cho thành viên.
@@ -33,7 +36,7 @@ class Social {
   }
 
   handle(p, msg) {
-    const fn = this.h[msg.t];
+    const fn = typeof msg.t === 'string' && Object.prototype.hasOwnProperty.call(this.h, msg.t) ? this.h[msg.t] : null;
     if (fn) fn.call(this, p, msg);
   }
 
@@ -110,6 +113,71 @@ class Social {
     }
   }
 
+  // Phần thưởng từ tham số lệnh admin: <xu> <lượng> [vật phẩm] [sl] [ngày]. Trả về chuỗi lỗi hoặc { xu, luong, items, days }
+  adminReward(args) {
+    const r = { xu: Math.max(0, Math.min(2e9, int(args[0], 0))), luong: Math.max(0, Math.min(1e6, int(args[1], 0))), items: [], days: 0 };
+    const id = args[2];
+    if (id && id !== '-') {
+      if (!Object.prototype.hasOwnProperty.call(ITEMS, id)) return `Không có vật phẩm "${String(id).slice(0, 24)}".`;
+      const def = ITEMS[id];
+      const q = Math.max(1, Math.min(def.stack ? def.stack * MAIL.maxItems : MAIL.maxItems, int(args[3], 1)));
+      r.items.push([id, q]);
+      r.days = Math.max(0, Math.min(3650, int(args[4], 0)));
+    }
+    if (!r.xu && !r.luong && !r.items.length) return 'Phần thưởng trống.';
+    return r;
+  }
+
+  // /mail <tên|all> <xu> <lượng> [vật phẩm] [sl] [ngày]: gửi thư quà (người offline nhận khi vào game)
+  adminMail(p, args, sys) {
+    const who = String(args[0] || '');
+    if (!who) return sys('Cú pháp: /mail <tên|all> <xu> <lượng> [vật phẩm] [sl] [ngày]');
+    const r = this.adminReward(args.slice(1));
+    if (typeof r === 'string') return sys(r);
+    const M = this.world.mail;
+    const base = { from: 'Ban Quản Trị', title: 'Quà từ Ban Quản Trị', body: 'Cảm ơn ngươi đã đồng hành cùng làng Ninja. Hãy nhận quà đính kèm nhé!', xu: r.xu, luong: r.luong };
+    const items = rewardItems(r);
+    const label = rewardLabel(r, items);
+    if (who.toLowerCase() === 'all') {
+      let ok = 0;
+      let full = 0;
+      for (const c of Object.values(this.world.db.chars)) {
+        // mỗi người một bản sao món đồ (không dùng chung đối tượng)
+        if (M.sendItems(c, base, items.map((it) => JSON.parse(JSON.stringify(it))))) ok++;
+        else full++;
+      }
+      return sys(`Đã gửi thư (${label}) tới ${ok} nhân vật${full ? `, ${full} hộp thư đầy` : ''}.`);
+    }
+    const c = M.charOf(who);
+    if (!c) return sys(`Không tìm thấy nhân vật "${who.slice(0, 16)}".`);
+    if (!M.sendItems(c, base, items)) return sys(`Hộp thư của ${c.name} đã đầy quà chưa nhận.`);
+    return sys(`Đã gửi thư (${label}) tới ${c.name}${this.world.byName.has(c.name.toLowerCase()) ? '' : ' (đang offline)'}.`);
+  }
+
+  // /code <MÃ> <xu> <lượng> [vật phẩm] [sl] [giờ] [lượt]: giftcode tạm thời; /code: danh sách; /code xoa <MÃ>
+  adminCode(p, args, sys) {
+    const M = this.world.mail;
+    const now = Date.now();
+    if (!args[0]) {
+      const mc = M.adminCodes();
+      const list = Object.keys(mc).map((k) => `${k} (${rewardLabel(mc[k].reward)}; còn ${Math.ceil((mc[k].until - now) / 3600000)} giờ; đã dùng ${mc[k].used || 0}${mc[k].max ? `/${mc[k].max}` : ''})`);
+      return sys(list.length ? `Giftcode tạm: ${list.join(' | ')}` : 'Chưa có giftcode tạm. Cú pháp: /code <MÃ> <xu> <lượng> [vật phẩm] [sl] [giờ=24] [lượt]');
+    }
+    if (args[0].toLowerCase() === 'xoa') {
+      const code = normCode(args[1]);
+      return sys(M.delCode(code) ? `Đã xóa giftcode ${code}.` : 'Không có giftcode tạm này.');
+    }
+    const code = normCode(args[0]);
+    const r = this.adminReward(args.slice(1, 5));
+    if (typeof r === 'string') return sys(r);
+    const hours = Math.max(1, Math.min(24 * 90, int(args[5], 24)));
+    const max = Math.max(0, Math.min(1e6, int(args[6], 0)));
+    const def = { reward: { xu: r.xu, luong: r.luong, items: r.items }, until: now + hours * 3600000, max, used: 0, by: p.name, note: 'Quà Ban Quản Trị' };
+    const e = M.addCode(code, def);
+    if (e) return sys(e);
+    return sys(`Đã tạo giftcode ${code}: ${rewardLabel(def.reward)}; hết hạn sau ${hours} giờ${max ? `, tối đa ${max} lượt` : ''}.`);
+  }
+
   command(p, text) {
     const [cmd, ...args] = text.slice(1).split(/\s+/);
     const isAdmin = this.world.config.admins.includes(p.conn.account.toLowerCase());
@@ -117,7 +185,8 @@ class Social {
     switch (cmd.toLowerCase()) {
       case 'help':
         sys('Lệnh: /w <tên> <tin> (mật), /p <tin> (nhóm), /g <tin> (gia tộc), /a <tin> (thế giới), /online, /moi <tên> (mời nhóm), /gd <tên> (giao dịch), /td <tên> (thách đấu), /xem <tên>');
-        if (isAdmin) sys('Admin: /lv <n>, /item <id> [sl] [hiếm], /plus <n> (cường hóa vũ khí), /xu <n>, /luong <n>, /tp <map>, /boss, /all <tin>, /kick <tên>');
+        if (isAdmin) sys('Admin: /lv <n>, /item <id> [sl] [hiếm] [ngày], /hethan [giây], /plus <n> (cường hóa vũ khí), /thu <cấp> [thân mật] (thú cưng), /xu <n>, /luong <n>, /tp <map>, /boss, /bosshp <%>, /event tathu [boss] [map] | /event stop, /all <tin>, /kick <tên>');
+        if (isAdmin) sys('Admin: /mail <tên|all> <xu> <lượng> [vật phẩm] [sl] [ngày] (gửi thư quà), /code <MÃ> <xu> <lượng> [vật phẩm] [sl] [giờ=24] [lượt] (tạo giftcode tạm), /code (danh sách), /code xoa <MÃ>, /sukien [mã mùa|tat|auto] (ép bật/tắt lễ hội), /arena [reward|elo <điểm>] (lôi đài: trao thưởng tuần ngay, đặt điểm)');
         return;
       case 'w': return this.chat(p, { ch: 'pm', to: args[0], msg: args.slice(1).join(' ') });
       case 'p': return this.chat(p, { ch: 'party', msg: args.join(' ') });
@@ -150,9 +219,18 @@ class Social {
         return sys(`Cấp hiện tại: ${p.lv}`);
       }
       case 'item':
-        if (!ITEMS[args[0]]) return sys('Không có vật phẩm này.');
-        p.addItem(args[0], Math.max(1, int(args[1], 1)), int(args[2], 0));
+        if (!Object.prototype.hasOwnProperty.call(ITEMS, args[0] || '')) return sys('Không có vật phẩm này.');
+        // /item <mã> [số lượng] [độ hiếm] [số ngày hạn dùng]
+        p.addItem(args[0], Math.max(1, int(args[1], 1)), int(args[2], 0), Math.max(0, Math.min(3650, int(args[3], 0))));
         return sys('Đã thêm vật phẩm.');
+      case 'hethan': {
+        // kiểm thử: mọi món có hạn trên người hết hạn sau n giây (mặc định 2)
+        const at = Date.now() + Math.max(0, Math.min(3600, int(args[0], 2))) * 1000;
+        let k = 0;
+        for (const it of [...Object.values(p.c.equip), ...p.c.inv]) if (it && it.exp) { it.exp = at; k++; }
+        p.markInv();
+        return sys(`${k} vật phẩm sẽ hết hạn sau ${Math.round((at - Date.now()) / 1000)} giây.`);
+      }
       case 'plus': {
         const w = p.c.equip.weapon;
         if (!w) return sys('Chưa trang bị vũ khí.');
@@ -162,14 +240,55 @@ class Social {
         this.world.actions.refreshInfo(p);
         return sys(`Vũ khí +${w.p}`);
       }
+      case 'thu': {
+        // kiểm thử thú cưng: /thu <cấp> [thân mật]
+        const it = p.pet;
+        if (!it) return sys('Chưa mang thú cưng.');
+        it.plv = Math.max(1, Math.min(PET.maxLv, n || 1));
+        it.pexp = 0;
+        if (args[1] != null) it.love = Math.max(0, Math.min(PET.loveMax, int(args[1], it.love)));
+        p.recalc();
+        p.markInv();
+        this.world.actions.refreshInfo(p);
+        return sys(`Thú cưng cấp ${it.plv}, thân mật ${it.love}.`);
+      }
+      case 'mail': return this.adminMail(p, args, sys);
+      case 'sukien': return sys(this.world.season.setForce(args[0]));
+      case 'arena': return this.world.arena.admin(p, args, sys);
+      case 'code': return this.adminCode(p, args, sys);
       case 'xu': p.gainXu(n); return sys(`+${n} xu`);
       case 'luong': p.c.luong += n; p.markMe(); return sys(`+${n} lượng`);
       case 'tp':
-        if (!MAPS[args[0]]) return sys(`Bản đồ: ${Object.keys(MAPS).join(', ')}`);
+        if (!Object.prototype.hasOwnProperty.call(MAPS, args[0] || '') || MAPS[args[0]].instance) return sys(`Bản đồ: ${Object.keys(MAPS).join(', ')}`);
         return this.world.changeMap(p, args[0], null);
       case 'boss':
         for (const map of Object.values(this.world.maps)) for (const m of map.monsters.values()) if (m.boss && m.dead) m.respawnAt = 0;
         return sys('Đã gọi boss.');
+      case 'bosshp': {
+        // kiểm thử: đặt máu boss trên bản đồ hiện tại còn n% (dưới 30% thì vào cuồng nộ)
+        if (!p.map) return;
+        const pct = Math.max(1, Math.min(100, n || 100));
+        let k = 0;
+        for (const m of p.map.monsters.values()) {
+          if (!m.boss || m.dead) continue;
+          m.hp = Math.max(1, Math.round((m.maxHp * pct) / 100));
+          m.checkRage();
+          k++;
+        }
+        return sys(`Đặt máu ${k} boss còn ${pct}%.`);
+      }
+      case 'event': {
+        const ev = this.world.event;
+        const sub = (args[0] || '').toLowerCase();
+        if (sub === 'stop') {
+          if (!ev.cur) return sys('Không có sự kiện nào đang diễn ra.');
+          ev.end('timeout');
+          return sys('Đã kết thúc sự kiện.');
+        }
+        if (sub !== 'tathu') return sys('Dùng: /event tathu [boss] [bản đồ] hoặc /event stop');
+        const e = ev.start(args[1] || null, args[2] || null);
+        return sys(e || 'Đã gọi Tà Thú.');
+      }
       case 'all': return this.world.announce(args.join(' '), 'world');
       case 'kick': {
         const o = this.find(args[0]);
@@ -239,7 +358,7 @@ class Social {
 
   partyUpdate(party) {
     const members = this.partyMembers(party).map((o) => ({
-      id: o.id, name: o.name, cls: o.c.cls, lv: o.lv, hp: o.c.hp, mhp: o.s.maxHp, map: o.map ? o.map.def.name : '', leader: party.leader === o.id,
+      id: o.id, name: o.name, cls: o.c.cls, lv: o.lv, hp: o.c.hp, mhp: o.s.maxHp, map: o.map ? o.map.def.name : '', mapId: o.map ? o.map.def.id : '', leader: party.leader === o.id,
     }));
     this.partyBroadcast(party, 'party', { id: party.id, members });
   }
@@ -307,6 +426,7 @@ class Social {
     const o = this.find(m.name);
     if (!o || o === p) return p.notice('Người chơi không online.');
     if (o.map !== p.map || Math.abs(o.x - p.x) > 250) return p.notice('Phải đứng gần nhau để giao dịch.');
+    if (p.match || o.match) return p.notice('Không thể giao dịch trên lôi đài.');
     if (p.trade || o.trade) return p.notice('Một bên đang giao dịch.');
     if (p.lv < 5 || o.lv < 5) return p.notice('Cần cấp 5 để giao dịch.');
     this.invite(p, o, 'trade');
@@ -317,9 +437,11 @@ class Social {
     const o = this.find(m.from);
     if (!o || !this.takeInvite(p, 'trade', m.from)) return p.notice('Lời mời đã hết hạn.');
     if (o.map !== p.map || Math.abs(o.x - p.x) > 250) return p.notice('Phải đứng gần nhau để giao dịch.');
+    // lời mời gửi trước khi vào trận vẫn còn hạn: kiểm tra lại lúc nhận
+    if (p.match || o.match) return p.notice('Không thể giao dịch trên lôi đài.');
     if (p.trade || o.trade) return;
-    p.trade = { other: o.id, slots: [], xu: 0, lock: false, ok: false };
-    o.trade = { other: p.id, slots: [], xu: 0, lock: false, ok: false };
+    p.trade = { other: o.id, slots: [], items: [], xu: 0, lock: false, ok: false };
+    o.trade = { other: p.id, slots: [], items: [], xu: 0, lock: false, ok: false };
     this.tradeUpdate(p);
   }
 
@@ -336,9 +458,15 @@ class Social {
 
   tradeSet(p, m) {
     if (!p.trade || p.trade.lock) return;
-    const slots = [...new Set((Array.isArray(m.slots) ? m.slots : []).map((s) => int(s, -1)))]
-      .filter((s) => s >= 0 && s < p.c.inv.length && p.c.inv[s]).slice(0, 10);
+    const all = [...new Set((Array.isArray(m.slots) ? m.slots : []).map((s) => int(s, -1)))]
+      .filter((s) => s >= 0 && s < p.c.inv.length && p.c.inv[s]);
+    // vật phẩm có hạn dùng (thời trang từ rương/vòng quay) không được giao dịch
+    const slots = all.filter((s) => !p.c.inv[s].exp).slice(0, 10);
+    if (slots.length < all.length) p.notice('Vật phẩm có hạn sử dụng không thể giao dịch.', 'warn');
     p.trade.slots = slots;
+    // giữ đúng món + số lượng lúc đặt để tradeOk phát hiện bị tráo (dùng/tháo đồ vào ô đã đặt)
+    // (kèm ngọc khảm: món đổi ngọc sau khi đặt cũng coi như bị tráo)
+    p.trade.items = slots.map((s) => ({ it: p.c.inv[s], q: p.c.inv[s].q, g: JSON.stringify(p.c.inv[s].gems || null) }));
     p.trade.xu = Math.max(0, Math.min(p.c.xu, int(m.xu, 0)));
     this.tradeUpdate(p);
   }
@@ -356,10 +484,15 @@ class Social {
     p.trade.ok = true;
     if (!o.trade.ok) return this.tradeUpdate(p);
     // Thực hiện
-    const take = (pl) => pl.trade.slots.map((s) => pl.c.inv[s]).filter(Boolean);
+    const same = (pl) => pl.trade.slots.every((s, k) => {
+      const snap = (pl.trade.items || [])[k];
+      const it = pl.c.inv[s];
+      return snap && it && it === snap.it && it.q === snap.q && !it.exp && JSON.stringify(it.gems || null) === snap.g;
+    });
+    if (!same(p) || !same(o)) return this.cancelTrade(p, 'Vật phẩm đã thay đổi, giao dịch bị hủy.');
+    const take = (pl) => pl.trade.slots.map((s) => pl.c.inv[s]);
     const a = take(p);
     const b = take(o);
-    if (a.length !== p.trade.slots.length || b.length !== o.trade.slots.length) return this.cancelTrade(p, 'Vật phẩm đã thay đổi, giao dịch bị hủy.');
     if (p.c.xu < p.trade.xu || o.c.xu < o.trade.xu) return this.cancelTrade(p, 'Không đủ xu.');
     const freeA = p.freeSlots() + a.length;
     const freeB = o.freeSlots() + b.length;
@@ -401,6 +534,7 @@ class Social {
     if (!o || o === p) return p.notice('Người chơi không online.');
     if (!p.map || o.map !== p.map) return p.notice('Phải ở cùng bản đồ.');
     if (p.map.def.town) return p.notice('Không thể thách đấu trong làng.');
+    if (p.map.def.arena) return p.notice('Đang ở lôi đài.');
     if (p.duel || o.duel) return p.notice('Một bên đang thách đấu.');
     this.invite(p, o, 'duel');
     p.notice(`Đã gửi lời thách đấu tới ${o.name}.`);
@@ -409,7 +543,7 @@ class Social {
   duelAccept(p, m) {
     const o = this.find(m.from);
     if (!o || !this.takeInvite(p, 'duel', m.from)) return p.notice('Lời mời đã hết hạn.');
-    if (o.map !== p.map || p.map.def.town || o.dead || p.dead) return p.notice('Không thể bắt đầu thách đấu.');
+    if (o.map !== p.map || p.map.def.town || p.map.def.arena || p.match || o.match || o.dead || p.dead) return p.notice('Không thể bắt đầu thách đấu.');
     p.duel = o.id;
     o.duel = p.id;
     for (const [a, b] of [[p, o], [o, p]]) {

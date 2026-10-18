@@ -37,6 +37,8 @@ const o = JSON.parse(process.argv[2] || '{}');
     await page.evaluate((m) => { const hc = document.querySelector('#hud-chat'); if (hc) hc.classList.remove('collapsed'); document.querySelector('#chat-input').value = m; }, c);
     await page.focus('#chat-input'); await page.keyboard.press('Enter'); await page.waitForTimeout(450);
   }
+  // gõ lệnh xong: thu khung chat lại như người chơi điện thoại (khung chat mở che giữa màn hình)
+  if ((o.cmds || []).length) await page.evaluate(() => { if (document.activeElement) document.activeElement.blur(); if (window.ninja && window.ninja.ui.touch) document.querySelector('#hud-chat').classList.add('collapsed'); });
   await page.waitForTimeout(o.wait || 1200);
   for (const k of o.keys || []) {
     if (Array.isArray(k)) { await page.keyboard.down(k[0]); await page.waitForTimeout(k[1]); await page.keyboard.up(k[0]); }

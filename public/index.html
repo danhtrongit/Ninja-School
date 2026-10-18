@@ -15,6 +15,7 @@
   <link rel="stylesheet" href="css/fonts.css">
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="css/screens.css">
+  <link rel="stylesheet" href="css/worldmap.css">
 </head>
 <body>
   <canvas id="game"></canvas>
@@ -110,7 +111,12 @@
       <span class="tg-emblem"><img data-ui="pk" alt=""></span>
       <div class="tg-head"><span id="tg-lv"></span><b id="tg-name"></b><span id="tg-el"></span></div>
       <div id="tg-bar" class="bar hp"><b></b><i></i><span></span></div>
+      <div id="tg-cast" class="hidden"><i></i><span></span></div>
     </div>
+    <div id="hud-travel" class="hidden" role="status"></div>
+    <button id="hud-event" class="hidden" type="button"></button>
+    <div id="hud-arena" class="hidden" role="status"></div>
+    <div id="arena-cd" class="hidden" aria-live="assertive"></div>
     <div id="hud-map">
       <div class="mm-head"><b id="map-name"></b><span id="map-ping"></span></div>
       <canvas id="minimap" width="188" height="46"></canvas>

@@ -1,18 +1,56 @@
 'use strict';
 
-const { SKILLS, SKILL_MAX_LV } = require('../data/skills');
+const { SKILL_MAX_LV, skillOf } = require('../data/skills');
 const { CLASSES } = require('../data/classes');
-const { ITEMS, SHOPS, UPGRADE, GEAR_SLOTS, TIERS, sellPrice, makeItem } = require('../data/items');
-const { HOTBAR } = require('./player');
+const { ITEMS, SHOPS, UPGRADE, GEM, GEM_TYPES, GEAR_SLOTS, SLOTS, TIERS, FASHION_DAYS, sellPrice, makeItem, rollFashion, gemId, gemHoles, gemDef } = require('../data/items');
+const { HOTBAR, HOTBAR_SETS } = require('./player');
 const { MAPS, GROUND, VILLAGES, NPC_TYPES } = require('../data/maps');
 const { MONSTERS } = require('../data/monsters');
 const { MAIN_QUESTS, DAILY } = require('../data/quests');
 const { CHECKIN, WHEEL } = require('../data/extras');
 const { DAILY_RUNS, MIN_LV, WAVES } = require('./dungeon');
+const { PET } = require('../data/pets');
+const { ARENA } = require('../data/extras');
 
 const NPC_RANGE = 130;
 const vnDay = (offset = 0) => new Date(Date.now() + 7 * 3600 * 1000 + offset * 86400000).toISOString().slice(0, 10);
 const int = (v, d = 0) => (Number.isFinite(+v) ? Math.floor(+v) : d);
+
+// Vật lý nhảy của máy khách (khớp JUMP/JUMP2/GRAV trong public/js/game.js): server tự kiểm độ cao,
+// không tin y do máy khách gửi (lơ lửng trên không sẽ né được chiêu boss đánh mặt đất)
+const JUMP = 378;
+const JUMP2 = 330;
+const GRAV = 1000;
+// nhảy đôi từ bục cao nhất chạm đất sau ~1.7s; cộng thêm phần trễ mạng
+const AIR_MAX = 2.4;
+// gói tin đến sớm/muộn so với lúc máy khách thật sự nhảy
+const AIR_SLACK = 0.3;
+
+// Độ cao cao nhất (px, so với chỗ cất nhảy) có thể đạt sau t giây: nhảy rồi nhảy đôi đúng lúc tối ưu
+function jumpReach(t) {
+  if (t <= 0) return 0;
+  const t1 = Math.max(0, Math.min(t, (JUMP - JUMP2) / (2 * GRAV) + t / 2));
+  const t2 = t - t1;
+  return JUMP * t1 - (GRAV / 2) * t1 * t1 + JUMP2 * t2 - (GRAV / 2) * t2 * t2;
+}
+// Cao nhất trong khoảng [t - AIR_SLACK, t + AIR_SLACK] (hàm chỉ có một đỉnh nên lấy mẫu là đủ)
+function jumpReachNear(t) {
+  let best = -Infinity;
+  for (let k = -3; k <= 3; k++) best = Math.max(best, jumpReach(Math.max(0, t + (k * AIR_SLACK) / 3)));
+  return best;
+}
+// Chân đang đứng trên mặt đất hoặc một bục (máy khách hạ chân đúng bằng y của bục)
+function onSurface(def, x, y) {
+  if (y >= GROUND - 1) return true;
+  for (const [px, py, pw] of def.platforms || []) if (x >= px - 6 && x <= px + pw + 6 && Math.abs(y - py) <= 1.5) return true;
+  return false;
+}
+// Bục gần nhất ngay dưới chân (không có thì mặt đất)
+function surfaceBelow(def, x, y) {
+  let best = GROUND;
+  for (const [px, py, pw] of def.platforms || []) if (x >= px - 2 && x <= px + pw + 2 && py >= y - 1 && py < best) best = py;
+  return best;
+}
 
 // Bản đồ nơi mỗi loại quái xuất hiện (để chỉ dẫn nhiệm vụ)
 const MONSTER_MAP = {};
@@ -28,14 +66,23 @@ class Actions {
       move: this.move, portal: this.portal, skill: this.skill, pickup: this.pickup,
       useItem: this.useItem, equip: this.equip, unequip: this.unequip, discard: this.discard, sortInv: this.sortInv,
       npc: this.npc, npcAct: this.npcAct, buy: this.buy, sell: this.sell, upgrade: this.upgrade,
-      addStat: this.addStat, resetStats: this.resetStats, learnSkill: this.learnSkill, hotbar: this.hotbar,
+      addStat: this.addStat, resetStats: this.resetStats, learnSkill: this.learnSkill, hotbar: this.hotbar, hotbarSet: this.hotbarSet,
       revive: this.revive, pk: this.pk, rank: this.rank, ping: this.ping, inspect: this.inspect,
       storePut: this.storePut, storeTake: this.storeTake, checkin: this.checkin, spin: this.spin,
+      gemPut: this.gemPut, gemTake: this.gemTake, gemMerge: this.gemMerge,
+      mailList: (p) => this.world.mail.list(p), mailRead: (p, m) => this.world.mail.read(p, m), mailClaim: (p, m) => this.world.mail.claim(p, m),
+      mailClaimAll: (p) => this.world.mail.claimAll(p), mailDel: (p, m) => this.world.mail.del(p, m), mailDelRead: (p) => this.world.mail.delRead(p),
+      giftcode: (p, m) => this.world.mail.redeem(p, m),
+      seasonEx: (p, m) => this.world.season.exchange(p, m, this.nearNpc(p, m.npc, 'event')),
+      arenaJoin: (p) => this.world.arena.join(p),
+      arenaCancel: (p) => this.world.arena.cancel(p, 'Đã hủy đăng ký lôi đài.'),
+      arenaLeave: (p) => (p.match ? this.world.arena.leave(p) : this.world.arena.sendState(p)),
     };
   }
 
   handle(p, msg) {
-    const fn = this.h[msg.t];
+    // Chỉ nhận khóa riêng của bảng (msg.t = 'constructor', '__proto__'... không gọi hàm của Object)
+    const fn = typeof msg.t === 'string' && Object.prototype.hasOwnProperty.call(this.h, msg.t) ? this.h[msg.t] : null;
     if (fn) return fn.call(this, p, msg);
     return this.world.social.handle(p, msg);
   }
@@ -55,14 +102,35 @@ class Actions {
     p.lastMoveAt = now;
     const def = p.map.def;
     const nx = Math.max(4, Math.min(def.w - 4, x));
-    const ny = Math.max(0, Math.min(GROUND, y));
-    const maxD = 110 * (1 + p.s.spd / 100) * 1.6 * dt + 30;
+    let ny = Math.max(0, Math.min(GROUND, y));
+    // tốc chạy gồm cả thú cưỡi (p.s.spd); vừa tháo thú cưỡi thì vẫn nhận tốc cũ thêm 2.5 giây
+    const maxD = 110 * (1 + p.moveSpd(now) / 100) * 1.6 * dt + 30;
     if (now > p.moveGrace && Math.abs(nx - p.x) > maxD) {
       p.send('pos', { x: Math.round(p.x), y: Math.round(p.y) });
       return;
     }
+    let fix = false;
+    if (!onSurface(def, nx, ny)) {
+      if (!p.airAt || now <= p.moveGrace) {
+        // vừa rời chỗ đứng (hoặc vừa được server đặt lại vị trí): tính cú nhảy từ chỗ đứng cuối
+        if (now <= p.moveGrace) p.baseY = ny;
+        p.airAt = now;
+      }
+      const t = (now - p.airAt) / 1000;
+      const lim = p.baseY - jumpReachNear(t) - 16;
+      if (ny < lim || t > AIR_MAX) {
+        const floor = surfaceBelow(def, nx, ny);
+        ny = t > AIR_MAX ? floor : Math.min(floor, lim);
+        fix = true;
+      }
+    }
+    if (onSurface(def, nx, ny)) {
+      p.airAt = 0;
+      p.baseY = ny;
+    }
     p.x = nx;
     p.y = ny;
+    if (fix) p.send('pos', { x: Math.round(nx), y: Math.round(ny) });
     p.dir = m.dir === -1 ? -1 : 1;
     p.st = int(m.st) & 7;
   }
@@ -111,6 +179,8 @@ class Actions {
     const now = Date.now();
     if (def.type === 'equip') return this.equip(p, m);
     if (p.dead) return;
+    if (p.map && p.map.def.arena) return p.notice('Lôi đài không cho dùng vật phẩm (bình thuốc, cuộn, đồ ăn).', 'warn');
+    if (def.type === 'book') return this.readBook(p, slot, def);
     if (def.lv > p.lv) return p.notice(`Cần đạt cấp ${def.lv}.`, 'warn');
     const e = def.effect || {};
     if (def.type === 'potion') {
@@ -138,6 +208,7 @@ class Actions {
         return;
       }
     }
+    if (def.type === 'petfood') return this.feedPet(p, slot, def, now);
     if (def.type === 'food') {
       p.c.buffs[e.buff] = Math.max(now, p.c.buffs[e.buff] || 0) + e.dur;
       p.removeAt(slot, 1);
@@ -150,6 +221,43 @@ class Actions {
       p.removeAt(slot, 1);
       this.openChest(p);
     }
+  }
+
+  // Cho thú cưng đang mang theo ăn: +EXP thú, +thân mật. Thú đã tối đa cả cấp lẫn thân mật thì không cho ăn
+  feedPet(p, slot, def, now) {
+    const it = p.pet;
+    if (!it) return p.notice('Hãy mang thú cưng theo trước khi cho ăn.', 'warn');
+    if (now - p.lastFeed < PET.feedCd) return;
+    const e = def.effect || {};
+    const maxLv = it.plv >= PET.maxLv;
+    if (maxLv && it.love >= PET.loveMax) return p.notice(`${ITEMS[it.id].name} đã no nê, cấp và thân mật đều tối đa.`);
+    p.lastFeed = now;
+    p.removeAt(slot, 1);
+    const love0 = it.love;
+    it.love = Math.min(PET.loveMax, it.love + (e.love || 0));
+    const got = maxLv ? 0 : p.petAddExp(e.petExp || 0);
+    p.markPet();
+    this.world.db.dirty = true;
+    if (p.map) p.map.broadcast('petAct', { id: p.id, k: 'feed' });
+    const parts = [];
+    if (got) parts.push(`+${got.toLocaleString('vi-VN')} EXP`);
+    if (it.love > love0) parts.push(`+${it.love - love0} thân mật`);
+    p.notice(`${ITEMS[it.id].name} ăn ${def.name}: ${parts.join(', ') || 'đã no'}.`, 'reward');
+  }
+
+  // Đọc sách: học cấp 1 kỹ năng nội tại (cấp sau nâng bằng điểm kỹ năng)
+  readBook(p, slot, def) {
+    const sid = def.skill;
+    const sk = skillOf(sid);
+    if (!sk || sk.type !== 'passive') return;
+    if (sk.cls !== p.c.cls) return p.notice(`Chỉ phái ${CLASSES[sk.cls].name} mới đọc được sách này.`, 'warn');
+    if (p.lv < sk.req) return p.notice(`Cần đạt cấp ${sk.req}.`, 'warn');
+    if ((p.c.skills[sid] || 0) > 0) return p.notice(`Đã học ${sk.name} rồi. Dùng điểm kỹ năng để nâng cấp.`);
+    if (p.trade) return p.notice('Đang giao dịch.', 'warn');
+    p.removeAt(slot, 1);
+    p.c.skills[sid] = 1;
+    p.recalc();
+    p.notice(`Đã lĩnh hội kỹ năng nội tại ${sk.name}!`, 'reward');
   }
 
   openChest(p) {
@@ -171,9 +279,11 @@ class Actions {
       const rar = Math.random() < 0.1 ? 3 : Math.random() < 0.4 ? 2 : 1;
       p.addItem(id, 1, rar);
       p.notice(`Mở rương nhận ${ITEMS[id].name}!`, 'reward');
-    } else if (r < 0.92) {
+    } else if (r < 0.88) {
       p.addItem('exp2', 1);
       p.notice('Mở rương nhận Bí Kíp Nhân Đôi!', 'reward');
+    } else if (r < 0.93) {
+      this.giveFashion(p, 'Mở rương');
     } else {
       const l = 2 + Math.floor(Math.random() * 8);
       p.c.luong += l;
@@ -182,12 +292,24 @@ class Actions {
     }
   }
 
+  // Thời trang ngẫu nhiên hạn FASHION_DAYS ngày (rương, vòng quay); món hiếm nhất báo toàn máy chủ.
+  // from rỗng: không báo riêng (vòng quay hiện kết quả sau khi quay xong)
+  giveFashion(p, from) {
+    const id = rollFashion();
+    const def = ITEMS[id];
+    if (!p.addItem(id, 1, 0, FASHION_DAYS)) return null;
+    if (from) p.notice(`${from} nhận ${def.name} (${FASHION_DAYS} ngày)!`, 'reward');
+    if (def.grade >= 4) this.world.announce(`${p.name} nhận được ${def.name} (${FASHION_DAYS} ngày)!`, 'world');
+    return def;
+  }
+
   equip(p, m) {
     const slot = int(m.slot, -1);
     const it = p.c.inv[slot];
     if (!it) return;
     const def = ITEMS[it.id];
     if (def.type !== 'equip') return;
+    if (it.exp && it.exp <= Date.now()) return p.notice('Vật phẩm đã hết hạn sử dụng.', 'warn');
     if (def.lv > p.lv) return p.notice(`Cần đạt cấp ${def.lv} để sử dụng.`, 'warn');
     if (def.cls && def.cls !== p.c.cls) return p.notice(`Chỉ phái ${CLASSES[def.cls].name} mới dùng được.`, 'warn');
     if (p.trade) return p.notice('Đang giao dịch.', 'warn');
@@ -201,6 +323,8 @@ class Actions {
 
   unequip(p, m) {
     const s = String(m.slot);
+    // chỉ nhận tên ô có thật (tránh '__proto__', 'constructor' trỏ vào Object.prototype)
+    if (!SLOTS.includes(s) || !Object.prototype.hasOwnProperty.call(p.c.equip, s)) return;
     const it = p.c.equip[s];
     if (!it) return;
     const i = p.c.inv.indexOf(null);
@@ -225,7 +349,9 @@ class Actions {
 
   sortInv(p) {
     if (p.trade) return;
-    const order = { equip: 0, potion: 1, scroll: 2, stone: 3, chest: 4, misc: 5, quest: 6 };
+    const order = { equip: 0, potion: 1, food: 2, petfood: 3, scroll: 4, book: 5, stone: 6, gem: 7, chest: 8, event: 9, misc: 10, quest: 11 };
+    // loại chưa có trong bảng xếp cuối (tránh NaN làm phép so sánh không nhất quán)
+    const rank = (t) => (Object.prototype.hasOwnProperty.call(order, t) ? order[t] : 99);
     const items = p.c.inv.filter(Boolean);
     // gộp các chồng
     const merged = [];
@@ -245,7 +371,7 @@ class Actions {
     merged.sort((a, b) => {
       const da = ITEMS[a.id];
       const db = ITEMS[b.id];
-      return (order[da.type] - order[db.type]) || (da.slot || '').localeCompare(db.slot || '') || (db.tier || 0) - (da.tier || 0) || a.id.localeCompare(b.id);
+      return (rank(da.type) - rank(db.type)) || (da.slot || '').localeCompare(db.slot || '') || (db.tier || 0) - (da.tier || 0) || a.id.localeCompare(b.id);
     });
     p.c.inv = p.c.inv.map((_, i) => merged[i] || null);
     p.markInv();
@@ -271,16 +397,45 @@ class Actions {
       case 'elder': return this.elderDialog(p, n);
       case 'potion': return this.openShop(p, n, 'potion');
       case 'smith':
-        return this.dialog(p, n, 'Ta có thể rèn vũ khí, trang bị và cường hóa chúng mạnh hơn. Ngươi cần gì?', [
-          { a: 'shop', label: 'Mua trang bị' }, { a: 'upgrade', label: 'Cường hóa trang bị' }, { a: 'sellui', label: 'Bán vật phẩm' },
+        return this.dialog(p, n, 'Ta có thể rèn vũ khí, trang bị, cường hóa và khảm ngọc cho chúng. Ngươi cần gì?', [
+          { a: 'shop', label: 'Mua trang bị' }, { a: 'upgrade', label: 'Cường hóa trang bị' }, { a: 'gem', label: 'Khảm & ghép ngọc' }, { a: 'sellui', label: 'Bán vật phẩm' },
         ]);
       case 'task': return this.taskDialog(p, n);
       case 'tele': return this.teleDialog(p, n);
       case 'clan': return this.clanDialog(p, n);
       case 'storage': return p.send('storage', { npc: n.id, items: p.c.storage });
       case 'dungeon': return this.dungeonDialog(p, n);
+      case 'event': return this.eventDialog(p, n);
+      case 'arena': return this.arenaDialog(p, n);
       default:
     }
+  }
+
+  // Võ Sư Lôi Đài: thành tích, đăng ký / hủy hàng chờ, xem bảng xếp hạng
+  arenaDialog(p, n) {
+    const A = this.world.arena;
+    const me = A.myRank(p);
+    const fmtN = (v) => v.toLocaleString('vi-VN');
+    const text = `Lôi đài xếp hạng: 1 đấu 1, trận ${Math.round(ARENA.dur / 60000)} phút. Vào trận sinh lực, chakra hồi đầy; không được dùng bình thuốc. `
+      + `Hạ đối thủ là thắng, hết giờ thì bên còn nhiều % sinh lực hơn thắng. Bỏ trận hay mất kết nối đều tính thua; bỏ khi chưa ai ra đòn thì trận không tính.\n`
+      + `Điểm của ngươi: ${fmtN(me.elo)}${me.rank ? ` (hạng ${me.rank})` : ''} · ${me.win} thắng, ${me.lose} thua${me.draw ? `, ${me.draw} hòa` : ''} · ${fmtN(me.fame)} danh vọng.\n`
+      + `Tuần này: ${me.wn} trận, thắng ${me.ww} (thưởng tuần qua hộp thư cần ${ARENA.weeklyMin} trận, thắng từ ${ARENA.weeklyWin} trận và điểm từ ${fmtN(ARENA.elo)}).`;
+    const opts = [];
+    if (me.queue) opts.push({ a: 'cancel', label: 'Hủy đăng ký' });
+    else if (p.lv >= ARENA.minLv) opts.push({ a: 'join', label: 'Đăng ký thi đấu' });
+    opts.push({ a: 'rank', label: 'Bảng xếp hạng' });
+    this.dialog(p, n, p.lv < ARENA.minLv ? `${text}\nNgươi cần đạt cấp ${ARENA.minLv} mới được lên lôi đài.` : text, opts);
+  }
+
+  // Sứ Giả Lễ Hội: có mùa lễ hội thì mở cửa sổ đổi quà, hết mùa chỉ chào hỏi
+  eventDialog(p, n) {
+    const s = this.world.season.cur();
+    if (!s) return this.dialog(p, n, 'Lễ hội đã khép lại rồi. Khi trăng lên mùa hội mới, ta sẽ lại mang quà về làng!');
+    const left = Math.max(1, Math.ceil((s.end - Date.now()) / 86400000));
+    const tok = ITEMS[s.token].name;
+    return this.dialog(p, n, `【${s.name}】\n${s.desc}\n\nNgươi đang có ${p.countItem(s.token)} ${tok}. Lễ hội còn ${left} ngày.`, [
+      { a: 'shop', label: 'Đổi quà lễ hội' },
+    ]);
   }
 
   npcAct(p, m) {
@@ -295,6 +450,7 @@ class Actions {
       case 'smith':
         if (a === 'shop') return this.openShop(p, n, 'smith');
         if (a === 'upgrade') return p.send('openUi', { ui: 'upgrade', npc: n.id });
+        if (a === 'gem') return p.send('openUi', { ui: 'upgrade', npc: n.id, tab: 'gem' });
         if (a === 'sellui') return this.openShop(p, n, 'smith');
         return;
       case 'task':
@@ -314,6 +470,15 @@ class Actions {
         return;
       case 'dungeon':
         if (a === 'enter') this.enterDungeon(p);
+        return;
+      case 'event':
+        if (a === 'shop' && this.world.season.cur()) return p.send('openUi', { ui: 'event', npc: n.id });
+        return;
+      case 'arena':
+        if (a === 'join') this.world.arena.join(p);
+        else if (a === 'cancel') this.world.arena.cancel(p, 'Đã hủy đăng ký lôi đài.');
+        else if (a === 'rank') return p.send('openUi', { ui: 'rank', tab: 'arena' });
+        if (!p.match) this.arenaDialog(p, n);
         return;
       default:
     }
@@ -552,7 +717,7 @@ class Actions {
     }
     if (r.xu) p.gainXu(r.xu);
     if (r.luong) p.c.luong += r.luong;
-    for (const [id, q] of items) p.addItem(id, q);
+    for (const [id, q] of items) p.addItem(id, q, 0, r.days || 0);
     p.markMe();
     return true;
   }
@@ -594,13 +759,14 @@ class Actions {
       if (roll < 0) break;
     }
     const prize = WHEEL.prizes[idx];
-    const need = (prize.items || []).length;
+    const need = (prize.items || []).length + (prize.fashion ? 1 : 0);
     if (p.freeSlots() < need) return p.notice('Hành trang đã đầy!', 'warn');
     p.lastSpin = now;
     if (cur === 'luong') p.c.luong -= cost;
     else p.c.xu -= cost;
     this.giveReward(p, prize);
-    p.send('spinResult', { idx, label: prize.label });
+    const fd = prize.fashion ? this.giveFashion(p, '') : null;
+    p.send('spinResult', { idx, label: fd ? `${fd.name} (${FASHION_DAYS} ngày)` : prize.label });
     if (prize.luong >= 20) this.world.announce(`${p.name} quay trúng ${prize.label} ở Vòng Quay May Mắn!`, 'world');
   }
 
@@ -608,7 +774,8 @@ class Actions {
   shopList(p, type) {
     const sh = SHOPS[type];
     const list = sh.items.map((id) => ({ id, price: ITEMS[id].price, cur: 'xu' }));
-    for (const id of sh.luong || []) list.push({ id, price: ITEMS[id].priceLuong, cur: 'luong' });
+    // hàng riêng của phái (sách nội tại) chỉ bày cho đúng phái
+    for (const id of sh.luong || []) if (!ITEMS[id].cls || ITEMS[id].cls === p.c.cls) list.push({ id, price: ITEMS[id].priceLuong, cur: 'luong' });
     for (const t of sh.equipTiers || []) {
       for (const s of GEAR_SLOTS) {
         const id = s === 'weapon' ? `w_${p.c.cls}_${t}` : `${s}_${t}`;
@@ -629,7 +796,8 @@ class Actions {
     const e = list.find((x) => x.id === m.id);
     if (!e) return;
     const def = ITEMS[e.id];
-    const qty = def.stack ? Math.max(1, Math.min(999, int(m.qty, 1))) : 1;
+    // sách nội tại chỉ đọc được 1 lần: mỗi lần mua 1 cuốn
+    const qty = def.stack && def.type !== 'book' ? Math.max(1, Math.min(999, int(m.qty, 1))) : 1;
     const cost = e.price * qty;
     const bal = e.cur === 'luong' ? p.c.luong : p.c.xu;
     if (bal < cost) return p.notice(e.cur === 'luong' ? 'Không đủ lượng.' : 'Không đủ xu.', 'warn');
@@ -659,10 +827,13 @@ class Actions {
     const n = this.nearNpc(p, m.npc, 'smith');
     if (!n || p.trade) return;
     const fromEq = m.src === 'eq';
-    const it = fromEq ? p.c.equip[String(m.slot)] : p.c.inv[int(m.slot, -1)];
+    const es = String(m.slot);
+    // khóa từ client: chặn '__proto__'/'constructor' như ở unequip
+    if (fromEq && (!SLOTS.includes(es) || !Object.prototype.hasOwnProperty.call(p.c.equip, es))) return;
+    const it = fromEq ? p.c.equip[es] : p.c.inv[int(m.slot, -1)];
     if (!it) return;
     const def = ITEMS[it.id];
-    if (def.type !== 'equip') return;
+    if (!def || def.type !== 'equip') return;
     if (def.noUpgrade) return p.notice('Vật phẩm này không thể cường hóa.', 'warn');
     const plus = it.p || 0;
     if (plus >= UPGRADE.max) return p.notice('Trang bị đã đạt cấp cường hóa tối đa.', 'warn');
@@ -691,6 +862,117 @@ class Actions {
     p.markInv();
     p.markMe();
     p.send('upgradeResult', { ok, plus: it.p || 0, name: def.name });
+    this.smithFx(p, { k: 'enh', ok, plus: it.p || 0 });
+  }
+
+  // Hiệu ứng rèn/khảm hiện trên nhân vật cho cả bản đồ cùng thấy
+  smithFx(p, d) {
+    if (p.map) p.map.broadcast('smithFx', { id: p.id, ...d });
+  }
+
+  // ---------- Khảm ngọc (Thợ Rèn). Mỗi món chỉ khảm 1 viên mỗi loại; ngọc đi theo món khi giao dịch, cất kho, bán.
+  // Món đồ: src 'eq' + tên ô đang mặc, hoặc src 'inv' + chỉ số ô hành trang
+  gemTarget(p, m) {
+    if (m.src === 'eq') {
+      const s = String(m.slot);
+      if (!GEAR_SLOTS.includes(s) || !Object.prototype.hasOwnProperty.call(p.c.equip, s)) return null;
+      return p.c.equip[s] ? { it: p.c.equip[s], eq: true } : null;
+    }
+    const i = int(m.slot, -1);
+    const it = i >= 0 && i < p.c.inv.length ? p.c.inv[i] : null;
+    return it ? { it, eq: false } : null;
+  }
+
+  // Kiểm tra chung: đứng gần Thợ Rèn, không giao dịch, món có lỗ khảm, chỉ số lỗ hợp lệ. Trả về { it, eq, def, gems, hole }
+  gemCheck(p, m) {
+    if (p.dead || p.trade || !this.nearNpc(p, m.npc, 'smith')) return null;
+    const tg = this.gemTarget(p, m);
+    if (!tg) return null;
+    const def = ITEMS[tg.it.id];
+    const holes = gemHoles(def);
+    if (!holes) {
+      p.notice('Vật phẩm này không có lỗ khảm.', 'warn');
+      return null;
+    }
+    const hole = int(m.hole, -1);
+    if (hole < 0 || hole >= holes) {
+      p.notice('Lỗ khảm không hợp lệ.', 'warn');
+      return null;
+    }
+    const gems = Array.from({ length: holes }, (_, k) => (Array.isArray(tg.it.gems) && gemDef(tg.it.gems[k]) ? tg.it.gems[k] : null));
+    return { ...tg, def, gems, hole };
+  }
+
+  gemDone(p, g, res) {
+    if (res.gems.some(Boolean)) res.it.gems = res.gems;
+    else delete res.it.gems;
+    if (res.eq) p.recalc();
+    p.markInv();
+    p.markMe();
+    this.world.db.dirty = true;
+    p.send('gemResult', { ...g, item: res.def.name });
+  }
+
+  gemPut(p, m) {
+    const res = this.gemCheck(p, m);
+    if (!res) return;
+    const gi = int(m.gem, -1);
+    const g = gi >= 0 && gi < p.c.inv.length ? p.c.inv[gi] : null;
+    const gd = g ? gemDef(g.id) : null;
+    if (!gd) return p.notice('Hãy chọn một viên ngọc trong hành trang.', 'warn');
+    if (res.gems[res.hole]) return p.notice('Lỗ này đã có ngọc. Hãy gỡ ra trước.', 'warn');
+    const t = GEM_TYPES[gd.gem];
+    if (res.gems.some((id) => id && gemDef(id).gem === gd.gem)) return p.notice(`Món này đã khảm ${t.name}. Mỗi món chỉ khảm 1 viên mỗi loại.`, 'warn');
+    res.gems[res.hole] = g.id;
+    p.removeAt(gi, 1);
+    this.gemDone(p, { act: 'put', ok: true, id: g.id, name: gd.name, hole: res.hole }, res);
+    this.smithFx(p, { k: 'gem', ok: true, c: t.c });
+  }
+
+  gemTake(p, m) {
+    const res = this.gemCheck(p, m);
+    if (!res) return;
+    const id = res.gems[res.hole];
+    if (!id) return p.notice('Lỗ này đang trống.', 'warn');
+    const gd = gemDef(id);
+    const cost = GEM.takeCost(gd.glv);
+    if (p.c.xu < cost) return p.notice(`Gỡ ngọc cần ${cost.toLocaleString('vi-VN')} xu.`, 'warn');
+    if (!p.canAdd(id, 1)) return p.notice('Hành trang đã đầy!', 'warn');
+    p.c.xu -= cost;
+    res.gems[res.hole] = null;
+    p.addItem(id, 1);
+    this.gemDone(p, { act: 'take', ok: true, id, name: gd.name, hole: res.hole, cost }, res);
+  }
+
+  // Ghép 3 viên cùng loại cùng cấp thành 1 viên cấp trên (tỉ lệ giảm dần); thất bại mất 1 viên, trả lại 2
+  gemMerge(p, m) {
+    if (p.dead || p.trade || !this.nearNpc(p, m.npc, 'smith')) return;
+    const now = Date.now();
+    if (now - (p.lastGemMerge || 0) < 250) return;
+    const id = String(m.id || '');
+    const gd = gemDef(id);
+    if (!gd) return p.notice('Hãy chọn ngọc cần ghép.', 'warn');
+    if (gd.glv >= GEM.max) return p.notice('Ngọc đã đạt cấp cao nhất.', 'warn');
+    if (p.countItem(id) < 3) return p.notice(`Cần 3 viên ${gd.name}.`, 'warn');
+    const cost = GEM.mergeCost(gd.glv);
+    if (p.c.xu < cost) return p.notice(`Ghép ngọc cần ${cost.toLocaleString('vi-VN')} xu.`, 'warn');
+    const next = gemId(gd.gem, gd.glv + 1);
+    // Xét chỗ trống sau khi đã bỏ 3 viên (cả chồng 3 viên được ghép thì ô đó trống ra); không đủ thì trả lại nguyên
+    p.removeItem(id, 3);
+    if (!p.canAdd(next, 1)) {
+      p.addItem(id, 3);
+      return p.notice('Hành trang đã đầy!', 'warn');
+    }
+    p.lastGemMerge = now;
+    p.c.xu -= cost;
+    const ok = Math.random() * 100 < GEM.rate[gd.glv - 1];
+    if (ok) p.addItem(next, 1);
+    else p.addItem(id, 2);
+    const t = GEM_TYPES[gd.gem];
+    p.markMe();
+    p.send('gemResult', { act: 'merge', ok, id: ok ? next : id, from: id, name: ok ? ITEMS[next].name : gd.name, cost });
+    this.smithFx(p, ok ? { k: 'gem', ok: true, c: t.c } : { k: 'enh', ok: false, plus: 0 });
+    if (ok && gd.glv + 1 >= 8) this.world.announce(`${p.name} đã ghép thành công ${ITEMS[next].name}!`, 'world');
   }
 
   // ---------- Tiềm năng & kỹ năng
@@ -718,15 +1000,17 @@ class Actions {
 
   learnSkill(p, m) {
     const sid = String(m.sid);
-    const sk = SKILLS[sid];
+    const sk = skillOf(sid);
     if (!sk || sk.cls !== p.c.cls || sk.basic) return;
     const cur = p.c.skills[sid] || 0;
+    if (sk.type === 'passive' && !cur) return p.notice(`Cần đọc ${ITEMS[sk.book].name} để học ${sk.name}.`, 'warn');
     if (cur >= SKILL_MAX_LV) return p.notice('Kỹ năng đã đạt cấp tối đa.');
     const need = sk.req + cur * 3;
     if (p.lv < need) return p.notice(`Cần đạt cấp ${need}.`, 'warn');
     if (p.c.skillPoints < 1) return p.notice('Không đủ điểm kỹ năng.', 'warn');
     p.c.skillPoints--;
     p.c.skills[sid] = cur + 1;
+    if (sk.type === 'passive') p.recalc();
     if (cur === 0) {
       const i = p.c.hotbar.indexOf(null);
       if (i >= 0 && !p.c.hotbar.includes(sid)) p.c.hotbar[i] = sid;
@@ -735,14 +1019,29 @@ class Actions {
     p.markMe();
   }
 
+  // Gán kỹ năng vào ô i của bộ đang dùng (đã có ở ô khác thì hoán đổi, sid rỗng = gỡ)
   hotbar(p, m) {
     const i = int(m.i, -1);
     if (i < 0 || i >= HOTBAR) return;
     const sid = m.sid ? String(m.sid) : null;
-    if (sid && (!SKILLS[sid] || !p.c.skills[sid] || SKILLS[sid].basic)) return;
-    const j = sid ? p.c.hotbar.indexOf(sid) : -1;
-    if (j >= 0) p.c.hotbar[j] = p.c.hotbar[i];
-    p.c.hotbar[i] = sid;
+    if (sid) {
+      const sk = skillOf(sid);
+      if (!sk || sk.cls !== p.c.cls || sk.basic || sk.type === 'passive' || !Object.prototype.hasOwnProperty.call(p.c.skills, sid) || !(p.c.skills[sid] > 0)) return;
+    }
+    const bar = p.c.hotbar;
+    const j = sid ? bar.indexOf(sid) : -1;
+    if (j >= 0) bar[j] = bar[i];
+    bar[i] = sid;
+    p.markMe();
+  }
+
+  hotbarSet(p, m) {
+    const n = Number.isInteger(m.n) ? m.n : -1;
+    if (n < 0 || n >= HOTBAR_SETS || n === p.c.hbi) return;
+    const now = Date.now();
+    if (now - (p.lastHotbarSet || 0) < 300) return;
+    p.lastHotbarSet = now;
+    p.c.hbi = n;
     p.markMe();
   }
 
@@ -754,6 +1053,8 @@ class Actions {
       else if (p.c.luong >= 1) p.c.luong -= 1;
       else return p.notice('Cần 1 lượng hoặc Thẻ Hồi Sinh.', 'warn');
       p.dead = false;
+      p.airAt = 0;
+      p.baseY = p.y;
       p.c.hp = Math.round(p.s.maxHp * 0.6);
       p.c.mp = Math.max(p.c.mp, Math.round(p.s.maxMp * 0.3));
       p.markMe();
@@ -779,7 +1080,7 @@ class Actions {
   }
 
   rank(p) {
-    p.send('rank', this.world.rankCache);
+    p.send('rank', { ...this.world.rankCache, arenaMe: this.world.arena.myRank(p) });
   }
 
   ping(p, m) {

@@ -1,5 +1,6 @@
 // Icon vật phẩm, kỹ năng và giao diện (pixel art vẽ bằng code, cache theo khóa)
 import { shade } from './sprites.js';
+import { petPixels } from './petart.js';
 
 const OUT = '#1d1424';
 const TAU = Math.PI * 2;
@@ -494,6 +495,40 @@ function drawFood(P, col) {
   P.set(2, 9, '#ffffff');
 }
 
+// Bánh trung thu: mặt bánh vàng nâu viền gợn sóng, vòng hoa văn nổi và bông hoa giữa, thành bánh sẫm phía dưới
+function drawMooncake(P, col) {
+  const pal = tierPal(col);
+  const cx = 8;
+  const top = 7;
+  const rx = 6.8;
+  const ry = 4.6;
+  const shape = (x, y, cy) => {
+    const dx = (x + 0.5 - cx) / rx;
+    const dy = (y + 0.5 - cy) / ry;
+    const a = Math.atan2(dy, dx);
+    return dx * dx + dy * dy <= 1 - 0.13 * Math.max(0, Math.cos(a * 9));
+  };
+  // thành bánh: tối hai bên, sáng giữa
+  P.fill(0, 2, 15, 15, (x, y) => {
+    if (!shape(x, y, top + 3) || shape(x, y, top)) return null;
+    return x < 4 || x > 12 ? pal[1] : pal[2];
+  });
+  // mặt bánh
+  P.fill(0, 1, 15, 13, (x, y) => {
+    if (!shape(x, y, top)) return null;
+    const dx = (x + 0.5 - cx) / rx;
+    const dy = (y + 0.5 - top) / ry;
+    const d = Math.sqrt(dx * dx + dy * dy);
+    if (d > 0.48 && d < 0.66) return pal[2];
+    const lit = (-dx - dy * 1.2) / 1.4;
+    return lit > 0.5 ? pal[5] : lit > -0.15 ? pal[4] : pal[3];
+  });
+  // bông hoa nổi giữa mặt bánh
+  P.map(['.2.', '242', '.2.'], pal, 7, 6);
+  P.set(4, 4, '#fff8e0');
+  P.set(5, 4, pal[5]);
+}
+
 function drawPaw(P, col) {
   const pal = tierPal(col);
   const pad = (cx, cy, rx, ry) => P.fill(cx - rx - 1, cy - ry - 1, cx + rx + 1, cy + ry + 1, (x, y) => {
@@ -510,6 +545,325 @@ function drawPaw(P, col) {
   pad(12.8, 6.8, 1.6, 2.1);
   pad(8, 11.2, 4, 2.9);
   P.set(6, 10, '#ffffff');
+}
+
+// Thú cưng: dùng đúng hình khung đứng yên của thú ngoài thế giới (petart.js), căn giữa ô 16x16.
+// Thú rộng hơn 14px thì cắt bớt phía đuôi (bên trái). Không có hình thì vẽ dấu chân
+function drawPetIcon(P, col, kind) {
+  const px = kind ? petPixels(kind) : null;
+  if (!px) return drawPaw(P, col);
+  const { w, h, data } = px;
+  let x0 = w;
+  let x1 = -1;
+  let y0 = h;
+  let y1 = -1;
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      if (!data[(y * w + x) * 4 + 3]) continue;
+      x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y);
+    }
+  }
+  if (x1 < 0) return drawPaw(P, col);
+  if (x1 - x0 > 13) x0 = x1 - 13;
+  if (y1 - y0 > 13) y0 = y1 - 13;
+  const ox = 1 + Math.floor((14 - (x1 - x0 + 1)) / 2) - x0;
+  const oy = 1 + Math.ceil((14 - (y1 - y0 + 1)) / 2) - y0;
+  for (let y = y0; y <= y1; y++) {
+    for (let x = x0; x <= x1; x++) {
+      const i = (y * w + x) * 4;
+      if (!data[i + 3]) continue;
+      const j = ((y + oy) * 16 + (x + ox)) * 4;
+      P.d[j] = data[i];
+      P.d[j + 1] = data[i + 1];
+      P.d[j + 2] = data[i + 2];
+      P.d[j + 3] = 255;
+    }
+  }
+}
+
+// Thức ăn thú (icon.s → cách vẽ): bánh gạo in dấu chân / cá khô / linh đan
+const PETFOOD_ICONS = {
+  grain: (P, pal) => {
+    // bánh gạo: đĩa tròn vàng nướng, viền sậm, dấu chân thú ở giữa
+    P.fill(1, 2, 15, 15, (x, y) => {
+      const dx = (x - 8) / 6.6;
+      const dy = (y - 8.8) / 5.6;
+      const r = dx * dx + dy * dy;
+      if (r > 1) return null;
+      if (r > 0.72) return dy > -0.2 ? pal[2] : pal[3];
+      const lit = -dx - dy + (1 - r) * 0.3;
+      return lit > 0.9 ? pal[5] : lit > 0 ? pal[4] : pal[3];
+    });
+    P.map(['.1.1.', '1...1', '.111.', '.111.'], pal, 6, 7);
+    P.set(4, 6, '#ffffff');
+  },
+  fish: (P, pal) => {
+    P.map([
+      '.......44.......',
+      '......4554......',
+      '.2...455555444..',
+      '.22.3555w55544..',
+      '.233355555o5543.',
+      '.23333333333343.',
+      '.22.2333333332..',
+      '.2...22222222...',
+      '......2...2.....',
+    ], pal, 0, 4);
+    P.line(10, 7, 10, 10, pal[2]);
+    for (const [x, y] of [[5, 9], [7, 9], [6, 8], [8, 8]]) P.set(x, y, pal[4]);
+  },
+  pill: (P, pal) => {
+    // linh đan: viên tròn đỏ, đai mây vàng, chấm sáng + sao lấp lánh
+    P.fill(2, 3, 14, 15, (x, y) => {
+      const dx = (x - 8) / 5.4;
+      const dy = (y - 9) / 5.4;
+      const r = dx * dx + dy * dy;
+      if (r > 1) return null;
+      const lit = -dx - dy * 1.2 + (1 - r) * 0.4;
+      return lit > 1 ? pal[5] : lit > 0.25 ? pal[4] : lit > -0.6 ? pal[3] : pal[2];
+    });
+    P.map(['GGG.....', 'gYGGG.GG', '..ggGYGg', '......g.'], FIX, 4, 9);
+    P.set(5, 5, '#ffffff'); P.set(6, 5, '#ffffff'); P.set(5, 6, '#ffffff');
+    P.map(['.Y.', 'YwY', '.Y.'], FIX, 12, 1);
+  },
+};
+function drawPetFood(P, col, kind) {
+  (PETFOOD_ICONS[kind] || PETFOOD_ICONS.grain)(P, tierPal(col));
+}
+
+// ---- Thời trang: mặt nạ (icon.s = kiểu), áo choàng, trang phục, thú cưỡi
+const MASK_ICONS = {
+  fox: {
+    pal: { W: '#f6f2ea', g: '#b8b0a8', R: '#d8323c', r: '#8e1b2a', k: OUT },
+    rows: [
+      '................',
+      '..gR.......Rg...',
+      '..gWR.....RWg...',
+      '..gWWWWWWWWWg...',
+      '.gWWRWWWWWRWWg..',
+      '.gWkkRWWWRkkWg..',
+      '.gWWWWWWWWWWWg..',
+      '.gRWWWWWWWWWRg..',
+      '..gRWWWWWWWRg...',
+      '...gWWWWWWWg....',
+      '....gWWkWWg.....',
+      '.....gWRWg......',
+      '......ggg.......',
+    ],
+  },
+  oni: {
+    pal: { R: '#d32f2f', r: '#7a1414', q: '#ff6f60', k: OUT, Y: '#ffd54a', I: '#f4ead8', i: '#bfb09a', W: '#ffffff' },
+    rows: [
+      '..I.........I...',
+      '..Ii.......iI...',
+      '...IrRRRRRrI....',
+      '..rqqRRRRRRRr...',
+      '.rqkkRRRRRkkRr..',
+      '.rqYkRRRRRYkRr..',
+      '.rqRRRRRRRRRRr..',
+      '.rRRRRRrRRRRRr..',
+      '.rRRRRrrrRRRRr..',
+      '..rkWkkkkkWkr...',
+      '..rRWRRRRRWRr...',
+      '...rRRRRRRRr....',
+      '....rrrrrrr.....',
+    ],
+  },
+  tengu: {
+    pal: { R: '#d32f2f', r: '#7a1414', q: '#ff6f60', k: OUT, G: '#f2c230', W: '#ffffff', w: '#d8d4dc' },
+    rows: [
+      '................',
+      '....WWWWW.......',
+      '...rqqRRRRr.....',
+      '..rWWWRWWWRr....',
+      '..rqkGRRkGRr....',
+      '..rqRRRRRRRRRRr.',
+      '..rqRRRRRRRRRRRr',
+      '..rRRRRRRRRRRrr.',
+      '..rRRWWWWWRr....',
+      '..rRRwWWWwRr....',
+      '...rRRWWWRr.....',
+      '....rrrrrr......',
+    ],
+  },
+};
+
+function drawMaskIcon(P, s) {
+  const m = MASK_ICONS[s] || MASK_ICONS.fox;
+  P.map(m.rows, m.pal, 0, 1);
+}
+
+// Áo choàng nhìn từ sau: cổ áo, khuy vàng, vạt xòe gợn sóng; hoa văn theo kiểu
+function drawCloakIcon(P, col, s) {
+  const pal = tierPal(col);
+  P.fill(0, 2, 15, 14, (x, y) => {
+    const t = (y - 2) / 12;
+    const hw = 3.2 + t * 4.4;
+    const dx = x - 8;
+    if (Math.abs(dx) > hw) return null;
+    const wave = y > 12.6 + Math.sin(x * 1.3) * 0.8;
+    if (wave) return null;
+    const u = (dx / hw + 1) / 2;
+    let c = u < 0.18 ? pal[2] : u < 0.5 ? pal[3] : u < 0.82 ? pal[4] : pal[3];
+    if (Math.abs(dx) < 0.6 && y > 4) c = pal[2];
+    if (y > 11.5) c = pal[2];
+    return c;
+  });
+  // cổ áo + khuy
+  P.rect(5, 2, 6, 1, pal[5]);
+  P.rect(4, 3, 8, 1, pal[4]);
+  P.set(7, 3, FIX.G);
+  P.set(8, 3, FIX.Y);
+  if (s === 'night') [[5, 6], [10, 8], [7, 10], [4, 10], [11, 5]].forEach(([x, y]) => P.set(x, y, '#b39ddb'));
+  if (s === 'wind') {
+    P.line(3, 11, 6, 11, '#f2f6f0');
+    P.line(9, 11, 12, 11, '#f2f6f0');
+    P.set(5, 10, '#f2f6f0');
+    P.set(11, 10, '#f2f6f0');
+  }
+  if (s === 'flame') {
+    for (let x = 2; x <= 13; x += 2) {
+      P.set(x, 12, '#ffb300');
+      P.set(x, 11, '#ffd54f');
+      P.set(x + 1, 12, '#ff7043');
+    }
+  }
+  if (s === 'snow') {
+    // cổ lông trắng
+    P.rect(3, 2, 10, 2, '#ffffff');
+    P.set(4, 4, '#dde6ee');
+    P.set(11, 4, '#dde6ee');
+    P.set(7, 4, '#90caf9');
+    P.set(8, 4, '#90caf9');
+  }
+}
+
+// Trang phục: áo kimono tay rộng, cổ chéo, đai lưng, hoa văn theo kiểu
+const COSTUME_ICON = { sakura: ['#ffffff', '#e91e63'], ocean: ['#e3f2fd', '#64b5f6'], shadow: ['#b39ddb', '#5a4a7a'], dragon: ['#ffd54a', '#ff8f00'] };
+function drawCostumeIcon(P, col, s) {
+  const pal = tierPal(col);
+  const [a, b] = COSTUME_ICON[s] || ['#ffffff', '#cccccc'];
+  // tay áo rộng
+  P.fill(1, 3, 14, 7, (x, y) => ((x < 5 || x > 11) && y < 7.5 + (x < 3 || x > 13 ? 0 : 1) ? (x < 3 || x > 13 ? pal[2] : pal[3]) : null));
+  // thân áo
+  P.fill(4, 2, 12, 14, (x, y) => (x >= 4.5 && x <= 11.5 && y >= 2 && y <= 14 ? (x < 6 ? pal[2] : x > 10 ? pal[3] : pal[4]) : null));
+  // cổ chéo
+  P.line(5, 2, 8, 6, pal[5]);
+  P.line(11, 2, 8, 6, pal[5]);
+  P.line(6, 2, 8, 5, '#ffffff');
+  // đai lưng
+  P.rect(5, 8, 7, 2, b);
+  P.rect(7, 8, 2, 2, a);
+  // hoa văn
+  if (s === 'sakura') [[2, 4], [13, 5], [6, 11], [10, 12]].forEach(([x, y]) => { P.set(x, y, a); P.set(x + 1, y, b); });
+  if (s === 'ocean') for (let x = 5; x <= 11; x++) P.set(x, 12 + (x & 1), a);
+  if (s === 'shadow') P.line(5, 3, 11, 9, b);
+  if (s === 'dragon') {
+    P.rect(6, 4, 2, 2, a);
+    for (let x = 5; x <= 11; x += 2) P.set(x, 12, a);
+    P.set(1, 7, a);
+    P.set(14, 7, a);
+  }
+}
+
+// Thú cưỡi: đầu nhìn nghiêng (kỳ lân: sừng + bờm lửa; hổ: mặt chính diện; hạc: cổ đen mào đỏ)
+const MOUNT_ICONS = {
+  horse: [
+    '................',
+    '.......ll.......',
+    '......mlc.......',
+    '.....mmccl......',
+    '....mmcccccl....',
+    '...mmccwkcccl...',
+    '...mmccccccccl..',
+    '..mmmcccccccccc.',
+    '..mmcccddd.ccnc.',
+    '.mmmccc....dddd.',
+    '.mmcccc.........',
+    '.mmccccc........',
+    'mmmcccccc.......',
+    'mmccccccc.......',
+    '.ddddddd........',
+  ],
+  qilin: [
+    '.........h......',
+    '.......llh......',
+    '......flc.......',
+    '.....fFccl......',
+    '....fFcscccl....',
+    '...fFccwkcccl...',
+    '...fFccccccccl..',
+    '..fFfcccscccccc.',
+    '..fFccsddd.ccnc.',
+    '.fFfccc....dddd.',
+    '.fFcscc.........',
+    '.fFccccs........',
+    'fFfcccscc.......',
+    'fFcscccsc.......',
+    '.hhhhhhh........',
+  ],
+  wolf: [
+    '................',
+    '....d...d.......',
+    '....cd.cdd......',
+    '...ccccccc......',
+    '..cccccccccl....',
+    '..ccwkcccccll...',
+    '.Mcccccccccclll.',
+    '.Mccccccccwwwwn.',
+    '.MMcccccwwwww...',
+    '.MMccccww.......',
+    '..MMcccw........',
+    '..MMMccc........',
+    '..MMMcccc.......',
+    '...MMcccc.......',
+    '....ddddd.......',
+  ],
+  tiger: [
+    '................',
+    '...dd.....dd....',
+    '..dccd...dccd...',
+    '..ccsccsccsccc..',
+    '.ccccssccssccc..',
+    '.cswkccccwkcsc..',
+    '.scccccccccccs..',
+    '.ccccwwnnwwcccc.',
+    '.sccwwwwwwwwccs.',
+    '..ccwwwkkwwwcc..',
+    '..sccwwwwwwccs..',
+    '...ccccwwcccc...',
+    '....sccccccs....',
+    '.....dddddd.....',
+  ],
+  crane: [
+    '................',
+    '........rr......',
+    '.......rrrr.....',
+    '.......kwkkbbbb.',
+    '........kk..bb..',
+    '........kk......',
+    '.......kk.......',
+    '.......kk.......',
+    '........kk......',
+    '...cccccckk.....',
+    '.cccccccccc.....',
+    'kkcccccccccc....',
+    'kkkMMcccccc.....',
+    '.kkkMMMccc......',
+    '...kk...........',
+  ],
+};
+const MOUNT_ICON_PAL = {
+  horse: { m: '#3a2216', n: '#2a1a12' },
+  qilin: { f: '#ffb300', F: '#ff5722', s: '#ffd54a', h: '#ffd54a', n: '#14503f' },
+  wolf: { M: '#5d6878', w: '#e3e8ee', n: '#2a2433', k: '#4fc3f7' },
+  tiger: { s: '#3a3446', w: '#ffffff', n: '#f48fb1', k: '#1d1424' },
+  crane: { r: '#e53935', b: '#e0b04a', M: '#9e9e9e', k: '#2a2433', w: '#ffffff' },
+};
+function drawMountIcon(P, col, s) {
+  const key = MOUNT_ICONS[s] ? s : 'horse';
+  const pal = Object.assign({ c: col, d: shade(col, -0.35), l: shade(col, 0.35), w: '#ffffff', k: OUT }, MOUNT_ICON_PAL[key]);
+  P.map(MOUNT_ICONS[key], pal, 0, 1);
 }
 
 function drawShurikenBig(P, col) {
@@ -662,6 +1016,93 @@ function drawGem(P, col) {
   P.set(13, 2, pal[5]);
 }
 
+// Ngọc khảm: hình theo loại (s = '<loại><cấp>', ví dụ 'hoa3'), mặt cắt nhiều giác sáng từ trên-trái.
+// inside(u, v): u, v chuẩn hóa về [-1, 1] quanh tâm ô.
+const GEM_SHAPES = {
+  // Hỏa: giọt lửa nhọn đỉnh
+  hoa: (u, v) => (v >= 0.2 ? (u / 0.78) ** 2 + ((v - 0.2) / 0.8) ** 2 <= 1 : Math.abs(u) <= 0.78 * ((v + 1) / 1.2) ** 0.8),
+  // Thủy: viên tròn hơi dẹt
+  thuy: (u, v) => (u / 0.86) ** 2 + (v / 0.8) ** 2 <= 1,
+  // Thổ: giác bát giác vuông vức
+  tho: (u, v) => Math.abs(u) <= 0.78 && Math.abs(v) <= 0.78 && Math.abs(u) + Math.abs(v) <= 1.3,
+  // Phong: lá xéo hai đầu nhọn
+  phong: (u, v) => {
+    const a = (u + v) * 0.7071;
+    const b = (v - u) * 0.7071;
+    return Math.abs(a) <= 1.08 && Math.abs(b) <= 0.5 * (1 - (a / 1.08) ** 2);
+  },
+  // Lôi: hình thoi cao
+  loi: (u, v) => Math.abs(u) / 0.72 + Math.abs(v) <= 1,
+  // Huyết: trái tim
+  huyet: (u, v) => {
+    const x = u * 1.22;
+    const y = -(v * 1.18) + 0.28;
+    const q = x * x + y * y - 1;
+    return q * q * q - x * x * y * y * y <= 0;
+  },
+};
+function drawGemIcon(P, col, s) {
+  const m = /^([a-z]+)(\d+)$/.exec(s || '') || [];
+  const inside = GEM_SHAPES[m[1]] || GEM_SHAPES.thuy;
+  const lv = +m[2] || 1;
+  const pal = tierPal(col);
+  const R = 6.6;
+  const cx = 7.5;
+  const cy = 7.6;
+  P.fill(0, 0, 15, 15, (x, y) => {
+    const u = (x - cx) / R;
+    const v = (y - cy) / R;
+    if (!inside(u, v)) return null;
+    // mặt bàn (giữa): phẳng, sáng; mép mặt bàn phía trên-trái sáng nhất
+    if (inside(u / 0.46, v / 0.46)) return u + v < -0.18 ? pal[5] : pal[4];
+    // các giác quanh mặt bàn: chia 8 múi, mỗi múi một độ sáng theo hướng ánh sáng trên-trái
+    const sec = Math.floor(((Math.atan2(v, u) + Math.PI) / TAU) * 8);
+    const a = ((sec + 0.5) / 8) * TAU - Math.PI;
+    const lit = -(Math.cos(a) + Math.sin(a)) * 0.7071;
+    // gờ mặt bàn: sáng phía đón ánh sáng, tối phía khuất (cắt rõ giác)
+    if (inside(u / 0.62, v / 0.62)) return lit > 0 ? pal[5] : pal[2];
+    return lit > 0.6 ? pal[5] : lit > 0.15 ? pal[4] : lit > -0.3 ? pal[3] : lit > -0.75 ? pal[2] : pal[1];
+  });
+  // ánh sáng: chấm trắng trên-trái
+  for (let y = 0; y < 16; y++) {
+    let hit = false;
+    for (let x = 0; x < 16 && !hit; x++) {
+      if (P.alpha(x, y) > 40 && P.alpha(x + 1, y + 1) > 40 && P.alpha(x + 1, y) > 40) {
+        P.set(x + 1, y + 1, '#ffffff');
+        if (y < 12) P.set(x + 2, y + 1, '#ffffff', 0.7);
+        hit = true;
+      }
+    }
+    if (hit) break;
+  }
+  if (m[1] === 'loi') {
+    // tia sét nhỏ trong lòng ngọc
+    P.set(8, 5, '#ffffff');
+    P.set(7, 6, '#ffffff');
+    P.set(7, 7, pal[5]);
+    P.set(8, 7, '#ffffff');
+    P.set(8, 8, '#ffffff');
+    P.set(7, 9, pal[5]);
+  }
+  // cấp cao: điểm sáng lóe ở mép phải (sao 4 cánh), cấp 10 thêm chấm vàng
+  if (lv >= 4) P.set(10, 9, '#ffffff');
+  if (lv >= 7) P.set(5, 11, pal[5]);
+}
+// Quầng sáng của ngọc theo cấp (vẽ sau viền): cấp 4-6 nhạt, 7-9 rõ, 10 vàng kim + sao lấp lánh
+function gemGlow(P, icon) {
+  const lv = +(/\d+$/.exec(icon.s || '') || [1])[0];
+  if (lv < 4) return;
+  const c = lv >= 10 ? '#ffe082' : icon.c;
+  P.halo(c, lv >= 7 ? 0.6 : 0.35, lv >= 7 ? 2 : 1);
+  const star = (x, y, core) => {
+    P.set(x, y, core);
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) P.set(x + dx, y + dy, c, 0.85);
+  };
+  star(13, 2, '#ffffff');
+  if (lv >= 7) star(2, 13, '#ffffff');
+  if (lv >= 10) star(13, 13, '#fff59d');
+}
+
 function drawRing(P, col) {
   const pal = tierPal(col);
   const cx = 7.5;
@@ -741,7 +1182,14 @@ export function iconCanvas(icon, rarity, size) {
     case 'xu': drawCoin(P, true); break;
     case 'hat': drawHat(P, col); break;
     case 'food': drawFood(P, col); break;
-    case 'pet': drawPaw(P, col); break;
+    case 'pet': drawPetIcon(P, col, icon.s); break;
+    case 'petfood': drawPetFood(P, col, icon.s); break;
+    case 'mask': drawMaskIcon(P, icon.s); break;
+    case 'cloak': drawCloakIcon(P, col, icon.s); break;
+    case 'costume': drawCostumeIcon(P, col, icon.s); break;
+    case 'mount': drawMountIcon(P, col, icon.s); break;
+    case 'gem': drawGemIcon(P, col, icon.s); break;
+    case 'mooncake': drawMooncake(P, col); break;
     default:
       if (m) P.map(m, tierPal(col));
       else {
@@ -752,7 +1200,12 @@ export function iconCanvas(icon, rarity, size) {
   if (icon.k === 'chest') {
     P.map(['..GG..', '.GYYG.', '.GxxG.', '..GG..'], FIX, 7 - 2, 6);
   }
+  // sách nội tại: huy hiệu mũi tên ngọc ở góc, khớp khung icon kỹ năng nội tại (phân biệt với bí kíp thường)
+  if (icon.k === 'book' && icon.s === 'pas') {
+    P.map(['.ooooo.', 'oeEwEeo', 'oEwwwEo', 'owwwwwo', 'oEEwEEo', 'oeEwEeo', '.ooooo.'], FIX, 9, 9);
+  }
   P.outline(OUT);
+  if (icon.k === 'gem') gemGlow(P, icon);
   if (rarity) {
     const rc = RARITY_COL[rarity];
     P.halo(rc, 0.35 + rarity * 0.12, rarity >= 3 ? 2 : 1);
@@ -1345,6 +1798,82 @@ function genericArt(P, F, sk, e) {
   }
 }
 
+// ----- Kỹ năng nội tại: khung lục giác viền vàng đồng (kỹ năng chủ động dùng khung tròn)
+const HEX_R = 11.4;
+// khoảng cách lục giác đỉnh nhọn trên/dưới: bằng R đúng trên cạnh
+function hexD(x, y) {
+  const dx = Math.abs(x - 12);
+  const dy = Math.abs(y - 12);
+  return Math.max(dx / 0.866, dx * 0.577 + dy);
+}
+
+function passiveBg(el) {
+  const P = new Pix(SK, SK);
+  const rim = ['#4a2c0a', '#c4923a', '#ffe7a3'];
+  P.fill(0, 0, SK - 1, SK - 1, (x, y) => {
+    const d = hexD(x, y);
+    if (d > HEX_R + 0.3) return null;
+    if (d > HEX_R - 0.8) return OUT;
+    if (d > HEX_R - 2) return (x - 12) + (y - 12) < 0 ? rim[2] : rim[1];
+    if (d > HEX_R - 2.8) return rim[0];
+    const lit = (-(x - 12) - (y - 12)) / 16;
+    const t = d / (HEX_R - 2.8);
+    // vân lục giác lồng nhau mờ trong nền
+    if (Math.abs(d - 5.2) < 0.45) return shade(el, -0.18);
+    return t < 0.5 ? shade(el, -0.22 + lit * 0.35) : shade(el, -0.48 + lit * 0.25);
+  });
+  // đinh tán ở 6 đỉnh
+  for (let k = 0; k < 6; k++) {
+    const a = -Math.PI / 2 + (k * TAU) / 6;
+    P.set(12 + Math.cos(a) * (HEX_R - 1.3), 12 + Math.sin(a) * (HEX_R - 1.3), '#fff6d0');
+  }
+  return P;
+}
+
+// trái tim pixel 11x10 (cols: [sáng, nhạt, chính, tối])
+function heart(P, x, y, cols) {
+  P.map([
+    '..RRR.RRR..',
+    '.RwwRRRRRR.',
+    'RwwlRRRRRRd',
+    'RwlRRRRRRRd',
+    'RlRRRRRRRRd',
+    '.RRRRRRRRd.',
+    '..RRRRRRd..',
+    '...RRRRd...',
+    '....RRd....',
+    '.....d.....',
+  ], { w: cols[0], l: cols[1], R: cols[2], d: cols[3] }, x, y);
+}
+
+const HEART = ['#ffffff', '#ff8a80', '#e53935', '#8e1b1b'];
+const CHAKRA = ['#ffffff', '#b3e5fc', '#29b6f6', '#01579b'];
+// mũi tên tăng nhỏ ở góc: dấu hiệu "chỉ số tăng" chung cho mọi nội tại
+function upMark(P, x, y, col) {
+  P.map(['..w..', '.wVw.', 'wVVVw', '.VVV.', '.VVV.'], { w: '#ffffff', V: col }, x, y);
+}
+
+// Hình minh họa nội tại theo chỉ số (e: bảng màu hệ)
+const PASSIVE_ART = {
+  hpPct: (P, F) => { F.disc(12, 12, 8, '#ef9a9a'); heart(P, 7, 7, HEART); },
+  atkPct: (P, F, e) => { flame(F, 12, 20, 5, 15, e); sword(P, 12, 21, 12, 4, ['#ffffff', '#cfd8dc', '#78909c'], { w: 2 }); },
+  defPct: (P, F, e) => { F.disc(12, 12, 8, e[1]); shield(P, 12, 12, ['#ffffff', e[1], e[2], e[3]]); P.rect(11, 8, 2, 7, '#ffffff'); },
+  crit: (P, F, e) => { ringE(F, 12, 12, 7.5, 7.5, e[1]); ringE(F, 12, 12, 4.5, 4.5, e[0]); star4(P, 12, 12, 7, '#ffd54f', '#ffffff'); },
+  critDmg: (P, F) => {
+    for (let k = 0; k < 8; k++) { const a = (k / 8) * TAU + 0.2; F.line(12, 12, 12 + Math.cos(a) * 9, 12 + Math.sin(a) * 9, k % 2 ? '#ffeb3b' : '#ff5252'); }
+    F.disc(12, 12, 5, '#ff7043'); star4(P, 12, 12, 6, '#fff176', '#ffffff'); P.disc(12, 12, 1.5, '#ffffff');
+  },
+  dodge: (P, F, e) => { figure(F, 9, 20, e[2], e[1]); speedLines(F, 2, 8, [9, 13, 17], e[0]); figure(P, 14, 20, '#37474f', '#90a4ae'); },
+  skillDmg: (P, F, e) => { F.disc(12, 12, 7, e[2]); spiral(P, 12, 12, 8, 2.3, e[0], e[1], 2, 0.4); P.disc(12, 12, 1.6, '#ffffff'); },
+  resist: (P, F, e) => { ringE(F, 12, 12, 9, 9, e[0]); ringE(F, 12, 12, 8, 8, e[1]); shield(P, 12, 12, ['#ffffff', '#ffd54f', '#c49000', '#6d4815']); star4(P, 12, 11, 2, e[1], '#ffffff'); },
+  mpRegen: (P, F) => { ringE(F, 12, 13, 8, 8, '#81d4fa', -2.6, 1.9); F.map(['w.', 'ww', 'w.'], { w: '#e1f5fe' }, 17, 17); drop(P, 12, 14, 4.5, CHAKRA); },
+  spd: (P, F, e) => {
+    speedLines(F, 2, 9, [8, 12, 16], e[0]);
+    P.map(['....ww', '..wwVw', '.wwVV.', 'wVVV..', '.VV...'], { w: '#ffffff', V: e[1] }, 12, 4);
+    P.map(ITEM_MAPS.shoes, tierPal(e[1]), 5, 6);
+  },
+};
+
 const skillCache = new Map();
 export function skillIconURL(sk, sid, elColor) {
   const key = `${sid}|${elColor}`;
@@ -1353,18 +1882,20 @@ export function skillIconURL(sk, sid, elColor) {
   const elN = elemName(el);
   const e = elPal(elN);
   const s = sk || {};
-  const bg = skillBg(el, (s.req || 0) >= 60, !!s.basic);
+  const passive = s.type === 'passive';
+  const bg = passive ? passiveBg(el) : skillBg(el, (s.req || 0) >= 60, !!s.basic);
   const F = new Pix(SK, SK); // lớp hiệu ứng (không viền)
   const P = new Pix(SK, SK); // lớp hình chính (có viền)
-  const art = SKILL_ART[sid];
+  const art = passive ? PASSIVE_ART[s.pas && s.pas.stat] : SKILL_ART[sid];
   if (art) art(P, F, e);
   else genericArt(P, F, s, e);
   P.outline(OUT);
-  // cắt theo vòng tròn bên trong khung
+  // cắt theo phần trong khung (tròn hoặc lục giác)
+  const inside = passive ? (x, y) => hexD(x, y) <= HEX_R - 2.6 : (x, y) => (x - 12) ** 2 + (y - 12) ** 2 <= 9.3 * 9.3;
   const clip = (L) => {
     for (let y = 0; y < SK; y++) {
       for (let x = 0; x < SK; x++) {
-        if ((x + 0.5 - 12) ** 2 + (y + 0.5 - 12) ** 2 > 9.3 * 9.3) L.d[(y * SK + x) * 4 + 3] = 0;
+        if (!inside(x + 0.5, y + 0.5)) L.d[(y * SK + x) * 4 + 3] = 0;
       }
     }
   };
@@ -1372,6 +1903,13 @@ export function skillIconURL(sk, sid, elColor) {
   clip(P);
   bg.over(F);
   bg.over(P);
+  if (passive) {
+    // huy hiệu mũi tên tăng đè lên góc khung, nằm ngoài vùng cắt
+    const M = new Pix(SK, SK);
+    upMark(M, 18, 1, '#69f0ae');
+    M.outline(OUT);
+    bg.over(M);
+  }
   const u = bg.canvas().toDataURL();
   skillCache.set(key, u);
   return u;
@@ -1550,6 +2088,44 @@ const UI_MAPS = {
     '................',
     '................',
   ],
+  // phong thư kem, nắp chữ V, dấu sáp đỏ
+  mail: [
+    '................',
+    '................',
+    '..PPPPPPPPPPPP..',
+    '.PnPPPPPPPPPPnP.',
+    '.PPnPPPPPPPPnPP.',
+    '.PPPnPPPPPPnPPP.',
+    '.PPPPnPPPPnPPPP.',
+    '.PPPPPnAAnPPPPP.',
+    '.PPPPPAddAPPPPP.',
+    '.PPPPPAdAAPPPPP.',
+    '.PPPPnnAAnnPPPP.',
+    '.PPnnPPPPPPnnPP.',
+    '.pnppppppppppnp.',
+    '.pppppppppppppp.',
+    '................',
+    '................',
+  ],
+  // đèn ông sao (biểu ngữ sự kiện theo mùa)
+  festival: [
+    '.......g........',
+    '.......g........',
+    '.......A........',
+    '......AdA.......',
+    '.....AdYdA......',
+    'AAAAAAdYYdAAAAAA',
+    '.AdddYYGYYYdddA.',
+    '..AdddYYYYdddA..',
+    '...AddYYYYddA...',
+    '...AddAddAddA...',
+    '..AddA....AddA..',
+    '..AdA......AdA..',
+    '.AdA........AdA.',
+    '.AA..........AA.',
+    '................',
+    '................',
+  ],
   gift: [
     '................',
     '...AA....AA.....',
@@ -1639,6 +2215,25 @@ const UI_MAPS = {
     '.....TTTTT......',
     '..TTT.....TTT...',
     '.TT.........TT..',
+  ],
+  // lôi đài xếp hạng: hai kiếm bắt chéo sau khiên tròn đỏ có sao vàng
+  arena: [
+    '................',
+    '.TT..........TT.',
+    '.TST........TST.',
+    '..TST......TST..',
+    '...TST....TST...',
+    '....TST..TST....',
+    '.....TaaaaT.....',
+    '....aAAAAAAa....',
+    '....aAAGYAAa....',
+    '....aAGYYGAa....',
+    '...gaAAGGAAag...',
+    '..GG.aAAAAa.GG..',
+    '..hGg.aaaa.gGh..',
+    '.hkh........hkh.',
+    '.hh..........hh.',
+    '................',
   ],
   chat: [
     '................',
@@ -1748,6 +2343,63 @@ const UI_MAPS = {
     '................',
     '................',
   ],
+  // Tà Thú: mặt quỷ sừng trắng, mắt vàng (sự kiện, boss sự kiện)
+  beast: [
+    '................',
+    '.T............T.',
+    '.ST..........TS.',
+    '..ST.aaaaaa.TS..',
+    '...SaAAAAAAaS...',
+    '...aAAAAAAAAa...',
+    '..aAAAAAAAAAAa..',
+    '..aAGGAAAAGGAa..',
+    '..aAAYGAAGYAAa..',
+    '..aaAAAAAAAAaa..',
+    '...aAAAaaAAAa...',
+    '...aAwaAAawAa...',
+    '....aAwAAwAa....',
+    '.....aaaaaa.....',
+    '................',
+    '................',
+  ],
+  // bị làm chậm do chiêu boss: ốc sên
+  slow: [
+    '................',
+    '................',
+    '.......2222.....',
+    '.....22333322...',
+    '....2334444332..',
+    '...233422224332.',
+    '...23422..22432.',
+    '...2342.24.2432.',
+    '.i.2342.22.2432.',
+    '.Li.23442..2432.',
+    '.LLi.2344444332.',
+    '.LwLi.222222222.',
+    '.LLLLLLLLLLLLLL.',
+    '..iiiiiiiiiiii..',
+    '................',
+    '................',
+  ],
+  // tìm đường: cột mốc đỏ cuối chuỗi dấu chân vàng
+  path: [
+    '.........aAAAa..',
+    '........aAdddAa.',
+    '........AdwwddA.',
+    '........AdwwddA.',
+    '........aAdddAa.',
+    '.........aAAAa..',
+    '..........aAa...',
+    '...........a....',
+    '.....GG.........',
+    '....GYYg..GG....',
+    '....gGGg.GYYg...',
+    '.GG..gg..gGGg...',
+    'GYYg......gg....',
+    'gGGg............',
+    '.gg.............',
+    '................',
+  ],
 };
 
 function drawLuong(P) {
@@ -1845,6 +2497,7 @@ export function uiIconURL(name) {
     case 'settings': drawSettings(P); break;
     case 'wheel': drawWheel(P); break;
     case 'auto': drawAuto(P); break;
+    case 'pet': drawPaw(P, '#ffb74d'); break;
     default: {
       const m = UI_MAPS[name];
       if (m) P.map(m, UI_PAL);

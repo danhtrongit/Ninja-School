@@ -180,8 +180,8 @@ function makePalette(sp) {
   P.B = mx(sp.skin, 0xff6b88, 0.4);
   P.m = mx(sh(sp.skin, -0.45), 0xb03040, 0.4);
   const hc = sp.hairCol;
-  P.H = hc; P.J = sh(hc, -0.3); P.G = sh(hc, -0.52); P.I = sh(hc, 0.3);
-  P.e = INK; P.i = sp.iris; P.j = sh(sp.iris, 0.5);
+  P.H = hc; P.J = sh(hc, -0.3); P.G = sh(hc, -0.52); P.I = sh(hc, 0.3); P['^'] = sh(hc, 0.36);
+  P.e = INK; P.i = sp.iris; P.j = sh(sp.iris, 0.5); P.d = sh(sp.iris, -0.5);
   // băng trán
   P.b = sp.bandCol; P.c = sh(sp.bandCol, -0.32);
   if (sp.ht >= 0) metalSet(P, C(TIER_METAL[sp.ht]), 'n', 'M', 'N');
@@ -237,12 +237,12 @@ const FACE = [
 const HAIR_STYLES = {
   // Nam
   spiky: [
-    '.....H..HH...H...',
-    '....JHH.HHH.HHH..',
-    '...JHHIHHHHIHHHH.',
-    '..JJHHHHHHHHHHHHH',
-    '..GJ............H',
-    '..GJJJ.HH.HHH.H..',
+    '.....J..IH...H...',
+    '....JHH.IHH.HHJ..',
+    '...JHHI^IHHHHHHJ.',
+    '..JJHHHIHHHHHHHHJ',
+    '..GJ............J',
+    '..GJJH.HJ.HHJ.H..',
     '..GJJJ...........',
     '..GJJJ...........',
     '..GJJ............',
@@ -251,12 +251,12 @@ const HAIR_STYLES = {
     '....G............',
   ],
   neat: [
-    '......HHHH.......',
-    '....JHHHHHHHH....',
-    '...JHHHIHIHHHHH..',
-    '..JJHHHHHHHHHHHH.',
+    '......JHHHJ......',
+    '....JHHIHHHHJ....',
+    '...JHI^IHHHHHHJ..',
+    '..JJHHIHHHHHHHHJ.',
     '..GJ.............',
-    '..GJJJHHHHHHH.H..',
+    '..GJJHHHJHHHHJH..',
     '..GJJJ...........',
     '..GJJJ...........',
     '..GJJ............',
@@ -266,11 +266,11 @@ const HAIR_STYLES = {
   ],
   topknot: [
     '.................',
-    '....JHHHHHHHH....',
-    '...JHHHIHIHHHHH..',
-    '..JJHHHHHHHHHHHH.',
+    '....JHHIHHHHJ....',
+    '...JHI^IHHHHHHJ..',
+    '..JJHHIHHHHHHHHJ.',
     '..GJ.............',
-    '..GJJJHH.HHHH.H..',
+    '..GJJHH.JHHHJ.H..',
     '..GJJJ...........',
     '..GJJJ...........',
     '..GJJ............',
@@ -279,12 +279,12 @@ const HAIR_STYLES = {
     '.................',
   ],
   wild: [
-    '...H....H..H.....',
-    '..JHH.HHHHHHHH...',
-    '..JJHHIHHHIHHHHH.',
-    '.JJJHHHHHHHHHHHHH',
-    '.GJJ............H',
-    '.GJJJJHH.HH.HHH.H',
+    '...J....J..H.....',
+    '..JHH.JHHHHHHJ...',
+    '..JJHHI^IHHHHHHJ.',
+    '.JJJHHHIHHHHHHHHJ',
+    '.GJJ............J',
+    '.GJJJJH.HJ.HHJ.H.',
     '.GGJJJ...........',
     '.GGJJJ...........',
     '..GJJ............',
@@ -294,59 +294,59 @@ const HAIR_STYLES = {
   ],
   // Nữ
   long: [
-    '......HHHHH......',
-    '....JHHHHHHHH....',
-    '...JHHIHIHHHHHH..',
-    '..JJHHHHHHHHHHHH.',
+    '......JHHHJ......',
+    '....JHHIHHHHJ....',
+    '...JHI^IHHHHHHJ..',
+    '..JJHHIHHHHHHHHJ.',
     '..GJ.............',
-    '..GJJJHHHHHHHHHH.',
-    '..GJJJJ........HH',
-    '..GJJJJ........HH',
-    '..GJJJ.........HH',
-    '..GJJJ..........H',
-    '..GJJ............',
+    '..GJJHHHJHHHHHHJ.',
+    '..GJJJJ........HJ',
+    '..GJJJJ........HJ',
+    '..GJJJ.........IJ',
+    '..GJJJ.........HJ',
+    '..GJJ...........J',
     '..GJ.............',
   ],
   bun: [
-    '......HHHHH......',
-    '....JHHHHHHHH....',
-    '...JHHIHIHHHHHH..',
-    '..JJHHHHHHHHHHHH.',
+    '......JHHHJ......',
+    '....JHHIHHHHJ....',
+    '...JHI^IHHHHHHJ..',
+    '..JJHHIHHHHHHHHJ.',
     '..GJ.............',
-    '..GJJJHHHH.HHHH..',
+    '..GJJHHHJ.HHHJ...',
     '..GJJJH........H.',
-    '..GJJJ.........H.',
+    '..GJJJ.........J.',
     '..GJJ............',
     '..GJJ............',
     '...GJ............',
     '.................',
   ],
   pony: [
-    '......HHHHH......',
-    '....JHHHHHHHH....',
-    '...JHHIHIHHHHHH..',
-    '..JJHHHHHHHHHHHH.',
+    '......JHHHJ......',
+    '....JHHIHHHHJ....',
+    '...JHI^IHHHHHHJ..',
+    '..JJHHIHHHHHHHHJ.',
     '..GJ.............',
-    '..GJJJHH.HHHHHH..',
+    '..GJJHH.JHHHHHJ..',
     '..GJJJ.........H.',
-    '..GJJJ.........H.',
+    '..GJJJ.........J.',
     '..GJJ............',
     '..GJJ............',
     '...GJ............',
     '.................',
   ],
   bob: [
-    '......HHHHH......',
-    '....JHHHHHHHH....',
-    '...JHHIHIHHHHHH..',
-    '..JJHHHHHHHHHHHH.',
+    '......JHHHJ......',
+    '....JHHIHHHHJ....',
+    '...JHI^IHHHHHHJ..',
+    '..JJHHIHHHHHHHHJ.',
     '.GJ..............',
-    '.GJJJJHHHHHHHHHH.',
-    '.GJJJJJ........HH',
-    '.GJJJJJ........HH',
-    '.GJJJJ.........HH',
-    '.GGJJJ.........HH',
-    '..GGJ...........H',
+    '.GJJJHHHHJHHHHHJ.',
+    '.GJJJJJ........HJ',
+    '.GJJJJJ........HJ',
+    '.GJJJJ.........IJ',
+    '.GGJJJ.........HJ',
+    '..GGJ..........JJ',
     '.................',
   ],
 };
@@ -368,17 +368,29 @@ function drawEyes(P, hx, hy, mode, female) {
     }
     return;
   }
+  // mắt to: mí đậm, điểm sáng trắng trên-trái, con ngươi tối, ánh phản chiếu dưới
   for (const ex of [0, 4]) {
     px(hx + ex, hy - 22, P.e); px(hx + ex + 1, hy - 22, P.e);
-    px(hx + ex, hy - 21, P.w); px(hx + ex + 1, hy - 21, P.i);
-    px(hx + ex, hy - 20, P.i); px(hx + ex + 1, hy - 20, P.j);
-  }
-  if (mode === 'angry') {
-    px(hx - 1, hy - 23, P.e); px(hx, hy - 23, P.e); px(hx + 5, hy - 23, P.e); px(hx + 6, hy - 23, P.e);
+    px(hx + ex, hy - 21, P.w); px(hx + ex + 1, hy - 21, P.d);
+    px(hx + ex, hy - 20, P.i); px(hx + ex + 1, hy - 20, P.d);
+    px(hx + ex, hy - 19, P.j); px(hx + ex + 1, hy - 19, P.i);
   }
   if (female) {
     px(hx - 1, hy - 22, P.e);
     px(hx + 6, hy - 22, P.e);
+  }
+}
+
+// Lông mày vẽ đè lên mái tóc (mái che hàng y-23), cau lại khi giận
+function drawBrows(P, sp, hx, hy, mode) {
+  if (sp.beard || mode === 'closed' || mode === 'dead') return;
+  const bc = P.G;
+  if (mode === 'angry') {
+    px(hx - 1, hy - 23, P.e); px(hx, hy - 23, P.e); px(hx + 1, hy - 23, bc);
+    px(hx + 4, hy - 23, bc); px(hx + 5, hy - 23, P.e); px(hx + 6, hy - 23, P.e);
+  } else {
+    px(hx, hy - 23, bc); px(hx + 1, hy - 23, bc);
+    px(hx + 4, hy - 23, bc); px(hx + 5, hy - 23, bc);
   }
 }
 
@@ -392,28 +404,29 @@ function drawHead(P, sp, hx, hy, pose) {
   drawEyes(P, hx, hy, eyes, sp.female);
   // má hồng + miệng
   if (eyes !== 'dead') {
-    px(hx - 1, hy - 19, P.B); px(hx + 6, hy - 19, P.B);
+    px(hx - 2, hy - 18, P.B); px(hx - 1, hy - 18, P.B); px(hx + 5, hy - 18, P.B);
   }
   if (sp.mask && !pose.noMask) {
     // khăn che mặt kéo lên mũi
     const Z = P.Z;
     const Zd = sh(Z, -0.3);
-    for (let x = -1; x <= 6; x++) px(hx + x, hy - 19, x >= 4 ? sh(Z, 0.3) : Z);
-    for (let x = -3; x <= 6; x++) px(hx + x, hy - 18, x <= -2 ? Zd : Z);
-    for (let x = -3; x <= 5; x++) px(hx + x, hy - 17, x <= -2 ? Zd : Z);
-    for (let x = -2; x <= 3; x++) px(hx + x, hy - 16, Zd);
+    for (let x = -2; x <= 6; x++) px(hx + x, hy - 18, x >= 4 ? sh(Z, 0.3) : x <= -2 ? Zd : Z);
+    for (let x = -3; x <= 6; x++) px(hx + x, hy - 17, x <= -2 ? Zd : Z);
+    for (let x = -2; x <= 4; x++) px(hx + x, hy - 16, Zd);
   } else if (eyes === 'dead') {
-    px(hx + 3, hy - 18, P.m); px(hx + 4, hy - 18, P.m);
+    px(hx + 3, hy - 17, P.m); px(hx + 4, hy - 17, P.m);
   } else {
-    px(hx + 3, hy - 18, P.m);
+    px(hx + 3, hy - 17, P.m);
   }
   if (sp.beard) drawBeard(P, sp, hx, hy);
   if (sp.headGear) {
     sp.headGear(P, sp, hx, hy, pose);
+    drawBrows(P, sp, hx, hy, eyes);
     return;
   }
   const style = HAIR_STYLES[sp.hair] || HAIR_STYLES.spiky;
   stamp(hx - 9, hy - 28, style, P);
+  drawBrows(P, sp, hx, hy, eyes);
   if (sp.hair === 'bun') {
     // búi tóc + trâm cài
     stamp(hx - 11, hy - 28, [
@@ -426,10 +439,11 @@ function drawHead(P, sp, hx, hy, pose) {
     px(hx - 12, hy - 29, P.z); px(hx - 11, hy - 28, P.a); px(hx - 6, hy - 26, P.a); px(hx - 5, hy - 25, P.Y);
   }
   if (sp.hair === 'topknot') {
-    px(hx - 6, hy - 25, P.a); px(hx - 5, hy - 25, P.a);
+    // búi tóc samurai trên đỉnh, buộc dây màu hệ; chỉ nhô 2 hàng để không vượt NINJA_H (chân dung, thanh máu)
+    stamp(hx - 6, hy - 29, ['.JH^J', '.GJHJ', '..aA.'], P);
   }
-  if (sp.noBand) return;
-  drawBand(P, sp, hx, hy, pose);
+  if (!sp.noBand) drawBand(P, sp, hx, hy, pose);
+  if (sp.fmask) drawFashionMask(P, sp, hx, hy);
 }
 
 function drawBand(P, sp, hx, hy, pose) {
@@ -543,6 +557,36 @@ function drawTorso(P, sp, ux, by, pose) {
       px(X - 5, Y - 7, P.x); px(X + 5, Y - 7, P.x); px(X - 4, Y - 7, P.x); px(X + 4, Y - 7, P.x);
     }
     if (at >= 5) { px(X + 2, Y - 8, P.x); px(X - 3, Y - 8, P.x); }
+    if (at >= 6) {
+      // hoa văn sóng mây dọc vạt áo
+      px(X - 1, Y - 8, P.x); px(X + 4, Y - 8, sh(P.x, -0.2)); px(X - 4, Y - 7, sh(P.x, -0.3)); px(X + 3, Y - 7, P.x);
+    }
+  }
+  if (at >= 8) {
+    // nẹp cổ áo ánh kim hai bên
+    px(X - 1, Y - 15, P.Y); px(X + 4, Y - 15, P.Y); px(X + 4, Y - 14, P.U);
+  }
+  if (at >= 9) {
+    // giáp ngực ánh kim quanh gia huy
+    px(X - 3, Y - 12, P.N); px(X - 3, Y - 11, P.M); px(X, Y - 11, P.M); px(X - 2, Y - 11, P.n);
+    px(X - 1, Y - 13, 0xffffff);
+  }
+}
+
+// Áo choàng ngắn cho trang phục bậc cao (Tiên, Thánh), bay ngược hướng chạy
+function drawCape(P, sp, ux, by, p, f) {
+  const fly = p.moving;
+  const bot = fly ? -6 : -4;
+  const ph = p.flap || 0;
+  for (let y = -16; y <= bot; y++) {
+    const k = y + 16;
+    const xl = fly ? -5 - (k >> 1) - (k > 6 ? ph : 0) : -5 - (k >> 2) - (k > 9 ? ph : 0);
+    const yy = fly && k > 6 ? y - ((k - 6) >> 1) : y;
+    for (let x = xl; x <= -2; x++) {
+      let c = x === xl ? P.x : x === xl + 1 ? P.D : P.O;
+      if (y === bot && x > xl) c = sh(P.x, -0.25);
+      px(ux + x, by + yy, c);
+    }
   }
 }
 
@@ -656,6 +700,19 @@ function drawShoulderPad(P, sp, ux, by) {
     px(X + 3, Y + 1, P.N); px(X - 1, Y, P.n); px(X + 3, Y, P.M);
     px(X, Y + 2, P.N); px(X + 1, Y + 2, P.N); px(X + 2, Y + 2, P.N);
   }
+  if (sp.at >= 9) {
+    // vai giáp nhiều lớp, viền trim, ánh kim
+    px(X - 1, Y - 1, P.n); px(X, Y - 1, 0xffffff); px(X + 1, Y - 1, P.n); px(X + 2, Y - 1, P.M);
+    px(X, Y + 3, P.x); px(X + 1, Y + 3, P.x); px(X + 2, Y + 3, P.x); px(X + 3, Y + 2, P.x);
+  }
+}
+// Vai giáp sau (vẽ trước thân, chỉ lộ một phần)
+function drawBackPad(P, sp, ux, by) {
+  const X = ux - 6;
+  const Y = by - 15;
+  px(X, Y, P.M); px(X + 1, Y, P.n); px(X + 2, Y, P.M);
+  px(X, Y + 1, P.N); px(X + 1, Y + 1, P.M); px(X + 2, Y + 1, P.N);
+  px(X, Y + 2, sh(P.x, -0.3)); px(X + 1, Y + 2, sh(P.x, -0.3));
 }
 
 // ================= KHĂN QUÀNG =================
@@ -713,8 +770,9 @@ function drawBladeW(P, hx, hy, d, len, broad, grip = 2) {
       if (broad) px(x - ex, y - ey, P.W);
       continue;
     }
-    px(x, y, P.W);
-    px(x + ex, y + ey, P.X);
+    px(x, y, i === 2 && !broad ? P.U : P.W);
+    // lưỡi sáng, một điểm lóe gần mũi
+    px(x + ex, y + ey, i === len - 1 ? 0xffffff : P.X);
     if (broad && i >= 3) px(x - ex, y - ey, i >= len - 1 ? P.W : P.V);
     if (broad === 2 && i >= len - 2) px(x - ex * 2, y - ey * 2, P.V);
   }
@@ -761,6 +819,8 @@ function drawBow(P, hx, hy, drawn, arrow) {
     px(x, y, end ? P.Y : i < 7 ? P.X : P.W);
     if (!end && i > 1 && i < off.length - 2) px(x + 1, y, P.V);
   }
+  // chuôi cung quấn vải màu hệ
+  px(hx + 2, hy - 1, P.a); px(hx + 2, hy, P.A); px(hx + 2, hy + 1, P.a);
   // dây cung
   const sx = drawn ? hx - 4 : hx - 1;
   const strCol = 0xf0eee8;
@@ -809,6 +869,18 @@ function drawFan(P, hx, hy, d, big) {
   TAGV = 0;
 }
 
+// Quạt gập cầm chéo lên phía trước, tua màu hệ dưới chuôi
+function drawFanHold(P, hx, hy) {
+  TAGV = 1;
+  for (let i = 1; i <= 6; i++) {
+    px(hx + i, hy - i, i === 6 ? P.X : i & 1 ? P.W : P.X);
+    px(hx + i, hy - i + 1, i === 1 ? P.K : P.V);
+  }
+  px(hx + 6, hy - 5, P.W);
+  TAGV = 0;
+  px(hx - 1, hy + 2, P.a); px(hx - 1, hy + 3, P.A); px(hx, hy + 2, P.z);
+}
+
 function drawFanClosed(P, hx, hy) {
   TAGV = 1;
   stamp(hx - 6, hy - 4, ['XX....', 'WXX...', 'VWWX..', '.VWWXK', '..VVWK'], P);
@@ -819,7 +891,7 @@ function drawFanClosed(P, hx, hy) {
 function drawWeapon(P, sp, wt, state, hx, hy) {
   switch (wt) {
     case 'sword': {
-      const d = { hold: 1, raise: 5, strike: 0, follow: 1, jump: 7 }[state];
+      const d = { hold: 1, raise: 4, strike: 0, follow: 1, jump: 7 }[state];
       const len = state === 'strike' ? 11 : 9;
       drawBladeW(P, hx, hy, d, len, 0, 2);
       break;
@@ -830,7 +902,7 @@ function drawWeapon(P, sp, wt, state, hx, hy) {
       break;
     }
     case 'kunai': {
-      const d = { hold: 2, raise: 6, strike: 0, follow: 1, jump: 2 }[state];
+      const d = { hold: 2, raise: 4, strike: 0, follow: 1, jump: 2 }[state];
       drawKunai(P, hx, hy, d);
       break;
     }
@@ -845,7 +917,8 @@ function drawWeapon(P, sp, wt, state, hx, hy) {
       if (state === 'raise') drawFanClosed(P, hx, hy);
       else if (state === 'strike') drawFan(P, hx, hy, 0, true);
       else if (state === 'follow') drawFan(P, hx, hy, 0, false);
-      else drawFan(P, hx, hy, 6, false);
+      else if (state === 'jump') drawFan(P, hx, hy, 6, false);
+      else drawFanHold(P, hx, hy);
       break;
     default:
   }
@@ -862,7 +935,22 @@ const WALK_F = [[2, 0], [1, 0], [0, 0], [-2, 0], [-1, 1], [0, 2]];
 const WALK_B = [[-2, 0], [-1, 1], [0, 2], [2, 0], [1, 0], [0, 0]];
 const WALK_BY = [0, 0, -1, 0, 0, -1];
 
-function getPose(anim, f, sp) {
+// ride: đang cưỡi thú. Chân trước gập buông bên sườn thú (chân sau khuất sau thân thú), tay giữ như đứng yên;
+// thú chạy thì khăn, áo choàng vẫn bay theo
+function getPose(anim, f, sp, ride) {
+  if (ride && anim !== 'attack' && anim !== 'dead') {
+    const p = getPose('idle', 0, sp, false);
+    p.ride = true;
+    p.lf = [1, 0];
+    if (anim === 'walk' || anim === 'jump') {
+      p.moving = true;
+      p.scarf = anim === 'jump' ? 'jump' : 'move';
+      p.flap = (f >> 1) & 1;
+    } else {
+      p.flap = f >> 1;
+    }
+    return p;
+  }
   const p = {
     by: 0, ux: 0, lb: [0, 0], lf: [0, 0], hb: [-5, -9], hf: [4, -9], wstate: 'hold', flap: f & 1, moving: false, scarf: 'idle', eyes: null,
   };
@@ -888,13 +976,14 @@ function getPose(anim, f, sp) {
       break;
     }
     case 'jump':
+      // co chân: khung sau co sâu hơn, tay dang thăng bằng
       p.moving = true;
       p.scarf = 'jump';
-      p.lf = [2, 3];
-      p.lb = [-1, 1];
+      p.lf = f ? [2, 4] : [2, 3];
+      p.lb = f ? [-2, 2] : [-1, 1];
       p.by = -1;
-      p.hf = [5, -13];
-      p.hb = [-7, -12];
+      p.hf = f ? [5, -12] : [5, -13];
+      p.hb = f ? [-7, -13] : [-7, -12];
       p.wstate = 'jump';
       break;
     case 'attack':
@@ -903,7 +992,7 @@ function getPose(anim, f, sp) {
       p.lf = [2, 0];
       p.lb = [-2, 0];
       if (!ranged) {
-        if (f === 0) { p.hf = [0, -20]; p.hb = [2, -11]; p.wstate = 'raise'; p.ux = -1; }
+        if (f === 0) { p.hf = [-4, -12]; p.hb = [-6, -10]; p.wstate = 'raise'; p.ux = -1; p.lf = [3, 0]; p.lb = [-3, 0]; }
         if (f === 1) { p.hf = [8, -14]; p.hb = [-7, -12]; p.wstate = 'strike'; p.ux = 1; }
         if (f === 2) { p.hf = [7, -10]; p.hb = [-6, -10]; p.wstate = 'follow'; p.ux = 1; p.by = 1; }
       } else if (sp.weapon === 'bow') {
@@ -911,15 +1000,20 @@ function getPose(anim, f, sp) {
         if (f === 0) { p.hf = [8, -14]; p.hb = [3, -14]; p.wstate = 'raise'; }
         if (f >= 1) { p.hf = [8, -14]; p.hb = [-1, -13]; p.wstate = 'strike'; }
       } else if (sp.weapon === 'fan') {
-        if (f === 0) { p.hf = [-5, -16]; p.hb = [3, -11]; p.wstate = 'raise'; p.ux = -1; }
+        if (f === 0) { p.hf = [-5, -13]; p.hb = [-6, -10]; p.wstate = 'raise'; p.ux = -1; }
         if (f === 1) { p.hf = [8, -14]; p.hb = [-7, -12]; p.wstate = 'strike'; p.ux = 1; }
         if (f === 2) { p.hf = [7, -11]; p.hb = [-6, -10]; p.wstate = 'follow'; p.ux = 1; }
       } else {
-        if (f === 0) { p.hf = [-2, -20]; p.hb = [3, -12]; p.wstate = 'raise'; p.ux = -1; }
+        if (f === 0) { p.hf = [-5, -13]; p.hb = [-6, -10]; p.wstate = 'raise'; p.ux = -1; }
         if (f === 1) { p.hf = [8, -15]; p.hb = [-7, -11]; p.wstate = 'strike'; p.ux = 1; }
         if (f === 2) { p.hf = [7, -12]; p.hb = [-6, -10]; p.wstate = 'follow'; p.ux = 1; }
       }
       if (sp.mon) p.eyes = 'angry';
+      if (ride) {
+        p.ride = true;
+        p.lf = [1, 0];
+        p.by = 0;
+      }
       break;
     case 'dead':
       p.eyes = 'dead';
@@ -932,19 +1026,21 @@ function getPose(anim, f, sp) {
 }
 
 // ================= DỰNG MỘT KHUNG =================
-function buildFrame(sp, P, anim, f) {
+function buildFrame(sp, P, anim, f, ride) {
   clr();
-  const p = getPose(anim, f, sp);
+  const p = getPose(anim, f, sp, ride);
   if (sp.npc) p.wstate = 'none';
   const dead = anim === 'dead';
   const ux = p.ux;
   const by = p.by;
   const hx = ux + (sp.hunch || 0);
   const hy = by + (sp.hunch ? 1 : 0);
-  // 1. đồ sau lưng, tóc sau, khăn
+  // 1. áo choàng thời trang, đồ sau lưng, tóc sau, khăn
+  if (sp.ck && !dead) drawCloak(P, sp, ux, by, p);
   if (!dead && !sp.npc) drawBackGear(P, sp, ux, by);
   if (sp.backLayer) sp.backLayer(P, sp, ux, by, p, f);
   drawHairBack(P, sp, hx, hy, p, f);
+  if (!sp.npc && !dead && sp.at >= 10 && !sp.ck) drawCape(P, sp, ux, by, p, f);
   if (!sp.noScarf && !dead) drawScarfTail(P, sp, ux, by, p.scarf, p.flap);
   // 2. tay sau
   const bsx = ux - 4;
@@ -952,14 +1048,18 @@ function buildFrame(sp, P, anim, f) {
   if (!sp.hideBackArm) drawArm(P, sp, bsx, bsy, ux + p.hb[0], by + p.hb[1], false);
   // 3. chân
   if (sp.robe) drawRobe(P, sp, ux, by, f);
+  else if (p.ride) drawLeg(P, sp, 1, p.lf[0], p.lf[1], false);
   else {
     drawLeg(P, sp, -3, p.lb[0], p.lb[1], true);
     drawLeg(P, sp, 1, p.lf[0], p.lf[1], false);
   }
   // 4. thân + khăn cổ
+  if (sp.at >= 9 && !sp.npc) drawBackPad(P, sp, ux, by);
   drawTorso(P, sp, ux, by, p);
+  if (sp.cs) drawCostume(P, sp, ux, by);
   if (sp.overTorso) sp.overTorso(P, sp, ux, by, p, f);
   if (!sp.noScarf) drawScarfNeck(P, sp, ux, by);
+  if (sp.ck && !dead) drawCloakFront(P, sp, ux, by);
   // 5. đầu
   drawHead(P, sp, hx, hy, p);
   // 6. tay trước + vũ khí
@@ -1042,6 +1142,14 @@ function rotateDead() {
       if (ngx < 0 || ngy < 0 || ngx >= FW || ngy >= FH) continue;
       BUF[ngy * FW + ngx] = c;
     }
+  }
+  // tóc dài/đuôi ngựa có thể thòng xuống dưới mặt đất: nâng cả khung cho đáy nằm ở y = -1
+  let maxY = -1;
+  for (let i = BUF.length - 1; i >= 0; i--) if (BUF[i] >= 0) { maxY = (i / FW) | 0; break; }
+  const lift = maxY - (OY - 1);
+  if (lift > 0) {
+    BUF.copyWithin(0, lift * FW);
+    BUF.fill(-1, BUF.length - lift * FW);
   }
 }
 
@@ -1188,6 +1296,7 @@ const NPCS = {
     sp.trim = C(pal[1]);
     sp.robeTrim = true;
     sp.frontProp = propCane;
+    sp.overTorso = gourdBelt;
   },
   potion(sp, pal) {
     sp.female = true;
@@ -1269,16 +1378,93 @@ const NPCS = {
     sp.noScarf = true;
   },
   arena(sp, pal) {
+    // võ sư đấu trường: cởi trần tay, khăn hachimaki, dây chéo ngực, đao lớn
     sp.hairCol = C('#2a2030');
     sp.hair = 'wild';
+    sp.hairBack = 'wild';
+    sp.headGear = gearHachimaki;
     sp.at = 5;
-    sp.weapon = 'sword';
+    sp.bulk = 1;
+    sp.bareArms = true;
+    sp.noScarf = true;
+    sp.weapon = 'blade';
     sp.wt = 7;
     sp.wcol = C(TIER_METAL[7]);
-    sp.accent = C(pal[1]);
+    sp.accent = C(pal[0]);
+    sp.overTorso = sashCross;
+    sp.outfit = C('#3c3448');
+    sp.trim = C('#e8c66a');
+    sp.pants = C('#2c2638');
+    sp.glove = 0x2a2030;
     sp.npcWeapon = true;
   },
+  event(sp, pal) {
+    // sứ giả lễ hội: áo dài đỏ thắm hoa văn kem, đai vàng thắt nơ sau lưng, tóc dài cài hoa, mặt nạ thỏ đeo sau đầu, cầm đèn ông sao
+    sp.female = true;
+    sp.hair = 'long';
+    sp.noBand = true;
+    sp.robe = true;
+    sp.robeTrim = true;
+    sp.noScarf = true;
+    sp.trim = 0xf6e7c8;
+    sp.accent = C(pal[1] || '#f2c230');
+    sp.headGear = gearFestival;
+    sp.overTorso = festivalObi;
+    sp.frontProp = propStarLantern;
+  },
 };
+
+// Tóc dài cài hoa trước trán, mặt nạ thỏ trắng buộc lệch sau đầu (đồ chơi Trung Thu)
+function gearFestival(P, sp, hx, hy) {
+  stamp(hx - 9, hy - 28, HAIR_STYLES.long, P);
+  stamp(hx - 12, hy - 30, [
+    '.WW.WW.',
+    '.Wp.Wp.',
+    '.Wp.Wp.',
+    'wWWWWWW',
+    'wkWWWkW',
+    'wrWWWrW',
+    '.wWkWW.',
+    '..www..',
+  ], { W: 0xf8f4ec, w: 0xd6ccbe, p: 0xf48fb1, k: INK, r: 0xe0505a });
+  // dây buộc mặt nạ vòng qua đầu
+  px(hx - 5, hy - 26, 0xc62828); px(hx - 4, hy - 27, 0xc62828);
+  // hoa cài: cánh hồng, nhụy vàng
+  stamp(hx + 1, hy - 30, ['.f.', 'fYf', '.f.'], { f: 0xf48fb1, Y: P.Y });
+  px(hx + 3, hy - 28, 0xc2185b);
+}
+// Đai lưng vàng rộng, nơ thắt sau lưng, hoa văn kem rải trên áo
+function festivalObi(P, sp, ux, by) {
+  for (let x = -4; x <= 4; x++) {
+    px(ux + x, by - 11, P.A);
+    px(ux + x, by - 10, x <= -3 ? P.A : P.a);
+    px(ux + x, by - 9, x <= -3 ? sh(P.A, -0.2) : P.A);
+  }
+  px(ux + 1, by - 10, P.z); px(ux + 2, by - 10, 0xc62828);
+  stamp(ux - 8, by - 12, ['aa..', 'aAza', 'aAA.', '.A..', '.A..'], { a: P.a, A: P.A, z: P.z });
+  const c = P.x;
+  px(ux - 2, by - 14, c); px(ux + 3, by - 13, c); px(ux - 1, by - 12, sh(c, -0.2));
+  px(ux - 3, -6, c); px(ux + 3, -6, sh(c, -0.2)); px(ux, -4, c); px(ux - 4, -3, sh(c, -0.2)); px(ux + 4, -3, c);
+}
+// Đèn ông sao đỏ năm cánh trên cán tre, ruột nến vàng, tua kim tuyến
+function propStarLantern(P, sp, ux, by) {
+  const hx = ux + 5;
+  const hy = by - 11;
+  for (let i = 1; i <= 9; i++) px(hx + 1 + (i >> 2), hy - i, i & 1 ? P[7] : P[8]);
+  drawArm(P, sp, ux + 3, by - 14, hx, hy, true);
+  stamp(hx - 1, hy - 18, [
+    '....R....',
+    '...RrR...',
+    'RRRrYrRRR',
+    '.RrYzYrR.',
+    '..RrYrR..',
+    '..Rr.rR..',
+    '.Rr...rR.',
+    '.R.....R.',
+  ], { R: 0xb71c1c, r: 0xe53935, Y: 0xffd54f, z: 0xfff3c0 });
+  px(hx + 3, hy - 10, P.Y); px(hx + 2, hy - 9, P.U); px(hx + 4, hy - 9, P.U);
+  px(hx, hy, P.s); px(hx + 1, hy, P.s);
+}
 
 function gearBaldTopknot(P, sp, hx, hy) {
   // đầu hói, tóc bạc hai bên, búi nhỏ trên đỉnh
@@ -1319,6 +1505,22 @@ function gearBandana(P, sp, hx, hy) {
   px(hx - 8, hy - 25, a); px(hx - 9, hy - 24, a); px(hx - 9, hy - 23, A); px(hx - 8, hy - 23, A); px(hx - 10, hy - 22, A);
 }
 
+function gearHachimaki(P, sp, hx, hy, pose) {
+  stamp(hx - 9, hy - 28, HAIR_STYLES.wild, P);
+  // khăn trắng buộc trán, chấm đỏ giữa, đuôi dài bay sau
+  const w = P[4];
+  const w2 = P[5];
+  for (let x = -7; x <= 6; x++) {
+    px(hx + x, hy - 25, x <= -5 ? w2 : w);
+    px(hx + x, hy - 24, w2);
+  }
+  px(hx + 2, hy - 25, P.a); px(hx + 3, hy - 25, P.a); px(hx + 2, hy - 24, P.A); px(hx + 3, hy - 24, P.A);
+  const ph = pose.flap || 0;
+  px(hx - 8, hy - 25, w); px(hx - 8, hy - 24, w2);
+  px(hx - 9, hy - 24 + ph, w); px(hx - 10, hy - 23 + ph, w); px(hx - 11, hy - 23, w2); px(hx - 12, hy - 22 + ph, w2);
+  px(hx - 9, hy - 23, w2); px(hx - 10, hy - 22, w2); px(hx - 10, hy - 21 + ph, w2);
+}
+
 function gearCap(P, sp, hx, hy) {
   stamp(hx - 9, hy - 28, HAIR_STYLES.neat, P);
   const o = P.o;
@@ -1351,7 +1553,7 @@ function gearConical(P, sp, hx, hy) {
   // vân nan nón
   px(hx - 4, hy - 30, s2); px(hx + 2, hy - 29, s2); px(hx - 1, hy - 28, s3); px(hx + 5, hy - 28, s2);
   // quai nón
-  px(hx + 5, hy - 22, s3); px(hx + 5, hy - 21, s3); px(hx + 4, hy - 20, s3); px(hx + 4, hy - 19, s3); px(hx + 3, hy - 18, s3);
+  px(hx + 6, hy - 22, s3); px(hx + 6, hy - 21, s3); px(hx + 6, hy - 20, s3); px(hx + 6, hy - 19, s3); px(hx + 5, hy - 18, s3); px(hx + 4, hy - 17, s3);
 }
 
 function gearHelmet(P, sp, hx, hy) {
@@ -1376,6 +1578,21 @@ function gearHelmet(P, sp, hx, hy) {
 }
 
 // ---------- phụ kiện thân
+function gourdBelt(P, sp, ux, by) {
+  // hồ lô rượu đeo bên hông, dây đỏ
+  stamp(ux - 6, by - 11, ['.r.', '.7.', '787', '.r.', '777', '7778', '.88'], { 7: P[7], 8: P[8], r: 0xc0392b });
+}
+
+function sashCross(P, sp, ux, by) {
+  // dây chéo ngực màu đỏ đấu trường + đai lưng đen
+  const pts = [[-4, -15], [-3, -14], [-2, -13], [-1, -12], [0, -11], [1, -11], [2, -12], [3, -13], [4, -14]];
+  pts.forEach(([x, y], i) => {
+    px(ux + x, by + y, i < 5 ? P.a : P.A);
+    if (i < 5) px(ux + x + 1, by + y, P.A);
+  });
+  px(ux, by - 12, P.z);
+}
+
 function apronFull(P, sp, ux, by) {
   const c = P[4];
   const c2 = P[5];
@@ -1519,13 +1736,431 @@ function propSpear(P, sp, ux, by) {
   drawArm(P, sp, ux + 3, by - 14, hx, hy, true);
 }
 
+// ================= THỜI TRANG =================
+// Mã hình (look.mask/cloak/costume/mount) do server gửi theo vật phẩm đang mặc (server/data/items.js FASHION).
+const own = (o, k) => typeof k === 'string' && Object.prototype.hasOwnProperty.call(o, k);
+
+// Mặt nạ: bản đồ ký tự gốc (hx - 3, hy - 26), vẽ đè lên mặt sau tóc và băng trán.
+// W nền, w nền tối, R/r màu vẽ, k khe mắt, Y mắt vàng, I sừng, G viền vàng, d dây buộc
+const MASKS = {
+  fox: {
+    pal: { W: 0xf6f2ea, w: 0xc8c0b8, R: 0xd8323c, r: 0x8e1b2a, k: 0x1d1424, d: 0xa8282e },
+    rows: [
+      '...r....r..',
+      '..rW...rW..',
+      '..WWWWWWWW.',
+      '.wWRWWWRWW.',
+      '.wWkkWWkkW.',
+      '.wRWWWWRWWW',
+      '.wWWWWWWWWW',
+      '..wWWWWWWkW',
+      '..wwWRRWw..',
+      '...wwwWw...',
+    ],
+  },
+  oni: {
+    pal: { W: 0xf4e8d0, R: 0xc62828, r: 0x7a1414, k: 0x1d1424, Y: 0xffd54a, I: 0xf4ead8, w: 0xbfb09a, d: 0x3a2a3e },
+    rows: [
+      '..I......I.',
+      '..Iw....Iw.',
+      '..RRRRRRRR.',
+      '.rRkkRRkkRR',
+      '.rRYkRRYkRR',
+      '.rRRRRRRRRR',
+      '.rRRRRRRrRR',
+      '..rkWkkWkr.',
+      '..rrRRRRr..',
+      '...rrrrr...',
+    ],
+  },
+  tengu: {
+    pal: { W: 0xffffff, w: 0xd8d4dc, R: 0xd32f2f, r: 0x8a1c1c, k: 0x1d1424, G: 0xf2c230, d: 0x3a2a3e },
+    rows: [
+      '...........',
+      '...........',
+      '..WWWW.WWW.',
+      '.rRWWRRWWRR',
+      '.rRkGRRkGRR',
+      '.rRRRRRRRRRRRR',
+      '.rRRRRRRRRRRRr',
+      '..rRWWWWRR.',
+      '..rrRWWRrr.',
+      '...rrrrr...',
+    ],
+  },
+};
+
+function drawFashionMask(P, sp, hx, hy) {
+  const m = MASKS[sp.fmask];
+  stamp(hx - 3, hy - 26, m.rows, m.pal);
+  // dây buộc vòng ra sau đầu
+  const d = m.pal.d;
+  px(hx - 4, hy - 22, d); px(hx - 5, hy - 22, d); px(hx - 6, hy - 21, d); px(hx - 7, hy - 21, sh(d, 0.25));
+}
+
+// Áo choàng: c màu chính, l lớp lót (lộ ra khi bay), t viền, pat hoa văn
+const CLOAKS = {
+  wind: { c: '#2e9d8f', l: '#e8f5e9', t: '#f2f6f0', pat: 'cloud' },
+  night: { c: '#2c3170', l: '#8e63d8', t: '#c5cae9', pat: 'stars' },
+  flame: { c: '#b3201c', l: '#ffb300', t: '#ffd54f', pat: 'flame' },
+  snow: { c: '#eef3f8', l: '#90caf9', t: '#ffffff', pat: 'fur' },
+};
+
+// Bay ngược hướng chạy: đứng yên buông dài gần chạm đất, chạy thì tung ra sau và lên, nhảy thì hất lên cao
+function drawCloak(P, sp, ux, by, p) {
+  const k = sp.ck;
+  const fly = p.moving;
+  const jump = p.scarf === 'jump';
+  const ph = p.flap || 0;
+  const bot = jump ? -7 : fly ? -3 : -2;
+  for (let y = -16; y <= bot; y++) {
+    const r = y + 16;
+    let xl;
+    let yy = y;
+    if (jump) {
+      xl = -6 - Math.round(r * 0.7) - (r > 4 ? ph : 0);
+      yy = y - Math.round(r * 0.6);
+    } else if (fly) {
+      xl = -6 - Math.round(r * 0.6) - (r > 5 ? ph : 0);
+      if (r > 5) yy = y - Math.round((r - 5) * 0.3);
+    } else {
+      xl = -6 - Math.round(r / 3) - (r > 9 ? ph : 0);
+    }
+    for (let x = xl; x <= -2; x++) {
+      let c = x === xl ? k.d : x === xl + 1 && (fly || jump) ? k.l : x >= -3 ? k.d : k.c;
+      if (y === bot) c = x === xl ? k.d : k.t;
+      else if (y === bot - 1 && x > xl) c = sh(k.c, -0.12);
+      // hoa văn
+      if (k.pat === 'stars' && y < bot - 1 && x > xl + 1 && x < -3 && ((x * 7 + r * 5) & 15) === 3) c = k.l;
+      if (k.pat === 'cloud' && y === bot - 2 && x > xl && ((x - xl) % 4 === 1)) c = k.t;
+      if (k.pat === 'cloud' && y === bot - 1 && x > xl && ((x - xl) % 4 !== 3)) c = sh(k.t, -0.12);
+      if (k.pat === 'flame' && y >= bot - 2 && y < bot && x > xl && ((x - xl + (bot - y)) % 3 === 0)) c = y === bot - 1 ? k.t : k.l;
+      px(ux + x, by + yy, c);
+    }
+    // lưỡi lửa liếm dưới mép áo
+    if (k.pat === 'flame' && y === bot) {
+      for (let x = xl + 1; x <= -3; x += 2) px(ux + x, by + yy + 1 + ((x + ph) & 1), (x & 2) ? k.l : k.t);
+    }
+  }
+}
+
+// Phần áo choàng phía trước: quai vai và khuy cài; Tuyết Hồ thêm cổ lông
+function drawCloakFront(P, sp, ux, by) {
+  const k = sp.ck;
+  px(ux - 3, by - 16, k.c); px(ux - 2, by - 16, k.d); px(ux - 3, by - 15, k.d);
+  if (k.pat === 'fur') {
+    for (let x = -4; x <= 3; x++) px(ux + x, by - 16, (x & 1) ? 0xffffff : 0xdde6ee);
+    px(ux - 4, by - 15, 0xdde6ee); px(ux - 5, by - 16, 0xffffff); px(ux + 4, by - 16, 0xdde6ee);
+  }
+  px(ux + 3, by - 15, k.t); px(ux + 4, by - 15, sh(k.t, -0.3));
+}
+
+// Trang phục: thay màu áo/quần/viền và vẽ hoa văn riêng; at/pt = mức chi tiết (vai giáp, nẹp, giáp gối)
+const COSTUMES = {
+  sakura: { o: '#f48fb1', p: '#9c2a5c', t: '#fff0f5', u: '#ffe4ee', w: '#fff0f5', g: '#ad1457', at: 3, pt: 2, pat: 'petal', a: '#ffffff', b: '#e91e63' },
+  ocean: { o: '#1e88e5', p: '#0d3c78', t: '#e3f2fd', u: '#bbdefb', w: '#e3f2fd', g: '#0d3c78', at: 3, pt: 3, pat: 'wave', a: '#e3f2fd', b: '#64b5f6' },
+  shadow: { o: '#30303e', p: '#1e1e28', t: '#8e6cc8', u: '#121218', w: '#3a3a4a', g: '#1e1e28', at: 4, pt: 4, pat: 'strap', a: '#5a4a7a', b: '#b39ddb' },
+  dragon: { o: '#c0262a', p: '#4a0d10', t: '#ffd54a', u: '#ffe9a8', w: '#ffd54a', g: '#5a1010', at: 8, pt: 7, pat: 'scale', a: '#ffd54a', b: '#ff8f00', rare: true },
+};
+
+function drawCostume(P, sp, ux, by) {
+  const cs = sp.cs;
+  const A = C(cs.a);
+  const B = C(cs.b);
+  const X = ux;
+  const Y = by;
+  if (cs.pat === 'petal') {
+    // cánh hoa anh đào rải trên áo
+    for (const [x, y] of [[-3, -13], [2, -12], [-1, -10], [3, -8], [-4, -7]]) {
+      px(X + x, Y + y, A); px(X + x + 1, Y + y, B); px(X + x, Y + y + 1, B);
+    }
+  } else if (cs.pat === 'wave') {
+    // sóng nước dọc vạt áo
+    for (let x = -5; x <= 5; x++) px(X + x, Y - 8 + ((x & 2) ? 1 : 0), (x & 1) ? A : B);
+    px(X - 3, Y - 12, B); px(X - 2, Y - 13, A); px(X - 1, Y - 12, B);
+  } else if (cs.pat === 'strap') {
+    // dây đai chéo ngực của dạ hành nhân, khóa kim loại
+    for (let i = 0; i < 6; i++) px(X - 3 + i, Y - 15 + i, i === 3 ? B : A);
+    px(X, Y - 12, B); px(X + 1, Y - 12, 0xe0e0f0);
+  } else if (cs.pat === 'scale') {
+    // ngọc rồng vàng trước ngực, vảy vàng dọc vạt áo
+    stamp(X - 3, Y - 14, ['.AA.', 'ABBA', 'ABBA', '.AA.'], { A, B });
+    px(X - 2, Y - 13, 0xffffff);
+    for (let x = -5; x <= 5; x += 2) { px(X + x, Y - 8, A); px(X + x + 1, Y - 7, B); }
+  }
+}
+
+// ================= THÚ CƯỠI =================
+// Gốc (0, 0) ở mặt đất dưới hông người cưỡi, quay mặt sang phải. Thú 4 chân dựng từ thân + chân + đầu theo loại.
+const MOUNTS = {
+  horse: { kind: 'quad', len: 13, bodyH: 8, legH: 9, head: 'horse', tail: 'hair', body: '#8a5634', belly: '#c49a6c', mane: '#3a2216', hoof: '#2a1d16', eye: '#1d1424', saddle: '#a8282e', trim: '#f2c230' },
+  wolf: { kind: 'quad', len: 12, bodyH: 7, legH: 8, head: 'wolf', tail: 'bush', body: '#8e9aab', belly: '#e3e8ee', mane: '#5d6878', hoof: '#3a3f4a', eye: '#4fc3f7', saddle: '#283593', trim: '#c5cae9' },
+  tiger: { kind: 'quad', len: 13, bodyH: 8, legH: 8, head: 'tiger', tail: 'long', body: '#f1ece2', belly: '#ffffff', mane: '#3a3446', hoof: '#bdb4a8', eye: '#40c4ff', saddle: '#00695c', trim: '#ffd54a', stripe: '#3a3446' },
+  qilin: { kind: 'quad', len: 13, bodyH: 8, legH: 9, head: 'qilin', tail: 'flame', body: '#2e9e83', belly: '#a7e8c8', mane: '#ff7043', hoof: '#f2c230', eye: '#ffeb3b', saddle: '#7b1fa2', trim: '#ffd54a', scale: '#ffd54a', glow: '#ff9e40' },
+  crane: { kind: 'bird', seat: 19, len: 12, body: '#f6f4ef', belly: '#e4e0d8', mane: '#2a2433', hoof: '#9a8a9e', eye: '#1d1424', saddle: '#1565c0', trim: '#ffd54a', crown: '#e53935', beak: '#e0b04a' },
+};
+// độ cao yên (pixel nghệ thuật) và độ nâng người cưỡi (hông ninja ở y = -8, lún vào yên 1px)
+for (const k in MOUNTS) {
+  const m = MOUNTS[k];
+  if (m.kind === 'quad') m.seat = m.legH + m.bodyH + 1;
+  m.lift = m.seat - 7;
+}
+// nhún thân theo khung chạy (4 khung)
+const MOUNT_BOB = [0, -1, 0, -1];
+
+// Đầu + cổ quay phải, gốc (L - 3, yt - 9). c thân, d tối, l sáng, m bờm, M bờm tối, e mắt, n mũi, w trắng, h sừng/vàng, s sọc
+const MOUNT_HEADS = {
+  horse: [
+    '..M.d......',
+    '.mMddl.....',
+    'mMccccl....',
+    'mMccecc....',
+    'mMcccccl...',
+    'mMccccccll.',
+    'mMdcc.dcccn',
+    'mMdc...ddd.',
+    'mMcc.......',
+    'mMccc......',
+    '.Mcccc.....',
+  ],
+  qilin: [
+    '.....h.....',
+    '..m.dh.....',
+    '.mmddlh....',
+    'mmccccl....',
+    'mMccecc....',
+    'mMcccccl...',
+    'mmccccccll.',
+    'mMdcs.dcccn',
+    'mmdc...ddd.',
+    'mMcc.......',
+    'mmccc......',
+    '.Mcccc.....',
+  ],
+  wolf: [
+    '...........',
+    '..d..d.....',
+    '..cd.cd....',
+    '.ccccccl...',
+    'Mcceccccl..',
+    'Mccccccclll',
+    'Mcccccccwwn',
+    'Mmccccww...',
+    '.mmcccw....',
+    '.mMcccc....',
+    '..mcccc....',
+  ],
+  tiger: [
+    '...........',
+    '..dc..dc...',
+    '.cccccccc..',
+    'scsccsccc..',
+    'ccccecccww.',
+    'sccccccwwwn',
+    'ccscccwwww.',
+    '.ccsccwww..',
+    '..ccccc....',
+    '..scccc....',
+    '..ccccc....',
+  ],
+};
+
+function mountPalette(m) {
+  const b = C(m.body);
+  return {
+    c: b, d: sh(b, -0.3), l: sh(b, 0.35), w: C(m.belly), m: C(m.mane), M: sh(C(m.mane), -0.35),
+    e: C(m.eye), n: sh(b, -0.6), h: C(m.trim), s: C(m.stripe || m.mane), k: INK,
+    S: C(m.saddle), T: C(m.trim), F: C(m.hoof),
+  };
+}
+
+function drawMountLeg(x, top, dx, lift, far, Q) {
+  const foot = -1 - lift;
+  const pts = linePts(x, top, x + dx, foot);
+  const c1 = far ? Q.d : Q.c;
+  const c2 = far ? sh(Q.d, -0.15) : Q.l;
+  for (let i = 0; i < pts.length; i++) {
+    const [lx, ly] = pts[i];
+    const hoof = ly >= foot - 1;
+    px(lx, ly, hoof ? (far ? sh(Q.F, -0.2) : Q.F) : c1);
+    px(lx + 1, ly, hoof ? Q.F : c2);
+  }
+}
+
+// Một khung thú 4 chân. anim: 'idle' | 'walk' | 'jump'
+function buildQuad(m, Q, anim, f) {
+  const L = m.len;
+  const BH = m.bodyH;
+  const bob = anim === 'walk' ? MOUNT_BOB[f] : anim === 'jump' ? -1 : 0;
+  const yb = -m.legH - 1 + bob;
+  const yt = yb - BH + 1;
+  // dáng chân: [độ lệch bàn chân, độ nhấc]
+  const G = [[2, 0], [0, 1], [-2, 0], [0, 2]];
+  const leg = (front, far) => {
+    if (anim === 'jump') return front ? [3, 3] : [-3, 2];
+    if (anim !== 'walk') return [front ? 0 : 0, 0];
+    const ph = (front !== far) ? f : (f + 2) % 4;
+    return G[ph];
+  };
+  // chân phía xa (tối) vẽ trước
+  for (const [x, front, far] of [[-L + 3, false, true], [L - 2, true, true], [-L + 1, false, false], [L - 4, true, false]]) {
+    const [dx, lift] = leg(front, far);
+    drawMountLeg(x, yb + 1, dx, lift, far, Q);
+    // bắp đùi / vai dày hơn ở phần trên chân gần
+    if (!far) for (let i = 1; i <= 3; i++) px(front ? x + 2 : x - 1, yb + i, front ? Q.c : Q.d);
+  }
+  // đuôi
+  const sway = anim === 'walk' ? (f & 1) : anim === 'idle' ? (f & 1) : 0;
+  if (m.tail === 'hair' || m.tail === 'flame') {
+    const pts = [[-L - 1, yt + 1], [-L - 2, yt + 2], [-L - 3, yt + 3], [-L - 3, yt + 4 + sway], [-L - 4, yt + 5 + sway], [-L - 4, yt + 6 + sway], [-L - 3, yt + 7 + sway]];
+    pts.forEach(([x, y], i) => {
+      const c = m.tail === 'flame' ? (i < 2 ? Q.m : i < 5 ? C('#ffb300') : C('#fff176')) : i > 4 ? Q.M : Q.m;
+      px(x, y, c); px(x + 1, y, m.tail === 'flame' ? Q.m : Q.M);
+    });
+  } else if (m.tail === 'bush') {
+    stamp(-L - 5, yt - 1 - sway, ['..ww.', '.cccw', 'dcccc', 'dddc.', '.dd..'], Q);
+  } else if (m.tail === 'long') {
+    const pts = [[-L - 1, yt + 1], [-L - 2, yt], [-L - 3, yt - 1], [-L - 4, yt - 2], [-L - 4, yt - 3 - sway], [-L - 3, yt - 4 - sway]];
+    pts.forEach(([x, y], i) => px(x, y, i % 2 ? Q.s : Q.c));
+  }
+  // thân: bo tròn hai đầu, sáng ở lưng, bụng nhạt
+  for (let r = 0; r < BH; r++) {
+    const inset = r === 0 || r === BH - 1 ? 2 : r === 1 || r === BH - 2 ? 1 : 0;
+    for (let x = -L + inset; x <= L - inset; x++) {
+      let c = Q.c;
+      if (r === 0) c = Q.l;
+      else if (r >= BH - 2 && x > -L + 3 && x < L - 3) c = Q.w;
+      else if (x <= -L + 1 + inset) c = Q.d;
+      if (m.stripe && r < BH - 2 && x > -L + inset && ((x + 40 + (r >> 1)) % 5 === 0)) c = Q.s;
+      if (m.scale && r > 0 && r < BH - 2 && ((x + (r & 1) * 2) & 3) === 0) c = C(m.scale);
+      px(x, yt + r, c);
+    }
+  }
+  // đầu + cổ
+  if (m.head && MOUNT_HEADS[m.head]) {
+    const nod = anim === 'idle' ? (f >> 1) & 1 : anim === 'walk' ? (f & 1) : 0;
+    stamp(L - 3, yt - 9 + nod, MOUNT_HEADS[m.head], Q);
+  }
+  // bờm lửa kỳ lân
+  if (m.tail === 'flame') {
+    const ph = f & 1;
+    for (const [x, y] of [[L - 4, yt - 8], [L - 5, yt - 6], [L - 5, yt - 4], [L - 4, yt - 2]]) {
+      px(x - ph, y, C('#ffb300')); px(x - 1 - ph, y + 1, C('#fff176'));
+    }
+  }
+  // yên + khăn yên
+  drawSaddle(Q, yt, -8, 1);
+  return yt;
+}
+
+function drawSaddle(Q, yt, x0, x1) {
+  for (let x = x0; x <= x1; x++) {
+    px(x, yt - 1, x === x0 || x === x1 ? sh(Q.S, -0.3) : Q.S);
+    px(x, yt, Q.S);
+    if (x > x0 && x < x1) {
+      px(x, yt + 1, sh(Q.S, -0.15));
+      px(x, yt + 2, sh(Q.S, -0.15));
+      px(x, yt + 3, Q.T);
+    }
+  }
+  px(x0, yt - 2, sh(Q.S, -0.3)); px(x1, yt - 2, Q.S); px(x1 + 1, yt - 2, Q.T);
+  // bàn đạp
+  px(x1 - 3, yt + 4, Q.T); px(x1 - 2, yt + 5, Q.T);
+}
+
+// Hạc tiên: thân trắng, cánh xếp viền đen, cổ đen cong dài, mào đỏ, chân mảnh
+function buildBird(m, Q, anim, f) {
+  const bob = anim === 'walk' ? MOUNT_BOB[f] : anim === 'jump' ? -1 : 0;
+  const yt = 1 - m.seat + bob;
+  const LEG = Q.F;
+  // chân: chạy so le, nhảy co về sau
+  for (const [i, x0] of [[0, -5], [1, 1]]) {
+    let dx = 0;
+    let lift = 0;
+    if (anim === 'walk') [dx, lift] = [[2, 0], [0, 1], [-2, 0], [0, 1]][(f + i * 2) % 4];
+    if (anim === 'jump') { dx = -5 + i; lift = 5; }
+    const c = i ? LEG : sh(LEG, -0.25);
+    for (const [x, y] of linePts(x0, yt + 7, x0 + dx, -1 - lift)) px(x, y, c);
+    px(x0 + dx + 1, -1 - lift, c); px(x0 + dx - 1, -1 - lift, c);
+  }
+  // đuôi lông đen
+  stamp(-16, yt + 1, ['kkM...', '.kkMM.', '..kkMM', '...kM.'], { k: Q.m, M: Q.M });
+  // thân hình giọt nước
+  const rows = [[-9, 5], [-11, 7], [-12, 8], [-12, 8], [-11, 7], [-9, 5], [-6, 2]];
+  rows.forEach(([a, b], r) => {
+    for (let x = a; x <= b; x++) px(x, yt + r, r === 0 ? Q.l : r >= 5 ? Q.w : x <= a + 1 ? sh(Q.c, -0.12) : Q.c);
+  });
+  // cánh: xếp sát thân, chạy thì hé lên, nhảy thì dang rộng ra sau người cưỡi
+  const open = anim === 'jump' ? 2 : anim === 'walk' && (f & 1) ? 1 : 0;
+  if (open === 2) {
+    stamp(-17, yt - 11, [
+      'kk...........',
+      '.kMd.........',
+      '..kMdd.......',
+      '...kMddc.....',
+      '....kMdccc...',
+      '.....kMddcc..',
+      '......kMdccc.',
+      '.......kdcccc',
+      '........dccc.',
+      '.........cc..',
+    ], { k: Q.m, M: Q.M, d: sh(Q.c, -0.14), c: Q.c });
+  } else {
+    for (let x = -12; x <= 3; x++) {
+      const y0 = yt + 2 - (x < -6 ? open : 0);
+      px(x, y0, sh(Q.c, -0.1));
+      px(x, y0 + 1, x < -8 ? Q.m : sh(Q.c, -0.2));
+      if (x < -6) px(x, y0 + 2, x < -9 ? Q.m : Q.M);
+    }
+  }
+  // cổ đen cong + đầu mào đỏ, mỏ vàng
+  const nod = anim === 'idle' ? (f >> 1) & 1 : anim === 'walk' ? (f & 1) : 0;
+  // cổ vươn ra trước để đầu hạc cách mũi mặt nạ dài (Thiên Cẩu) của người cưỡi ít nhất 1px
+  const neck = [[7, yt + 1], [8, yt], [9, yt - 1], [9, yt - 2], [9, yt - 3], [9, yt - 4], [9, yt - 5], [10, yt - 6], [10, yt - 7], [11, yt - 8], [11, yt - 9], [12, yt - 10]];
+  neck.forEach(([x, y], i) => {
+    const d = i > 5 ? nod : 0;
+    px(x, y + d, i < 2 ? Q.c : Q.m);
+    px(x + 1, y + d, i < 2 ? Q.l : Q.M);
+  });
+  stamp(11, yt - 14 + nod, ['.rr....', 'rrrr...', 'kkekbbb', '.kkk.bb', '..k....'], { r: C(m.crown), k: Q.m, e: 0xffffff, b: C(m.beak) });
+  drawSaddle(Q, yt, -8, 1);
+  return yt;
+}
+
+const mountCache = new Map();
+function mountEntry(type, anim, f, flash) {
+  const key = `${type}|${anim}${f}${flash ? 'F' : ''}`;
+  let e = mountCache.get(key);
+  if (e) return e;
+  const m = MOUNTS[type];
+  clr();
+  const Q = m.Q || (m.Q = mountPalette(m));
+  if (m.kind === 'bird') buildBird(m, Q, anim, f);
+  else buildQuad(m, Q, anim, f);
+  e = bake(flash, false, !!m.glow && !flash);
+  if (e.aura) e.aura = tinted(e.aura, m.glow);
+  mountCache.set(key, e);
+  return e;
+}
+
+// Độ nâng người cưỡi so với mặt đất (pixel nghệ thuật); 0 khi không cưỡi
+export function mountOffset(look) {
+  const k = look && look.mount;
+  return k && own(MOUNTS, k) ? MOUNTS[k].lift : 0;
+}
+
+// Chiều cao từ chân tới đỉnh đầu, tính cả thú cưỡi (nhãn tên, thanh máu, bong bóng chat)
+export function ninjaHeight(look) {
+  return NINJA_H + mountOffset(look);
+}
+
 // ================= SPEC + CACHE =================
 const specCache = new Map();
 const frameCache = new Map();
 const atkState = new Map();
 
 function tierOf(v) {
-  return v == null || v < 0 ? -1 : Math.min(9, v | 0);
+  return v == null || v < 0 ? -1 : Math.min(TIER_OUTFIT.length - 1, v | 0);
 }
 
 function buildSpec(o, key) {
@@ -1577,6 +2212,30 @@ function buildSpec(o, key) {
     wp: look.wp || 0,
   };
   if (mon) sp.ht = -1;
+  // thời trang (chỉ người chơi): mặt nạ thay khăn che mặt, trang phục thay màu áo quần
+  if (!pal && !npc) {
+    if (own(MASKS, look.mask)) {
+      sp.fmask = look.mask;
+      sp.mask = false;
+    }
+    if (own(CLOAKS, look.cloak)) {
+      const k = CLOAKS[look.cloak];
+      const c = C(k.c);
+      sp.ck = { c, d: sh(c, -0.3), l: C(k.l), t: C(k.t), pat: k.pat };
+    }
+    if (own(COSTUMES, look.costume)) {
+      const cs = COSTUMES[look.costume];
+      sp.cs = cs;
+      sp.outfit = C(cs.o);
+      sp.pants = C(cs.p);
+      sp.trim = C(cs.t);
+      sp.under = C(cs.u);
+      sp.wrap = C(cs.w);
+      sp.glove = C(cs.g);
+      sp.at = cs.at;
+      sp.pt = cs.pt;
+    }
+  }
   if (npc) {
     sp.mask = false;
     NPCS[npc](sp, pal || ['#666', '#ccc', '#333']);
@@ -1600,12 +2259,12 @@ function attackFrame(o) {
   return Math.floor((now - s.start) / 0.085) % 3;
 }
 
-function getEntry(sp, anim, f, flash) {
-  const key = `${sp.key}#${anim}${f}${flash ? 'F' : ''}`;
+function getEntry(sp, anim, f, flash, ride) {
+  const key = `${sp.key}#${anim}${f}${flash ? 'F' : ''}${ride ? 'R' : ''}`;
   let e = frameCache.get(key);
   if (e) return e;
   if (frameCache.size > 2400) frameCache.clear();
-  const dead = buildFrame(sp, sp.P, anim, f);
+  const dead = buildFrame(sp, sp.P, anim, f, ride);
   if (dead) rotateDead();
   const wb = sp.wp >= 11 ? 3 : sp.wp >= 8 ? 2 : 0;
   e = bake(flash, wb >= 2 && !flash && !dead, wb >= 3 && !flash && !dead);
@@ -1629,7 +2288,7 @@ function specOf(o) {
   const look = o.look || {};
   const wp = look.wp || 0;
   const wpb = wp >= 11 ? 3 : wp >= 8 ? 2 : wp >= 5 ? 1 : 0;
-  const key = `${o.cls}|${o.gender}|${o.name}|${look.w}|${look.a}|${look.p}|${look.h}|${wpb}|${o.el}|${o.weaponType}|${o.pal ? o.pal.join(',') : ''}|${o.npcType || ''}|${o.noMask ? 1 : 0}`;
+  const key = `${o.cls}|${o.gender}|${o.name}|${look.w}|${look.a}|${look.p}|${look.h}|${wpb}|${o.el}|${o.weaponType}|${o.pal ? o.pal.join(',') : ''}|${o.npcType || ''}|${o.noMask ? 1 : 0}|${look.mask || ''}|${look.cloak || ''}|${look.costume || ''}`;
   let sp = specCache.get(key);
   if (!sp) {
     if (specCache.size > 600) specCache.clear();
@@ -1641,8 +2300,9 @@ function specOf(o) {
 }
 
 // ================= NINJA =================
-// o: { dir, cls, gender, look:{w,a,p,h,wp}, anim:'idle'|'walk'|'jump'|'attack'|'dead', t, name, el,
+// o: { dir, cls, gender, look:{w,a,p,h,wp,mask?,cloak?,costume?,mount?}, anim:'idle'|'walk'|'jump'|'attack'|'dead', t, name, el,
 //      weaponType, pal:[áo, điểm nhấn, tóc, da], scale, flash, noMask, npcType?, atkP? (0..1), noShadow? }
+// look.mount: vẽ thú cưỡi dưới chân (y vẫn là mặt đất), người cưỡi nâng lên mountOffset(look); trọng thương thì xuống thú.
 export function drawNinja(ctx, x, y, o) {
   const ps = Math.max(1, Math.round(o.scale || 1));
   const dir = o.dir || 1;
@@ -1656,21 +2316,46 @@ export function drawNinja(ctx, x, y, o) {
   else if (anim === 'jump') f = Math.floor(t * 8) % 2;
   else if (anim === 'attack') f = attackFrame(o);
   const flash = !!o.flash;
-  const e0 = getEntry(sp, anim, f, flash);
+  const look = o.look || {};
+  const mk = !sp.npc && !o.pal && anim !== 'dead' && own(MOUNTS, look.mount) ? look.mount : null;
+  const e0 = getEntry(sp, anim, f, flash, !!mk);
   const e = dir < 0 ? flipped(e0) : e0;
-  const X = Math.round(x);
+  let X = Math.round(x);
   let Y = Math.round(y);
   // Canvas xem trước nhỏ (chọn nhân vật): đẩy xuống để không cụt đầu
   const cvs = ctx.canvas;
-  if (ps > 1 && cvs && cvs.width <= 160 && cvs.height <= 200) Y = Math.max(Y, (NINJA_H + 2) * ps);
+  if (ps > 1 && cvs && cvs.width <= 160 && cvs.height <= 200) Y = Math.max(Y, ((mk ? ninjaHeight(look) : NINJA_H) + 2) * ps);
   const prevSmooth = ctx.imageSmoothingEnabled;
   ctx.imageSmoothingEnabled = false;
   // bóng dưới chân
   if (!o.noShadow) {
-    ctx.fillStyle = 'rgba(20,10,30,0.28)';
-    const sw = anim === 'dead' ? 14 : 7;
-    ctx.fillRect(X - sw * ps, Y - ps, sw * 2 * ps, ps);
-    ctx.fillRect(X - (sw - 2) * ps, Y, (sw - 2) * 2 * ps, ps);
+    // bóng elip 3 hàng, đậm ở lõi (thú cưỡi: bóng rộng theo thân thú)
+    const sw = mk ? (MOUNTS[mk].len || 9) + 2 : anim === 'dead' ? 13 : anim === 'jump' ? 4 : 6;
+    ctx.fillStyle = 'rgba(20,10,30,0.2)';
+    ctx.fillRect(X - (sw - 2) * ps, Y - ps, (sw - 2) * 2 * ps, ps);
+    ctx.fillRect(X - sw * ps, Y, sw * 2 * ps, ps);
+    ctx.fillRect(X - (sw - 3) * ps, Y + ps, (sw - 3) * 2 * ps, ps);
+    ctx.fillStyle = 'rgba(20,10,30,0.16)';
+    ctx.fillRect(X - (sw - 3) * ps, Y, (sw - 3) * 2 * ps, ps);
+  }
+  if (mk) {
+    // thú chạy 10 khung/giây, đứng thì thở chậm; người cưỡi nhún theo thân thú
+    const ma = anim === 'walk' ? 'walk' : anim === 'jump' ? 'jump' : 'idle';
+    const mf = ma === 'walk' ? Math.floor(t * 10) % 4 : ma === 'idle' ? Math.floor(t * 1.6) % 4 : 0;
+    const m0 = mountEntry(mk, ma, mf, flash);
+    const me = dir < 0 ? flipped(m0) : m0;
+    const mx0 = X - me.ox * ps;
+    const my0 = Y - me.oy * ps;
+    if (me.aura) {
+      ctx.globalAlpha = 0.4 + Math.sin((o.t || 0) * 4) * 0.18;
+      ctx.drawImage(me.aura, mx0, my0, m0.w * ps, m0.h * ps);
+      ctx.globalAlpha = 1;
+    }
+    ctx.drawImage(me.cv, mx0, my0, m0.w * ps, m0.h * ps);
+    const bob = ma === 'walk' ? MOUNT_BOB[mf] : ma === 'jump' ? -1 : 0;
+    Y -= (MOUNTS[mk].lift - bob) * ps;
+    // người cưỡi ngồi lùi về sau để lộ cổ và đầu thú
+    X -= 3 * dir * ps;
   }
   const dx = X - e.ox * ps;
   const dy = Y - e.oy * ps;

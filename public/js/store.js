@@ -12,9 +12,13 @@ export const S = {
 };
 
 function loadSettings() {
-  const def = { autoHp: 40, autoMp: 25, names: true, autoPick: true, autoRange: 600, chatTab: 'all', sound: true };
+  // daynight: mức lớp ngày/đêm 0 (tắt) / 0.5 (nhẹ) / 1 (đầy đủ); shake: rung màn hình
+  const def = { autoHp: 40, autoMp: 25, names: true, autoPick: true, autoRange: 600, chatTab: 'all', sound: true, daynight: 1, shake: true };
   try {
-    return { ...def, ...JSON.parse(localStorage.getItem('ns_settings') || '{}') };
+    const st = { ...def, ...JSON.parse(localStorage.getItem('ns_settings') || '{}') };
+    if (![0, 0.5, 1].includes(st.daynight)) st.daynight = def.daynight;
+    st.shake = st.shake !== false;
+    return st;
   } catch (e) {
     return def;
   }
@@ -51,13 +55,59 @@ export function itemStats(it) {
   const out = {};
   if (!def || !def.stats) return out;
   const mul = 1 + S.G.upgrade.bonus * (it.p || 0);
+  // thú cưng: chỉ số tăng theo cấp thú (khớp petMul của server)
+  const pet = def.slot === 'pet' && S.G.pet;
   for (const k in def.stats) {
-    const v = def.stats[k] * mul;
+    const v = def.stats[k] * (pet ? petMul(k, it.plv || 1) : mul);
     out[k] = k === 'crit' || k === 'dodge' || k === 'spd' ? Math.round(v * 10) / 10 : Math.round(v);
   }
   for (const [k, v] of it.o || []) out[k] = (out[k] || 0) + v;
+  for (const id of it.gems || []) {
+    const g = gemDef(id);
+    if (!g) continue;
+    const t = S.G.gems.types[g.gem];
+    out[t.stat] = Math.round(((out[t.stat] || 0) + t.v[g.glv - 1]) * 10) / 10;
+  }
   return out;
 }
+
+// ---- Thú cưng (bảng tra trong S.G.pet)
+export function petMul(k, lv) {
+  const P = S.G.pet;
+  return 1 + (P.pct.includes(k) ? P.growthPct : P.growth) * (Math.max(1, lv | 0) - 1);
+}
+
+// Thú đang mang theo: { it, def } hoặc null
+export function myPet() {
+  const it = S.equip && S.equip.pet;
+  const def = it && S.G.items[it.id];
+  return def && def.slot === 'pet' ? { it, def } : null;
+}
+
+// ---- Ngọc khảm (bảng tra trong S.G.gems)
+export function gemDef(id) {
+  const d = id && S.G && S.G.items[id];
+  return d && d.type === 'gem' && S.G.gems ? d : null;
+}
+
+// Số lỗ khảm của loại trang bị (thú cưng, thời trang: 0)
+export function gemHoles(def) {
+  if (!def || def.type !== 'equip' || def.noUpgrade || !S.G.gems) return 0;
+  if (S.G.gearSlots && !S.G.gearSlots.includes(def.slot)) return 0;
+  return S.G.gems.holes[def.tier || 0] || 0;
+}
+
+// ["+2.400", "sinh lực"]: tách số và nhãn để giao diện hẹp ngắt dòng giữa hai phần, không ngắt giữa từ
+export function gemParts(g) {
+  const t = S.G.gems.types[g.gem];
+  const v = t.v[g.glv - 1];
+  return [`+${t.unit === '%' ? v : fmt(v)}${t.unit}`, t.label];
+}
+
+// "+0.9% chí mạng", "+2.400 sinh lực"
+export const gemText = (g) => gemParts(g).join(' ');
+
+export const gemColor = (g) => S.G.gems.types[g.gem].c;
 
 export function itemName(it) {
   const def = S.G.items[it.id];
@@ -67,4 +117,17 @@ export function itemName(it) {
 
 export function rarityColor(it) {
   return S.G.rarity[it.r || 0].color;
+}
+
+// Sự kiện theo mùa đang diễn ra (server báo id qua gói 'season'), không có thì null
+export function activeSeason() {
+  if (!S.seasonId) return null;
+  return ((S.G && S.G.seasons) || []).find((s) => s.id === S.seasonId) || null;
+}
+
+// Số lượng một vật phẩm trong hành trang
+export function countInv(id) {
+  let n = 0;
+  for (const it of S.inv || []) if (it && it.id === id) n += it.q;
+  return n;
 }

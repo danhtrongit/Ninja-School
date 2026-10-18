@@ -1,5 +1,7 @@
 'use strict';
 
+const { SKILLS } = require('./skills');
+
 // type = kiểu sprite phía client: slime, bunny, mushroom, imp, flyer, humanoid, crab, golem, ghost, beast, snowman
 // pal  = bảng màu [chính, phụ, điểm nhấn]
 const LIST = [
@@ -75,14 +77,61 @@ const BOSSES = [
   ['boss_crystal', 'Tinh Thể Vương', 66, 'golem', ['#7c4dff', '#e1bee7', '#00e5ff'], 'water', 1.9],
   ['boss_heaven', 'Thiên Ma', 112, 'humanoid', ['#000000', '#ff1744', '#ffd600'], 'fire', 2.4],
   ['boss_dragon', 'Long Vương', 125, 'beast', ['#006064', '#4dd0e1', '#ffd600'], 'water', 2.6],
+  // Boss sự kiện Tà Thú Xuất Thế: không đặt cố định trên bản đồ, world.js gọi ra theo lịch
+  ['ev_hacviem', 'Hắc Viêm Tà Thú', 32, 'beast', ['#2b1a24', '#ff6d00', '#ffe082'], 'fire', 2.4, 1],
+  ['ev_bangphach', 'Băng Phách Tà Thú', 60, 'golem', ['#3d5a80', '#98c1d9', '#e0fbfc'], 'water', 2.1, 1],
+  ['ev_huyetnguyet', 'Huyết Nguyệt Tà Thú', 95, 'imp', ['#3b0a1e', '#f8bbd0', '#ff1744'], 'wind', 2.5, 1],
 ];
+
+// Chiêu boss. shape: circle (vòng quanh boss), line (dải từ boss theo hướng mục tiêu, r = chiều dài),
+// pillar (cột sáng giáng xuống chỗ đứng người chơi, extra.n cột). windup = thời gian niệm (ms) để người chơi chạy ra.
+// ground: chỉ trúng người đứng sát mặt đất (nhảy lên né được). extra: summon { m, n }, roar { slow (% tốc chạy), dur (ms) }.
+const quake = (r, mul, o) => ({ name: 'Địa Chấn', k: 'quake', shape: 'circle', r, windup: 1400, cd: 9000, mul, ground: true, ...o });
+const fissure = (r, mul, o) => ({ name: 'Liệt Địa', k: 'quake', shape: 'line', r, windup: 1200, cd: 10000, mul, w: 18, ...o });
+const roar = (r, slow, o) => ({ name: 'Kinh Hồn Hống', k: 'roar', shape: 'circle', r, windup: 1000, cd: 15000, mul: 0.6, extra: { slow, dur: 3000 }, ...o });
+const summon = (m, n, o) => ({ name: 'Triệu Hồi', k: 'summon', shape: 'circle', r: 46, windup: 1300, cd: 20000, mul: 0, extra: { m, n }, ...o });
+const beam = (r, mul, o) => ({ name: 'Quang Tuyến', k: 'beam', shape: 'line', r, windup: 1100, cd: 9000, mul, w: 16, ...o });
+const pillar = (n, mul, o) => ({ name: 'Thiên Trụ', k: 'beam', shape: 'pillar', r: 24, windup: 1300, cd: 12000, mul, extra: { n }, ...o });
+const nova = (r, mul, o) => ({ name: 'Bạo Liệt', k: 'nova', shape: 'circle', r, windup: 1800, cd: 16000, mul, ...o });
+
+const BOSS_SKILLS = {
+  boss_slime: [quake(90, 1.5), summon('slime', 3)],
+  boss_fox: [beam(220, 1.6, { name: 'Hồ Hỏa Tuyến' }), pillar(2, 1.5, { name: 'Hồ Hỏa Trụ' }), roar(130, 35)],
+  boss_bat: [roar(140, 40, { name: 'Âm Ba Thét' }), summon('bat', 3)],
+  boss_wolf: [fissure(230, 1.7, { name: 'Lang Trảo' }), roar(130, 40, { name: 'Lang Hống' })],
+  boss_pharaoh: [pillar(3, 1.6, { name: 'Thái Dương Trụ' }), summon('mummy', 3), nova(130, 2.0, { name: 'Sa Bạo' })],
+  boss_yeti: [quake(110, 1.8), roar(150, 45, { name: 'Băng Hống' })],
+  boss_crystal: [pillar(3, 1.7, { name: 'Pha Lê Trụ' }), nova(140, 2.1, { name: 'Tinh Bạo' })],
+  boss_oni: [quake(100, 1.8), beam(260, 1.9, { name: 'Quỷ Hỏa Tuyến' }), summon('oni', 2)],
+  boss_god: [nova(150, 2.2, { name: 'Ma Thần Bạo' }), pillar(4, 1.8, { name: 'Hắc Lôi Trụ' }), beam(280, 2.0)],
+  boss_heaven: [pillar(4, 1.9, { name: 'Thiên Phạt' }), nova(160, 2.3), roar(160, 45)],
+  boss_dragon: [beam(300, 2.1, { name: 'Long Tức' }), quake(120, 2.0, { name: 'Long Chấn' }), summon('seaserpent', 2)],
+  ev_hacviem: [beam(260, 1.8, { name: 'Hắc Viêm Tuyến' }), quake(110, 1.9, { name: 'Viêm Chấn' }), roar(150, 40, { name: 'Tà Hống' })],
+  ev_bangphach: [pillar(4, 1.8, { name: 'Băng Phách Trụ' }), quake(120, 2.0, { name: 'Băng Chấn' }), summon('icewolf', 2)],
+  ev_huyetnguyet: [nova(160, 2.3, { name: 'Huyết Nguyệt Bạo' }), pillar(4, 1.9, { name: 'Huyết Trụ' }), roar(160, 45, { name: 'Tà Hống' })],
+};
+// Cuồng nộ khi máu dưới 30%: hồi chiêu và đánh thường nhanh hơn, niệm chiêu ngắn hơn (vẫn đủ thời gian chạy ra)
+const RAGE = { hp: 0.3, cd: 0.6, windup: 0.85, atkCd: 0.75, speed: 1.2 };
+
+// Sách nội tại cấp yêu cầu req của mọi phái, mỗi cuốn tỉ lệ ch (6 phái: tổng khoảng 6·ch có ít nhất 1 cuốn)
+const books = (req, ch) => Object.keys(SKILLS).filter((id) => SKILLS[id].type === 'passive' && SKILLS[id].req === req).map((id) => [SKILLS[id].book, ch]);
 
 // Vật phẩm đặc biệt boss rơi thêm (ngoài trang bị, đá, rương)
 const BOSS_DROPS = {
-  boss_fox: [['pet_fox', 0.1]],
-  boss_god: [['stone4', 1]],
-  boss_heaven: [['stone4', 1], ['pet_ghost', 0.1]],
-  boss_dragon: [['stone4', 1], ['pet_dragon', 0.25]],
+  boss_slime: [...books(15, 0.02)],
+  boss_fox: [['pet_fox', 0.1], ...books(15, 0.03)],
+  boss_bat: [...books(15, 0.03)],
+  boss_wolf: [...books(15, 0.02), ...books(35, 0.025)],
+  boss_pharaoh: [...books(15, 0.02), ...books(35, 0.025)],
+  boss_yeti: [...books(35, 0.03), ...books(50, 0.02)],
+  boss_crystal: [...books(35, 0.03), ...books(50, 0.02)],
+  boss_oni: [...books(35, 0.02), ...books(50, 0.03)],
+  boss_god: [['stone4', 1], ...books(50, 0.035)],
+  boss_heaven: [['stone4', 1], ['pet_ghost', 0.1], ...books(50, 0.035)],
+  boss_dragon: [['stone4', 1], ['pet_dragon', 0.25], ...books(50, 0.035)],
+  ev_hacviem: [...books(15, 0.03), ...books(35, 0.02)],
+  ev_bangphach: [...books(35, 0.03), ...books(50, 0.02)],
+  ev_huyetnguyet: [['stone4', 1], ...books(50, 0.035)],
 };
 
 const SIZES = {
@@ -112,16 +161,17 @@ for (const [id, name, lv, type, pal, el, aggro, drops, ranged, scale] of LIST) {
     fly: type === 'flyer' || type === 'ghost',
   };
 }
-for (const [id, name, lv, type, pal, el, scale] of BOSSES) {
+for (const [id, name, lv, type, pal, el, scale, event] of BOSSES) {
   const s = baseStats(lv);
   const sz = SIZES[type];
+  // boss sự kiện: cả máy chủ cùng đánh nên máu dày hơn (×80), EXP nhiều hơn (×60)
   MONSTERS[id] = {
-    name, lv, type, pal, el, aggro: true, boss: true, ranged: false, scale,
-    hp: Math.round(s.hp * 45), atk: Math.round(s.atk * 2.2), def: Math.round(s.def * 1.6), exp: Math.round(s.exp * 40),
+    name, lv, type, pal, el, aggro: true, boss: true, event: !!event, ranged: false, scale,
+    hp: Math.round(s.hp * (event ? 80 : 45)), atk: Math.round(s.atk * 2.2), def: Math.round(s.def * 1.6), exp: Math.round(s.exp * (event ? 60 : 40)),
     speed: 45, atkRange: 40 * scale * 0.6, atkCd: 1500, aoe: 60 * scale * 0.5, respawn: 10 * 60 * 1000,
     w: Math.round(sz[0] * scale), h: Math.round(sz[1] * scale), fly: type === 'flyer' || type === 'ghost',
-    drops: BOSS_DROPS[id] || [],
+    drops: BOSS_DROPS[id] || [], skills: BOSS_SKILLS[id] || [],
   };
 }
 
-module.exports = { MONSTERS };
+module.exports = { MONSTERS, RAGE };

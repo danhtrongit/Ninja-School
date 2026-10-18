@@ -1,11 +1,13 @@
 // Vòng lặp game phía client: vật lý, đồng bộ mạng, chiến đấu, vẽ
-import { S, skillVal } from './store.js';
-import { drawNinja, ELEMENT_COLORS, NINJA_H } from './sprites.js';
-import { drawMonster, monsterHeight } from './monsterart.js';
+import { S, skillVal, activeSeason, countInv } from './store.js';
+import { drawNinja, ELEMENT_COLORS, NINJA_H, mountOffset } from './sprites.js';
+import { drawMonster, monsterHeight, prewarmMonsters } from './monsterart.js';
+import { drawPet, PET_ART, petHeight, petFlies } from './petart.js';
 import { iconCanvas } from './icons.js';
-import { MapRenderer } from './maprender.js';
+import { MapRenderer, setLighting } from './maprender.js';
 import { FX } from './fx.js';
 import { sfx } from './sound.js';
+import { findRoute, nearestMap, mapsWithNpc, questDest, dailyDest, buildNav, surfaceAt, surfaceBelow, navPlan } from './pathfind.js';
 
 const GRAV = 1000;
 const JUMP = 378;
@@ -13,6 +15,12 @@ const JUMP2 = 330;
 const SPEED = 110;
 const PH = NINJA_H;
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
+// Cộng độ rung s vào v; vượt khỏi [lo, hi] thì rung về phía ngược lại
+const shakeIn = (v, s, lo, hi) => {
+  if (!s) return v;
+  const a = v + s;
+  return a < lo || a > hi ? clamp(v - s, lo, Math.max(lo, hi)) : a;
+};
 
 export class Game {
   constructor(net, ui, input) {
@@ -24,6 +32,12 @@ export class Game {
     this.lo = document.createElement('canvas');
     this.lctx = this.lo.getContext('2d');
     this.fx = new FX();
+    // giờ ép cho lớp ngày/đêm (công cụ kiểm thử); null = giờ thực Việt Nam
+    this.forceHour = null;
+    // độ lệch rung màn hình của khung đang vẽ (nhãn tên trên lớp phân giải cao rung theo)
+    this.shakeDX = 0;
+    this.shakeDY = 0;
+    this.applySettings();
     this.players = new Map();
     this.monsters = new Map();
     this.items = new Map();
@@ -39,6 +53,13 @@ export class Game {
     this.auto = false;
     this.autoBlack = new Map();
     this.autoStuck = { id: null, since: 0 };
+    this.travel = null;
+    this.hunt = null;
+    this.meId = 0;
+    this.dt = 1 / 60;
+    this.nav = null;
+    this.navJump = null;
+    this.navCache = { key: '', t: -1, e: null };
     this.camX = 0;
     this.camY = 0;
     this.t = 0;
@@ -49,10 +70,20 @@ export class Game {
     this.lastPortal = 0;
     this.lastPotion = { hp: 0, mp: 0 };
     this.duelWith = 0;
+    // hiệu ứng hẹn giờ (chuỗi nổ dọc chiêu dải của boss), xóa khi đổi bản đồ
+    this.timers = [];
     this.resize();
     window.addEventListener('resize', () => this.resize());
     this.canvas.addEventListener('pointerdown', (e) => this.onPointer(e));
     this.bind();
+  }
+
+  // Áp dụng cài đặt hiển thị (ngày/đêm, rung màn hình) từ S.settings
+  applySettings() {
+    const st = S.settings;
+    setLighting(st.daynight);
+    this.fx.shakeScale = st.shake === false ? 0 : 1;
+    if (!this.fx.shakeScale) this.fx.shake = 0;
   }
 
   resize() {
@@ -91,6 +122,7 @@ export class Game {
       if (p) {
         p.info = m;
         p.dead = m.dead;
+        this.checkCostume(p, m.look);
       }
     });
     n.on('mSpawn', (m) => this.addMonster(m));
@@ -99,10 +131,40 @@ export class Game {
       if (mo) {
         this.dying.push({ ...mo, dieT: 0 });
         this.fx.sparks(mo.x, mo.y - mo.def.h / 2, mo.def.pal[0], 14, 70);
+        if (mo.def.boss) this.fx.shakeAt(mo.x, mo.y, 6);
       }
       this.monsters.delete(m.id);
       if (this.target && this.target.kind === 'm' && this.target.id === m.id) this.target = null;
       this.ui.updateTarget(null);
+    });
+    // quái biến mất không qua cái chết (quái con khi boss ngã, Tà Thú hết giờ)
+    n.on('mGone', (m) => {
+      const mo = this.monsters.get(m.id);
+      if (mo) {
+        this.fx.sparks(mo.x, mo.y - mo.def.h / 2, '#b39ddb', 10, 50);
+        for (let i = 0; i < 6; i++) this.fx.smoke(mo.x + (i - 2.5) * 4, mo.y - 2, i % 2 ? '#5e4a6e' : '#8a7a9a', 3, 7, 0.9, 0.5);
+      }
+      this.monsters.delete(m.id);
+      if (this.target && this.target.kind === 'm' && this.target.id === m.id) this.target = null;
+    });
+    n.on('bossCast', (m) => this.onBossCast(m));
+    n.on('bossHit', (m) => this.onBossHit(m));
+    n.on('mRage', (m) => {
+      const mo = this.monsters.get(m.id);
+      if (!mo) return;
+      mo.rage = !!m.on;
+      if (mo.rage) {
+        this.fx.bossSkill(mo.x, mo.y, 'roar', '#ff1744', Math.max(1, mo.def.scale || 1) * 0.6);
+        this.fx.text(mo.x, mo.y - mo.h - 18, 'CUỒNG NỘ!', '#ff5252', true);
+      }
+    });
+    n.on('event', (m) => {
+      // thời gian còn lại tính theo đồng hồ máy khách để không lệch giờ với server
+      S.event = m.on ? { ...m, until: performance.now() + (m.left || 0) } : null;
+      if (this.ui.setEvent) this.ui.setEvent(S.event);
+    });
+    n.on('eventResult', (m) => {
+      if (this.ui.showEventResult) this.ui.showEventResult(m);
     });
     n.on('gAdd', (m) => this.items.set(m.id, { ...m, born: this.t }));
     n.on('gDel', (m) => this.items.delete(m.id));
@@ -111,7 +173,8 @@ export class Game {
     n.on('heal', (m) => {
       for (const [tid, amt] of m.list) {
         const e = this.entity(tid);
-        if (e && amt) this.fx.text(e.x, e.y - NINJA_H - 2, `+${amt}`, '#69f0ae');
+        // hút máu (ngọc Huyết Hồn) hiện màu đỏ máu nhạt, khác số sát thương đỏ tươi
+        if (e && amt) this.fx.text(e.x, e.y - this.headH(e) - 2, `+${amt}`, m.ls ? '#ff8aa0' : '#69f0ae');
       }
     });
     n.on('levelUp', (m) => {
@@ -119,8 +182,17 @@ export class Game {
       this.fx.levelUp(getter);
       if (S.me && m.id === S.me.id) sfx('level');
       const e = getter();
-      if (e) this.fx.text(e.x, e.y - NINJA_H - 16, 'LÊN CẤP!', '#ffd54f', true);
+      if (e) this.fx.text(e.x, e.y - this.headH(e) - 16, 'LÊN CẤP!', '#ffd54f', true);
     });
+    // Thợ Rèn: cường hóa (cột sáng / dấu X) và khảm, ghép ngọc (lấp lánh màu ngọc) hiện trên người chơi
+    n.on('smithFx', (m) => {
+      const e = this.entity(`p${m.id}`);
+      if (!e) return;
+      const y = e.y - this.lift(e);
+      if (m.k === 'gem') this.fx.gemSocket(e.x, y - 14, m.c);
+      else this.fx.enhance(e.x, y, !!m.ok, m.plus);
+    });
+    n.on('petAct', (m) => this.onPetAct(m));
     n.on('expGain', (m) => {
       if (m.n > 0) this.fx.text(m.x, m.y - 6, `+${m.n} EXP`, '#b3e5fc');
     });
@@ -130,7 +202,7 @@ export class Game {
       // nhặt liên tiếp thì xếp chữ lệch lên trên, không đè nhau và không đè tên nhân vật
       const ls = this.lootStack && this.t - this.lootStack.t < 0.45 ? this.lootStack.n + 1 : 0;
       this.lootStack = { t: this.t, n: ls % 4 };
-      const ly = this.me.y - NINJA_H - 14 - (ls % 4) * 7;
+      const ly = this.me.y - this.headH(this.me) - 14 - (ls % 4) * 7;
       if (m.k === 'xu') this.fx.text(this.me.x, ly, `+${m.q} xu`, '#ffd54f');
       else {
         const def = S.G.items[m.k];
@@ -148,6 +220,7 @@ export class Game {
       sfx('die');
       this.chase = null;
       this.walkTo = null;
+      this.cancelTravel();
     });
     n.on('chat', (m) => {
       if (m.ch === 'map' && m.id) this.bubbles.set(m.id, { msg: m.msg, until: this.t + 5 });
@@ -155,9 +228,44 @@ export class Game {
     n.on('duel', (m) => {
       this.duelWith = m.with || 0;
     });
+    // lôi đài: trạng thái hàng chờ / trận (idle, queue, prep, fight, end) và kết quả trận
+    n.on('arena', (m) => this.onArena(m));
+    n.on('arenaResult', (m) => {
+      if (this.ui.showArenaResult) this.ui.showArenaResult(m);
+    });
+  }
+
+  onArena(m) {
+    const st = ['queue', 'prep', 'fight', 'end'].includes(m.st) ? m.st : 'idle';
+    const prev = S.arena;
+    S.arena = st === 'idle' ? null : { ...m, st, opp: m.opp || (prev && prev.opp) || null, at: performance.now() };
+    if (st === 'prep') {
+      // server làm mới hồi chiêu khi vào trận
+      this.cool = {};
+      this.chase = null;
+      this.walkTo = null;
+      this.cancelTravel();
+    }
+    if (st === 'fight' && m.opp && this.players.has(m.opp.id)) this.setTarget({ kind: 'p', id: m.opp.id });
+    if (st === 'end' || st === 'idle') this.chase = null;
+    if (this.ui.setArena) this.ui.setArena(S.arena);
+  }
+
+  // Đối thủ lôi đài đang đấu (chỉ người này được tự động nhắm / đuổi theo trong trận)
+  isArenaOpp(p) {
+    const a = S.arena;
+    return !!(a && a.st === 'fight' && a.opp && p && p.id === a.opp.id && this.map && this.map.arena);
+  }
+
+  // Được tự đuổi theo người chơi: chỉ đối thủ lôi đài hoặc đối thủ thách đấu
+  canChase(p) {
+    return this.isArenaOpp(p) || (!!this.duelWith && !!p && p.id === this.duelWith);
   }
 
   enterMap(m) {
+    // nhân vật khác (đổi tài khoản/nhân vật) không được thừa hưởng lộ trình của nhân vật cũ
+    if (m.me.id !== this.meId) this.leaveSession();
+    this.meId = m.me.id;
     this.map = S.G.maps[m.map];
     this.renderer = new MapRenderer(this.map);
     S.me = m.me;
@@ -165,11 +273,13 @@ export class Game {
     this.monsters.clear();
     this.items.clear();
     this.dying = [];
+    this.timers = [];
     this.bubbles.clear();
+    // đặt this.me trước khi thêm quái: boss đang niệm dở gọi onBossCast cần vị trí mình
+    this.me = { x: m.x, y: m.y, vx: 0, vy: 0, dir: this.me ? this.me.dir : 1, onGround: true, jumps: 0, st: 0, attackT: 0, dropT: 0 };
     for (const p of m.players) if (p.id !== m.me.id) this.addPlayer(p);
     for (const mo of m.monsters) this.addMonster(mo);
     for (const it of m.items) this.items.set(it.id, { ...it, born: -10 });
-    this.me = { x: m.x, y: m.y, vx: 0, vy: 0, dir: this.me ? this.me.dir : 1, onGround: true, jumps: 0, st: 0, attackT: 0, dropT: 0 };
     this.target = null;
     this.chase = null;
     this.walkTo = null;
@@ -178,7 +288,44 @@ export class Game {
     this.camY = this.camTargetY();
     this.active = true;
     this.lastPortal = performance.now();
+    S.mapId = m.map;
+    this.nav = buildNav(this.map, { JUMP, JUMP2, GRAV });
+    this.navJump = null;
+    this.navCache.key = '';
+    if (this.hunt && this.hunt.map !== m.map) this.hunt = null;
     this.ui.onEnterMap(this.map);
+    this.prewarm();
+    this.resumeTravel();
+  }
+
+  // Dựng sẵn khung hình quái/boss của bản đồ để lần đầu chúng xuất hiện không bị giật
+  prewarm() {
+    const defs = [];
+    const seen = new Set();
+    const add = (k) => {
+      const d = S.G.monsters[k];
+      if (d && !seen.has(k)) { seen.add(k); defs.push(d); }
+    };
+    for (const k of this.map.mobs || []) add(k);
+    for (const b of this.map.bosses || []) add(b.m);
+    for (const m of this.monsters.values()) add(m.k);
+    prewarmMonsters(defs);
+  }
+
+  // Rời màn hình game (đăng xuất, đổi nhân vật, mất phiên): bỏ mọi việc tự động đang làm dở
+  leaveSession() {
+    this.travel = null;
+    this.hunt = null;
+    this.navJump = null;
+    this.walkTo = null;
+    this.chase = null;
+    this.meId = 0;
+    this.notifyTravel();
+    // trạng thái lôi đài thuộc phiên cũ (tự kết nối lại sau khi mất mạng): server gửi lại trạng thái thật khi vào game
+    if (S.arena) {
+      S.arena = null;
+      if (this.ui.setArena) this.ui.setArena(null);
+    }
   }
 
   addPlayer(p) {
@@ -191,7 +338,53 @@ export class Game {
 
   addMonster(m) {
     const def = S.G.monsters[m.k];
-    this.monsters.set(m.id, { id: m.id, k: m.k, def, x: m.x, y: m.y, tx: m.x, ty: m.y, dir: m.dir, st: 0, hp: m.hp, mhp: m.mhp, flash: 0, h: monsterHeight(def) });
+    this.monsters.set(m.id, { id: m.id, k: m.k, def, x: m.x, y: m.y, tx: m.x, ty: m.y, dir: m.dir, st: 0, hp: m.hp, mhp: m.mhp, flash: 0, h: monsterHeight(def), rage: !!m.rage, cast: null });
+    // boss đang niệm dở lúc mình vào bản đồ: vẫn hiện vùng cảnh báo phần thời gian còn lại
+    if (m.cast && m.cast.dur > 150) this.onBossCast(m.cast);
+  }
+
+  // ---------------- Chiêu boss
+  later(sec, fn) {
+    this.timers.push({ at: this.t + sec, fn });
+  }
+
+  // Bắt đầu niệm: vẽ vùng cảnh báo đúng hình vùng server sẽ tính sát thương
+  onBossCast(m) {
+    const mo = this.monsters.get(m.id);
+    const dur = Math.max(0.2, (+m.dur || 0) / 1000);
+    const col = m.k === 'summon' ? '#c77dff' : '#ff5252';
+    if (m.shape === 'line') this.fx.telegraph(m.x, m.y, (m.dir < 0 ? -1 : 1) * m.r, dur, col, 'line', +m.w || 16);
+    else if (m.shape === 'pillar') for (const [px, py] of m.pts || [[m.x, m.y]]) this.fx.telegraph(px, py, m.r, dur, col, 'pillar');
+    else this.fx.telegraph(m.x, m.y, m.r, dur, col, 'circle');
+    if (!mo) return;
+    mo.cast = { name: m.name || '', t0: this.t, dur };
+    if (m.dir) mo.dir = m.dir;
+    this.fx.text(mo.x, mo.y - mo.h - 18, m.name || '', '#ff8a80', true);
+    if (this.me && Math.abs(mo.x - this.me.x) < this.W) sfx('magic');
+  }
+
+  // Tung chiêu: hiệu ứng tại vùng đã chốt (rung màn hình do fx.bossSkill tự gọi shakeAt theo khoảng cách)
+  onBossHit(m) {
+    const mo = this.monsters.get(m.id);
+    if (mo) mo.cast = null;
+    const el = mo && mo.def.el ? ELEMENT_COLORS[mo.def.el] : undefined;
+    const col = m.k === 'beam' || m.k === 'nova' ? el : undefined;
+    if (m.shape === 'line') {
+      // chuỗi nổ chạy dọc dải theo hướng đánh
+      const n = Math.max(2, Math.round(m.r / 50));
+      const dir = m.dir < 0 ? -1 : 1;
+      for (let i = 0; i < n; i++) {
+        const x = m.x + dir * ((i + 0.7) * m.r) / n;
+        this.later(i * 0.055, () => this.fx.bossSkill(x, m.y, m.k, col, m.k === 'beam' ? 0.8 : 0.55));
+      }
+    } else if (m.shape === 'pillar') {
+      for (const [px, py] of m.pts || [[m.x, m.y]]) this.fx.bossSkill(px, py, m.k, col, (m.r * 2) / 26);
+    } else if (m.k === 'summon') {
+      const pts = m.pts && m.pts.length ? m.pts : [[m.x, m.y]];
+      for (const [px, py] of pts) this.fx.bossSkill(px, py, 'summon', col, 0.9);
+    } else {
+      this.fx.bossSkill(m.x, m.y, m.k, col, m.r / (m.k === 'quake' ? 90 : m.k === 'roar' ? 95 : 100));
+    }
   }
 
   onState(m) {
@@ -229,7 +422,7 @@ export class Game {
 
   centerY(tid, e) {
     if (tid[0] === 'm') return e.y - e.def.h / 2 - (e.def.fly ? 10 : 0);
-    return e.y - Math.round(NINJA_H / 2);
+    return e.y - this.lift(e) - Math.round(NINJA_H / 2);
   }
 
   onHit(m) {
@@ -244,7 +437,7 @@ export class Game {
         else this.fx.sparks(e.x, cy, '#ff8a80', 5, 40);
       }
       // chữ trên người chơi bắt đầu phía trên nhãn tên để không đè tên
-      const ty = tid[0] === 'p' ? e.y - NINJA_H - 12 : cy - 14;
+      const ty = tid[0] === 'p' ? e.y - this.headH(e) - 12 : cy - 14;
       if (miss) {
         this.fx.text(e.x, ty, 'Né', '#b0bec5');
         continue;
@@ -258,6 +451,8 @@ export class Game {
       else col = '#ffcc80';
       this.fx.text(e.x, ty, crit ? `${dmg}!` : `${dmg}`, col, crit);
       if (tid[0] === 'm') e.hp = Math.max(0, e.hp - dmg);
+      // boss đánh trúng mình: rung nhẹ, mạnh hơn khi chí mạng
+      if (tid === meTid && att && att.def && att.def.boss) this.fx.addShake(crit ? 3 : 1.5);
       this.fx.sparks(e.x, cy, crit ? '#ffeb3b' : '#ffffff', crit ? 10 : 4, 50);
       if (tid === meTid && m.a[0] === 'm' && !this.getTarget()) this.target = { kind: 'm', id: +m.a.slice(1) };
     }
@@ -284,9 +479,11 @@ export class Game {
     const tx = te ? te.x : m.tx;
     const ty = te ? this.centerY(m.tid, te) : m.ty - 11;
     const tFeet = te ? te.y : m.ty;
-    const ay = a.y - 12;
+    // chém/phóng phát ra từ thân người cưỡi (nâng theo thú cưỡi); vòng mặt đất (burst/wave/whirl/aura/heal) giữ ở chân thú
+    const seat = a.y - this.lift(a);
+    const ay = seat - 12;
     switch (f.k) {
-      case 'slash': this.fx.slash(a.x, a.y, dir, f.c, f.big); break;
+      case 'slash': this.fx.slash(a.x, seat, dir, f.c, f.big); break;
       case 'proj':
         for (let i = 0; i < (f.n || 1); i++) this.fx.proj(a.x + dir * 6, ay, tx, ty, f.p, f.c, { delay: i * 0.09, boom: f.boom, big: f.big });
         break;
@@ -338,7 +535,9 @@ export class Game {
 
   canPvp(p) {
     const me = S.me;
-    if (!me || !p || p.dead || this.map.town) return false;
+    if (!me || !p || p.dead) return false;
+    if (this.map.arena) return this.isArenaOpp(p);
+    if (this.map.town) return false;
     if (this.duelWith && p.id === this.duelWith) return true;
     if (p.info.party && p.info.party === S.party.id) return false;
     if (this.map.pvp) return true;
@@ -363,6 +562,10 @@ export class Game {
 
   autoTarget(range, quiet, forAuto) {
     const me = this.me;
+    if (forAuto && this.hunt) {
+      const h = this.huntTarget();
+      if (h) return h;
+    }
     let best = null;
     let bd = 1e9;
     const now = this.t;
@@ -382,16 +585,45 @@ export class Game {
         best = { kind: 'm', id: m.id, e: m };
       }
     }
-    if (!forAuto) {
-      for (const p of this.players.values()) {
-        if (!this.canPvp(p)) continue;
-        const dx = Math.abs(p.x - me.x);
-        if (dx > range || Math.abs(p.y - me.y) > 140) continue;
-        const d = dx + Math.abs(p.y - me.y) * 1.5 - 10;
-        if (d < bd) {
-          bd = d;
-          best = { kind: 'p', id: p.id, e: p };
-        }
+    for (const p of this.players.values()) {
+      if (!this.canPvp(p)) continue;
+      // tự động (auto đánh, chiêu tự chọn mục tiêu) không nhắm người chơi khác, trừ đối thủ lôi đài
+      if ((forAuto || quiet) && !this.isArenaOpp(p)) continue;
+      const dx = Math.abs(p.x - me.x);
+      if (dx > range || Math.abs(p.y - me.y) > 140) continue;
+      const d = dx + Math.abs(p.y - me.y) * 1.5 - 10;
+      if (d < bd) {
+        bd = d;
+        best = { kind: 'p', id: p.id, e: p };
+      }
+    }
+    return best;
+  }
+
+  // Nhiệm vụ đã đủ hoặc đổi mục tiêu thì thôi săn, auto quay về tầm đánh thường
+  checkHunt() {
+    const h = this.hunt;
+    if (!h || this.t - h.chk < 1) return;
+    h.chk = this.t;
+    const from = this.map.id;
+    const d = h.src === 'daily' ? dailyDest(S, S.me.daily, from) : h.src === 'quest' ? questDest(S, S.me.quest, from) : null;
+    if (!d || d.mob !== h.mob) this.hunt = null;
+  }
+
+  // Quái đang săn theo nhiệm vụ: tìm khắp bản đồ để không đứng yên khi quái ở xa
+  huntTarget() {
+    const me = this.me;
+    const now = this.t;
+    let best = null;
+    let bd = 1e9;
+    for (const m of this.monsters.values()) {
+      if (m.k !== this.hunt.mob) continue;
+      const bl = this.autoBlack.get(m.id);
+      if (bl && bl > now) continue;
+      const d = Math.abs(m.x - me.x) + Math.abs(m.y - me.y) * 1.5;
+      if (d < bd) {
+        bd = d;
+        best = { kind: 'm', id: m.id, e: m };
       }
     }
     return best;
@@ -421,10 +653,15 @@ export class Game {
     if (!sid || !me || me.dead || !this.me) return false;
     const sk = S.G.skills[sid];
     const lv = me.skills[sid];
-    if (!sk || !lv) return false;
+    if (!sk || !lv || sk.type === 'passive') return false;
     const now = performance.now();
     if ((this.cool[sid] || 0) > now) return false;
     if (now - this.lastCast < 200) return false;
+    // lôi đài: chỉ ra chiêu sau hiệu lệnh bắt đầu
+    if (this.map && this.map.arena && !(S.arena && S.arena.st === 'fight')) {
+      if (!auto) this.ui.toast(S.arena && S.arena.st === 'prep' ? 'Chờ hiệu lệnh bắt đầu!' : 'Trận đấu đã kết thúc.');
+      return false;
+    }
     const mp = Math.round(skillVal(sk.mp, lv));
     if (me.mp < mp) {
       if (!auto) this.ui.toast('Không đủ chakra!');
@@ -441,6 +678,11 @@ export class Game {
       }
       this.setTarget(t);
       if (!this.inRange(t, sk.range)) {
+        // không tự tìm đường tới người chơi khác (ngoài trận lôi đài / thách đấu)
+        if (t.kind === 'p' && !this.canChase(t.e)) {
+          if (!auto) this.ui.toast('Mục tiêu ở quá xa');
+          return false;
+        }
         this.chase = { sid, kind: t.kind, id: t.id, since: this.t };
         return false;
       }
@@ -460,6 +702,10 @@ export class Game {
   }
 
   usePotion(kind, auto) {
+    if (this.map && this.map.arena) {
+      if (!auto) this.ui.toast('Lôi đài không cho dùng bình thuốc');
+      return;
+    }
     const now = performance.now();
     if (now - this.lastPotion[kind] < 600) return;
     // ưu tiên bình nhỏ nhất đủ dùng
@@ -538,12 +784,14 @@ export class Game {
 
   onPointer(e) {
     if (!this.active || !this.me) return;
-    const wx = (e.clientX * this.dpr) / this.zoom + this.camX;
-    const wy = (e.clientY * this.dpr) / this.zoom + this.camY;
+    // Cộng độ lệch rung của khung vừa vẽ để chạm đúng chỗ hình đang hiện
+    const wx = (e.clientX * this.dpr) / this.zoom + this.camX + this.shakeDX;
+    const wy = (e.clientY * this.dpr) / this.zoom + this.camY + this.shakeDY;
     // NPC
     const G = this.map.ground;
     for (const n of this.map.npcs) {
       if (Math.abs(wx - n.x) < 10 && wy > G - 30 && wy < G + 4) {
+        this.cancelTravel();
         if (Math.abs(n.x - this.me.x) < 110) this.net.send('npc', { id: n.id });
         else this.walkTo = { x: n.x, npc: n.id };
         return;
@@ -559,7 +807,7 @@ export class Game {
     }
     // Người chơi
     for (const p of this.players.values()) {
-      if (Math.abs(wx - p.x) < 9 && wy > p.y - NINJA_H - 4 && wy < p.y + 3) {
+      if (Math.abs(wx - p.x) < (this.lift(p) ? 14 : 9) && wy > p.y - this.headH(p) - 4 && wy < p.y + 3) {
         this.target = { kind: 'p', id: p.id };
         this.ui.playerMenu(p.info, e.clientX, e.clientY);
         return;
@@ -568,8 +816,9 @@ export class Game {
     // Vật phẩm
     for (const it of this.items.values()) {
       if (Math.abs(wx - it.x) < 10 && Math.abs(wy - (it.y - 6)) < 12) {
-        if (Math.abs(it.x - this.me.x) < 70) this.net.send('pickup', { id: it.id });
-        else this.walkTo = { x: it.x };
+        this.cancelTravel();
+        if (Math.abs(it.x - this.me.x) < 70 && Math.abs(it.y - this.me.y) < 50) this.net.send('pickup', { id: it.id });
+        else this.walkTo = { x: it.x, y: it.y, item: it.id, since: this.t };
         return;
       }
     }
@@ -577,6 +826,7 @@ export class Game {
     for (let i = 0; i < this.map.portals.length; i++) {
       const p = this.map.portals[i];
       if (p.door && Math.abs(wx - p.x) < 20 && wy > G - 50 && wy < G + 4) {
+        this.cancelTravel();
         if (Math.abs(p.x - this.me.x) < 22) this.usePortal(i);
         else this.walkTo = { x: p.x, door: i };
         return;
@@ -592,6 +842,7 @@ export class Game {
       }
       switch (a) {
         case 'jump': {
+          this.cancelTravel();
           const d = this.nearDoor();
           if (d >= 0 && this.me.onGround) this.usePortal(d);
           else this.jump();
@@ -608,7 +859,12 @@ export class Game {
         case 'target': this.cycleTarget(); break;
         case 'auto': this.toggleAuto(); break;
         case 'chat': this.ui.focusChat(); break;
-        case 'esc': this.ui.closeAll(); break;
+        case 'esc':
+          this.cancelTravel();
+          this.ui.closeAll();
+          break;
+        case 'travel': this.travelQuest(); break;
+        case 'left': case 'right': this.cancelTravel(); break;
         default:
       }
     }
@@ -621,12 +877,209 @@ export class Game {
     if (!this.auto) {
       this.chase = null;
       this.walkTo = null;
+      this.hunt = null;
     }
+  }
+
+  // ---------------- Tìm đường tự động giữa các bản đồ
+  routeTo(mapId) {
+    if (!this.map || !S.G) return null;
+    return findRoute(S.G.maps, this.map.id, mapId, this.me ? Math.round(this.me.x) : undefined);
+  }
+
+  // Bản đồ đích của dest: map ghi sẵn, hoặc bản đồ chứa NPC cụ thể, hoặc làng gần nhất có NPC loại đó
+  resolveDest(dest) {
+    const maps = S.G.maps;
+    if (dest.map && maps[dest.map]) return dest.map;
+    if (dest.npc) {
+      for (const id in maps) if (!maps[id].instance && (maps[id].npcs || []).some((n) => n.id === dest.npc)) return id;
+    }
+    if (dest.npcType) {
+      const near = nearestMap(maps, this.map.id, mapsWithNpc(maps, dest.npcType), Math.round(this.me.x));
+      if (near) return near.id;
+    }
+    return null;
+  }
+
+  travelTo(dest) {
+    if (!dest || !this.map || !this.me || !S.me || !S.G) return false;
+    if (S.me.dead) {
+      this.ui.toast('Đang trọng thương, không thể di chuyển', 'warn');
+      return false;
+    }
+    const mapId = this.resolveDest(dest);
+    if (!mapId) {
+      this.ui.toast('Không tìm thấy nơi cần đến', 'warn');
+      return false;
+    }
+    const name = S.G.maps[mapId].name;
+    // server từ chối vào khu PK dưới cấp 10: báo ngay thay vì đi tới cửa rồi bị chặn
+    if (S.G.maps[mapId].pvp && S.me.level < 10) {
+      this.ui.toast(`Cần đạt cấp 10 để vào ${name}`, 'warn');
+      return false;
+    }
+    const route = this.routeTo(mapId);
+    if (!route) {
+      this.ui.toast(`Không tìm được đường tới ${name}`, 'warn');
+      return false;
+    }
+    this.walkTo = null;
+    this.chase = null;
+    this.hunt = null;
+    this.travel = { dest, map: mapId, route, label: dest.label || name, since: this.t, best: 1e9, bestT: this.t, jumpT: 0, retries: 0, tries: 0 };
+    this.notifyTravel();
+    return true;
+  }
+
+  cancelTravel(msg) {
+    if (!this.travel) return;
+    this.travel = null;
+    this.navJump = null;
+    this.notifyTravel();
+    if (msg) this.ui.toast(msg, 'warn');
+  }
+
+  travelQuest() {
+    if (!S.me) return false;
+    const dest = questDest(S, S.me.quest, this.map ? this.map.id : undefined);
+    if (!dest) {
+      this.ui.toast('Không có mục tiêu nhiệm vụ để tìm đường', 'info');
+      return false;
+    }
+    dest.src = 'quest';
+    return this.travelTo(dest);
+  }
+
+  travelDaily() {
+    if (!S.me) return false;
+    const dest = dailyDest(S, S.me.daily, this.map ? this.map.id : undefined);
+    if (!dest) {
+      this.ui.toast('Đã xong nhiệm vụ hằng ngày hôm nay', 'info');
+      return false;
+    }
+    dest.src = 'daily';
+    return this.travelTo(dest);
+  }
+
+  notifyTravel() {
+    if (!this.ui.setTravel) return;
+    const tr = this.travel;
+    this.ui.setTravel(tr ? { label: tr.label, mapName: S.G.maps[tr.map].name, left: tr.route.length } : null);
+  }
+
+  resetTravelProgress() {
+    const tr = this.travel;
+    tr.best = 1e9;
+    tr.bestT = this.t;
+    tr.tries = 0;
+  }
+
+  // Vào bản đồ mới: tính lại lộ trình từ chỗ đang đứng (phòng khi bị đưa lệch khỏi lộ trình)
+  resumeTravel() {
+    const tr = this.travel;
+    if (!tr) return;
+    const route = this.routeTo(tr.map);
+    if (!route) {
+      this.cancelTravel('Không tìm được đường, đã hủy tìm đường');
+      return;
+    }
+    tr.route = route;
+    this.resetTravelProgress();
+    this.notifyTravel();
+  }
+
+  finishTravel(arrived) {
+    const tr = this.travel;
+    this.travel = null;
+    this.navJump = null;
+    this.notifyTravel();
+    if (arrived) this.ui.toast(`Đã tới nơi: ${tr.label}`, 'quest');
+  }
+
+  updateTravel() {
+    const tr = this.travel;
+    const me = this.me;
+    const G = this.map.ground;
+    const set = S.settings;
+    // vẫn tự uống thuốc khi đi qua vùng quái chủ động tấn công
+    if (S.me.hp < (S.me.s.maxHp * set.autoHp) / 100) this.usePotion('hp', true);
+    let goal;
+    let stop = 4;
+    if (tr.route.length) {
+      const st = tr.route[0];
+      if (st.map !== this.map.id) {
+        this.resumeTravel();
+        return 0;
+      }
+      const p = this.map.portals[st.portal];
+      goal = p.x;
+      if (p.door) {
+        if (Math.abs(p.x - me.x) < 16 && me.onGround && me.y >= G - 1) {
+          if (performance.now() - this.lastPortal > 900) {
+            tr.tries++;
+            if (tr.tries > 4) {
+              this.cancelTravel(`Không vào được ${S.G.maps[st.to].name}`);
+              return 0;
+            }
+            this.usePortal(st.portal);
+          }
+          return 0;
+        }
+      } else {
+        // cổng mép: cứ đi vào, game.update tự kích hoạt khi chạm
+        stop = 0;
+      }
+    } else {
+      const d = tr.dest;
+      if (d.npc || d.npcType) {
+        const n = this.map.npcs.find((o) => (d.npc ? o.id === d.npc : o.type === d.npcType));
+        if (!n) {
+          this.finishTravel(true);
+          return 0;
+        }
+        goal = n.x;
+        if (Math.abs(n.x - me.x) < 36 && me.onGround) {
+          this.net.send('npc', { id: n.id });
+          this.finishTravel(false);
+          return 0;
+        }
+      } else if (d.x != null && Math.abs(d.x - me.x) > 12) {
+        goal = d.x;
+      } else {
+        this.finishTravel(true);
+        if (d.mob) {
+          this.hunt = { mob: d.mob, map: this.map.id, x: d.x, src: d.src, chk: this.t };
+          this.target = null;
+        }
+        if ((d.mob || d.auto) && !this.auto) this.toggleAuto(true);
+        return 0;
+      }
+    }
+    // kẹt: không lại gần được thì nhảy thử, quá lâu thì tính lại đường rồi hủy
+    const dist = Math.abs(goal - me.x);
+    if (dist < tr.best - 3) {
+      tr.best = dist;
+      tr.bestT = this.t;
+    } else if (this.t - tr.bestT > 2.5 && me.onGround && this.t - tr.jumpT > 1.2) {
+      tr.jumpT = this.t;
+      this.wantJump = true;
+    }
+    if (this.t - tr.bestT > 9) {
+      tr.retries++;
+      if (tr.retries > 2) {
+        this.cancelTravel('Bị kẹt, đã hủy tìm đường');
+        return 0;
+      }
+      this.resumeTravel();
+      return 0;
+    }
+    return this.navTo(goal, G, stop);
   }
 
   // ---------------- Cập nhật
   update(dt) {
     this.t += dt;
+    this.dt = dt;
     if (!this.active || !this.me || !S.me) return;
     this.handleInput();
     const me = this.me;
@@ -641,6 +1094,7 @@ export class Game {
     if (dirX) {
       this.chase = null;
       this.walkTo = null;
+      this.cancelTravel();
     } else if (!dead) {
       intent = this.updateIntent();
     }
@@ -652,6 +1106,7 @@ export class Game {
 
     const G = this.map.ground;
     const oldY = me.y;
+    const wasGround = me.onGround;
     me.vy = Math.min(600, me.vy + GRAV * dt);
     me.x = clamp(me.x + me.vx * dt, 4, this.map.w - 4);
     me.y += me.vy * dt;
@@ -672,7 +1127,10 @@ export class Game {
         }
       }
     }
-    if (me.onGround) me.jumps = 0;
+    if (me.onGround) {
+      me.jumps = 0;
+      this.navJump = null;
+    }
     me.dropT -= dt;
     me.attackT -= dt;
     me.st = me.attackT > 0 ? 3 : !me.onGround ? 2 : move ? 1 : 0;
@@ -683,7 +1141,8 @@ export class Game {
         if (!p.door && Math.abs(me.x - p.x) < 12) this.usePortal(i);
       });
     }
-    if (!dead) this.sendMove(false);
+    // khung chạm đất luôn gửi ngay: server tính thời gian ở trên không từ lần đứng cuối
+    if (!dead) this.sendMove(me.onGround && !wasGround);
 
     // Nội suy thực thể khác
     const k = Math.min(1, dt * 10);
@@ -700,6 +1159,14 @@ export class Game {
     }
     for (const d of this.dying) d.dieT += dt;
     this.dying = this.dying.filter((d) => d.dieT < 0.5);
+    if (this.timers.length) {
+      const due = this.timers.filter((tm) => tm.at <= this.t);
+      if (due.length) {
+        this.timers = this.timers.filter((tm) => tm.at > this.t);
+        for (const tm of due) tm.fn();
+      }
+    }
+    this.updateFashionFx(dt);
     this.fx.update(dt);
     this.updateCamera(dt);
     this.ui.updateTarget(this.getTarget());
@@ -709,12 +1176,22 @@ export class Game {
   updateIntent() {
     const me = this.me;
     const manualRecently = performance.now() - this.input.lastManual < 1500;
+    if (this.travel && !this.walkTo) return this.updateTravel();
     if (this.walkTo) {
-      const dx = this.walkTo.x - me.x;
+      const w = this.walkTo;
+      const dx = w.x - me.x;
+      if ((w.since != null && this.t - w.since > 10) || (w.item != null && !this.items.has(w.item))) {
+        const it = w.item != null ? this.items.get(w.item) : null;
+        if (it) it.tryUntil = this.t + 6;
+        this.walkTo = null;
+        return 0;
+      }
+      // vật phẩm trên bục khác tầng: tìm đường nhảy lên/xuống trước
+      if (w.y != null && Math.abs(w.y - me.y) > 30) return this.navTo(w.x, w.y, 4);
       if (Math.abs(dx) < 14) {
         if (this.walkTo.npc) this.net.send('npc', { id: this.walkTo.npc });
         if (this.walkTo.door != null) this.usePortal(this.walkTo.door);
-        else if (!this.walkTo.npc) {
+        else if (!this.walkTo.npc && !this.walkTo.wait) {
           const it = this.walkTo.item != null ? this.items.get(this.walkTo.item) : null;
           // nhặt không được (của người khác, túi đầy) thì tạm bỏ qua để auto không kẹt gửi nhặt liên tục
           if (it) it.tryUntil = this.t + 3;
@@ -728,8 +1205,13 @@ export class Game {
     if (this.auto && !manualRecently) this.updateAuto();
     if (this.chase) {
       const t = this.chase.kind === 'm' ? this.monsters.get(this.chase.id) : this.players.get(this.chase.id);
+      // người chơi chỉ được đuổi khi còn là đối thủ lôi đài / thách đấu
+      if (t && this.chase.kind === 'p' && !this.canChase(t)) {
+        this.chase = null;
+        return 0;
+      }
       if (!t || t.dead || this.t - this.chase.since > 8) {
-        if (t && this.auto) this.autoBlack.set(t.id, this.t + 15);
+        if (t && this.auto && this.chase.kind === 'm') this.autoBlack.set(t.id, this.t + 15);
         this.chase = null;
         return 0;
       }
@@ -748,23 +1230,71 @@ export class Game {
   approach(t, range) {
     const me = this.me;
     const dx = t.x - me.x;
-    const dy = t.y - me.y;
-    if (dy < -30 && Math.abs(dx) < 70) {
-      if (me.onGround) this.wantJump = true;
-      else if (me.jumps === 1 && me.vy > -60 && t.y < me.y - 10) this.wantJump = true;
-    } else if (dy > 30 && me.onGround && me.y < this.map.ground - 1 && Math.abs(dx) < 80) {
+    const stop = Math.max(6, range * 0.6);
+    // lệch tầng quá tầm đánh dọc thì đi theo đồ thị bục
+    if (Math.abs(t.y - me.y) > (range > 90 ? 100 : 36)) return this.navTo(t.x, t.y, stop);
+    if (Math.abs(dx) <= stop) return 0;
+    return Math.sign(dx);
+  }
+
+  // Đi tới điểm (tx, ty) qua các bục: chọn điểm cất cánh theo đồ thị nhảy rồi nhảy/thả xuống
+  navTo(tx, ty, stop = 6) {
+    const me = this.me;
+    const dx = tx - me.x;
+    const flat = () => (Math.abs(dx) <= stop ? 0 : Math.sign(dx));
+    if (!this.nav) return flat();
+    if (!me.onGround) {
+      const j = this.navJump;
+      if (!j) return flat();
+      if (j.kind === 2 && me.jumps === 1 && me.vy > -60) this.wantJump = true;
+      // giữ hướng về phía bục đích để không trượt khỏi mép
+      const s = this.nav.surf[j.to];
+      const lo = s.x1 + 6;
+      const hi = s.x2 - 6;
+      if (me.x < lo) return 1;
+      if (me.x > hi) return -1;
+      return 0;
+    }
+    const a = surfaceAt(this.nav, me.x, me.y);
+    const b = surfaceBelow(this.nav, tx, ty);
+    if (a < 0 || a === b) return flat();
+    const key = `${a}>${b}`;
+    let e = this.navCache.e;
+    if (this.navCache.key !== key || this.t - this.navCache.t > 0.4) {
+      e = navPlan(this.nav, a, me.x, b);
+      this.navCache.key = key;
+      this.navCache.t = this.t;
+      this.navCache.e = e;
+    }
+    if (!e) return flat();
+    const kx = me.x < e.x1 ? e.x1 : me.x > e.x2 ? e.x2 : me.x;
+    const gap = Math.abs(kx - me.x);
+    if (gap > 1.5) {
+      // cạnh hẹp hơn một bước (FPS thấp, chạy nhanh): đặt thẳng vào điểm cất cánh để khỏi bước qua lại mãi
+      const step = SPEED * (1 + (S.me.s.spd || 0) / 100) * this.dt;
+      if (gap > step) return Math.sign(kx - me.x);
+      me.x = kx;
+    }
+    if (e.kind === 0) {
       me.dropT = 0.22;
       me.y += 1;
+      me.onGround = false;
+    } else {
+      this.wantJump = true;
+      this.navJump = { kind: e.kind, to: e.to };
     }
-    if (Math.abs(dx) <= Math.max(6, range * 0.6)) return 0;
-    return Math.sign(dx);
+    this.navCache.key = '';
+    return 0;
   }
 
   updateAuto() {
     const me = S.me;
     const set = S.settings;
-    if (me.hp < (me.s.maxHp * set.autoHp) / 100) this.usePotion('hp', true);
-    if (me.mp < (me.s.maxMp * set.autoMp) / 100) this.usePotion('mp', true);
+    if (!this.map.arena) {
+      if (me.hp < (me.s.maxHp * set.autoHp) / 100) this.usePotion('hp', true);
+      if (me.mp < (me.s.maxMp * set.autoMp) / 100) this.usePotion('mp', true);
+    }
+    this.checkHunt();
     if (this.chase) return;
     // nhặt đồ của mình
     if (set.autoPick && S.inv.some((x) => !x)) {
@@ -772,15 +1302,16 @@ export class Game {
       let bd = 170;
       for (const it of this.items.values()) {
         if (it.tryUntil > this.t) continue;
-        const dx = Math.abs(it.x - this.me.x);
-        // server chỉ cho nhặt khi lệch cao dưới 60
-        if (dx < bd && Math.abs(it.y - this.me.y) < 50 && this.t - it.born < 14) {
+        const dy = Math.abs(it.y - this.me.y);
+        // khác tầng thì tính thêm quãng leo; server chỉ cho nhặt khi lệch cao dưới 60 nên phải tới đúng tầng
+        const dx = Math.abs(it.x - this.me.x) + (dy < 50 ? 0 : dy);
+        if (dx < bd && dy < 140 && this.t - it.born < 14) {
           bd = dx;
           best = it;
         }
       }
-      if (best && bd > 12) {
-        this.walkTo = { x: best.x, item: best.id };
+      if (best && (bd > 12 || Math.abs(best.y - this.me.y) >= 50)) {
+        this.walkTo = { x: best.x, y: best.y, item: best.id, since: this.t };
         return;
       }
     }
@@ -793,11 +1324,21 @@ export class Game {
       }
     }
     let t = this.getTarget();
-    if (!t || t.kind !== 'm') {
-      t = this.autoTarget(set.autoRange, true, true);
+    // auto chỉ đánh quái, hoặc đối thủ lôi đài khi đang trong trận
+    const okT = (x) => !!x && (x.kind === 'm' || this.isArenaOpp(x.e));
+    if (!okT(t) || (this.hunt && t.kind === 'm' && t.e.k !== this.hunt.mob)) {
+      const nt = this.autoTarget(set.autoRange, true, true);
+      // mục tiêu là người chơi thì bỏ (auto không tự đánh người); đang đánh quái khác thì chỉ đổi khi thấy quái cần săn
+      if (!okT(t)) t = nt;
+      else if (nt && nt.kind === 'm' && nt.e.k === this.hunt.mob) t = nt;
       if (t) this.setTarget(t);
     }
-    if (!t) return;
+    if (!t) {
+      // boss chưa hồi sinh: đứng chờ ở chỗ boss xuất hiện
+      const hx = this.hunt && this.hunt.x;
+      if (hx != null && Math.abs(hx - this.me.x) > 60) this.walkTo = { x: hx, wait: true };
+      return;
+    }
     // kỹ năng mạnh trước
     const order = me.hotbar.filter(Boolean).slice().reverse();
     for (const sid of order) {
@@ -810,7 +1351,7 @@ export class Game {
     const basic = this.basicSkill();
     if (!this.useSkill(basic, true) && !this.chase) {
       const sk = S.G.skills[basic];
-      if (!this.inRange(t, sk.range)) this.chase = { sid: basic, kind: 'm', id: t.id, since: this.t };
+      if (!this.inRange(t, sk.range)) this.chase = { sid: basic, kind: t.kind, id: t.id, since: this.t };
     }
   }
 
@@ -823,7 +1364,11 @@ export class Game {
 
   updateCamera(dt) {
     const W = this.W;
-    const tx = this.map.w <= W ? (this.map.w - W) / 2 : clamp(this.me.x - W / 2 + this.me.dir * 20, 0, this.map.w - W);
+    let cx = this.me.x + this.me.dir * 20;
+    // lôi đài: canh giữa hai đấu thủ để đối thủ không nằm dưới cụm nút HUD (mình vẫn luôn trong khung, cách mép 60)
+    const ao = this.map.arena && S.arena && S.arena.opp ? this.players.get(S.arena.opp.id) : null;
+    if (ao) cx = clamp((this.me.x + ao.x) / 2, this.me.x - W / 2 + 60, this.me.x + W / 2 - 60);
+    const tx = this.map.w <= W ? (this.map.w - W) / 2 : clamp(cx - W / 2, 0, this.map.w - W);
     const ty = this.camTargetY();
     const k = Math.min(1, dt * 6);
     this.camX += (tx - this.camX) * k;
@@ -836,14 +1381,26 @@ export class Game {
     const c = this.lctx;
     const W = this.W;
     const H = this.H;
-    const camX = Math.round(this.camX);
-    const camY = Math.round(this.camY);
     const R = this.renderer;
     const G = this.map.ground;
     const t = this.t;
+    const me = this.me;
+    // rung màn hình: lệch camera nguyên pixel; chạm mép bản đồ thì rung ngược lại để không lộ khoảng trống
+    const sh = this.fx.shakeXY();
+    const bx = Math.round(this.camX);
+    const by = Math.round(this.camY);
+    const camX = this.map.w > W ? shakeIn(bx, sh.x, 0, this.map.w - W) : bx + sh.x;
+    const camY = shakeIn(by, sh.y, -1e9, this.map.h - H);
+    this.shakeDX = camX - bx;
+    this.shakeDY = camY - by;
+    const hour = this.forceHour == null ? undefined : this.forceHour;
     R.drawBackground(c, camX, camY, W, H, t);
     R.drawTerrain(c, camX, camY, W, H);
     R.drawPortals(c, camX, camY, t);
+    // đêm làm tối nền + địa hình (lỗ sáng ở đèn và quanh nhân vật), thực thể vẽ sau chỉ bị ám nhẹ
+    R.drawNight(c, camX, camY, W, H, hour, me.x, me.y - 20);
+    // hiệu ứng nằm trên mặt đất (cảnh báo boss, vết nứt) dưới chân quái/người
+    this.fx.drawGround(c, camX, camY);
 
     // NPC
     for (const n of this.map.npcs) {
@@ -871,7 +1428,7 @@ export class Game {
     const mons = [...this.monsters.values()].sort((a, b) => a.y - b.y);
     for (const m of mons) {
       if (m.x < camX - 60 || m.x > camX + W + 60) continue;
-      drawMonster(c, m.x - camX, m.y - camY, m.def, { t, dir: m.dir, st: m.st, id: m.id, flash: m.flash > t });
+      drawMonster(c, m.x - camX, m.y - camY, m.def, { t, dir: m.dir, st: m.st, id: m.id, flash: m.flash > t, rage: m.rage });
       const showBar = m.hp < m.mhp || (target && target.kind === 'm' && target.id === m.id);
       if (showBar && !m.def.boss) {
         const bw = Math.max(14, Math.min(30, m.def.w));
@@ -901,7 +1458,6 @@ export class Game {
       });
     }
     // Bản thân
-    const me = this.me;
     const meAnim = S.me.dead ? 'dead' : me.st === 3 ? 'attack' : me.st === 2 ? 'jump' : me.st === 1 ? 'walk' : 'idle';
     drawNinja(c, me.x - camX, me.y - camY, {
       dir: me.dir, cls: S.me.cls, gender: S.me.gender, look: S.me.look, anim: meAnim, t, name: S.me.name,
@@ -923,6 +1479,7 @@ export class Game {
     this.fx.draw(c, camX, camY);
     R.drawParticles(c, camX, camY, W, H, 1 / 60);
     R.drawForeground(c, camX, camY, W, H, t);
+    R.drawLighting(c, camX, camY, W, H, hour, me.x, me.y - 20);
 
     // Phóng to lên màn hình
     const ctx = this.ctx;
@@ -931,32 +1488,82 @@ export class Game {
     this.renderOverlay(camX, camY);
   }
 
-  // Thú cưng: vẽ quái thu nhỏ (scale 1) bay/chạy theo sau lưng chủ
+  // Thú cưng bay/chạy theo sau lưng chủ (petart.js). Trạng thái thú lưu trên thực thể chủ: owner.pet = { kind, x, y, dir, act }
   drawPet(c, owner, look, camX, camY, t) {
-    const key = look && look.pet;
-    if (!key || !S.G.monsters[key] || owner.dead || (S.me && owner === this.me && S.me.dead)) return;
-    this.petDefs = this.petDefs || {};
-    let def = this.petDefs[key];
-    if (!def) {
-      const base = S.G.monsters[key];
-      def = { ...base, scale: 1, boss: false, w: Math.round(base.w / (base.scale || 1)), h: Math.round(base.h / (base.scale || 1)) };
-      this.petDefs[key] = def;
+    const kind = look && look.pet;
+    const dead = owner === this.me ? S.me && S.me.dead : owner.dead;
+    if (!kind || !Object.prototype.hasOwnProperty.call(PET_ART, kind) || dead) {
+      owner.pet = null;
+      return;
     }
-    const tx = owner.x - (owner.dir || 1) * 18;
-    if (owner.petX == null || Math.abs(owner.petX - tx) > 200) {
-      owner.petX = tx;
-      owner.petY = owner.y;
+    const dir = owner.dir || 1;
+    const fly = petFlies(kind);
+    // cưỡi thú: thú cưng đi xa hơn để không chui dưới bụng thú cưỡi
+    const tx = owner.x - dir * (look.mount ? 28 : 18);
+    // thú đi bộ bám mặt sàn chủ đứng lần cuối (không bay theo khi chủ nhảy); sàn không kéo tới chỗ thú thì rơi xuống sàn dưới
+    const grounded = owner === this.me ? this.me.onGround : owner.st !== 2 && this.floorBelow(owner.x, owner.y) - owner.y < 1.5;
+    if (grounded || owner.petFloor == null) owner.petFloor = grounded ? owner.y : this.floorBelow(owner.x, owner.y);
+    const ty = fly ? owner.y : this.floorBelow(tx, owner.petFloor);
+    let p = owner.pet;
+    if (!p || p.kind !== kind || Math.abs(p.x - tx) > 220 || Math.abs(p.y - ty) > 160) p = owner.pet = { kind, x: tx, y: ty, dir, act: null };
+    const dt = Math.min(0.05, this.dt || 1 / 60);
+    const a = p.act;
+    const age = a ? t - a.t0 : 0;
+    let gx = tx;
+    let gy = ty;
+    // Tha Đồ: lao tới chỗ món đồ rồi quay về
+    const dashing = a && a.k === 'pick' && age < 0.3;
+    if (dashing) {
+      gx = a.x;
+      gy = a.y;
     }
-    const k = Math.min(1, (1 / 60) * 5);
-    owner.petX += (tx - owner.petX) * k;
-    owner.petY += (owner.y - owner.petY) * k;
-    const moving = Math.abs(tx - owner.petX) > 2;
-    if (owner.x < camX - 60 || owner.x > camX + this.W + 60) return;
-    drawMonster(c, owner.petX - camX, owner.petY - camY, def, { t: t + 0.3, dir: owner.dir || 1, st: moving ? 1 : 0, id: 7 });
+    if (a && age > (a.k === 'feed' ? 1.3 : 0.7)) p.act = null;
+    const k = 1 - Math.exp(-dt * (dashing ? 16 : 6));
+    const ox = p.x;
+    p.x += (gx - p.x) * k;
+    p.y += (gy - p.y) * (fly ? k * 0.8 : 1 - Math.exp(-dt * 14));
+    const vx = (p.x - ox) / dt;
+    const moving = Math.abs(vx) > 8;
+    if (moving) p.dir = vx > 0 ? 1 : -1;
+    else if (Math.abs(p.x - tx) < 4) p.dir = dir;
+    if (p.x < camX - 40 || p.x > camX + this.W + 40) return;
+    drawPet(c, p.x - camX, p.y - camY, kind, {
+      t: t + (owner === this.me ? 0 : owner.id * 0.37), dir: p.dir, moving, lv: look.pl || 1, shadowDY: this.floorBelow(p.x, p.y) - p.y,
+      happy: a && a.k === 'feed' ? Math.min(1, age / 1.2) : 0,
+    });
+  }
+
+  // Mặt đỡ cao nhất (đất hoặc sàn gỗ) nằm ngay dưới điểm (x, y)
+  floorBelow(x, y) {
+    let f = this.map.ground;
+    for (const [px, py, pw] of this.map.platforms) if (x >= px - 2 && x <= px + pw + 2 && py >= y - 1 && py < f) f = py;
+    return f;
+  }
+
+  // Thú cưng của người chơi id làm gì đó (server gửi 'petAct'): nhặt đồ, hồi máu, được cho ăn, lên cấp
+  onPetAct(m) {
+    const e = this.entity(`p${m.id}`);
+    if (!e) return;
+    const pet = e.pet;
+    const px = pet ? pet.x : e.x;
+    const py = pet ? pet.y - petHeight(pet.kind) + 4 : e.y - 10;
+    if (m.k === 'pick') {
+      if (pet) pet.act = { k: 'pick', x: m.x, y: m.y, t0: this.t };
+      this.fx.sparks(m.x, m.y - 3, '#ffe082', 5, 30);
+    } else if (m.k === 'heal') {
+      this.fx.sparks(px, py, '#69f0ae', 7, 34);
+      if (m.n) this.fx.text(e.x, e.y - this.headH(e) - 2, `+${m.n}`, '#69f0ae');
+    } else if (m.k === 'feed') {
+      if (pet) pet.act = { k: 'feed', t0: this.t };
+    } else if (m.k === 'lv') {
+      this.fx.sparks(px, py, '#ffd54f', 14, 50);
+      this.fx.text(px, py - 6, `Thú cưng Lv${m.lv}!`, '#ffd54f');
+      if (S.me && m.id === S.me.id) sfx('level');
+    }
   }
 
   toScreen(x, y) {
-    return [Math.round((x - this.camX) * this.zoom), Math.round((y - this.camY) * this.zoom)];
+    return [Math.round((x - this.camX - this.shakeDX) * this.zoom), Math.round((y - this.camY - this.shakeDY) * this.zoom)];
   }
 
   label(ctx, text, x, y, color, size, stroke = '#120a18') {
@@ -972,10 +1579,78 @@ export class Game {
     return Math.max(Math.round(15 * this.dpr), Math.round(this.zoom * 5));
   }
 
-  // Độ cao đỉnh đầu so với chân: nằm xuống khi trọng thương thì nhãn hạ thấp theo
+  // Độ cao đỉnh đầu so với chân: nằm xuống khi trọng thương thì nhãn hạ thấp theo; cưỡi thú thì nâng theo thú
   nameLift(e) {
     const dead = e === this.me ? S.me && S.me.dead : e.dead;
-    return dead ? 12 : NINJA_H;
+    return dead ? 12 : this.headH(e);
+  }
+
+  // Ngoại hình của thực thể người chơi (mình hoặc người khác)
+  lookOf(e) {
+    if (e === this.me) return S.me ? S.me.look : null;
+    return e && e.info ? e.info.look : null;
+  }
+
+  // Độ nâng do thú cưỡi (0 khi không cưỡi hoặc đang trọng thương)
+  lift(e) {
+    const dead = e === this.me ? S.me && S.me.dead : e.dead;
+    return dead ? 0 : mountOffset(this.lookOf(e));
+  }
+
+  headH(e) {
+    return NINJA_H + this.lift(e);
+  }
+
+  // Độ hiếm của món thời trang theo ô + mã hình (tra từ dữ liệu vật phẩm)
+  fashionGrade(slot, look) {
+    if (!look) return 0;
+    if (!this.fGrade) {
+      this.fGrade = new Map();
+      for (const id in S.G.items) {
+        const d = S.G.items[id];
+        if (d.fashion) this.fGrade.set(`${d.slot}:${d.look}`, d.grade || 0);
+      }
+    }
+    return this.fGrade.get(`${slot}:${look}`) || 0;
+  }
+
+  // Vừa khoác trang phục hiếm (Sử thi trở lên): xoắn ánh sáng quanh thân
+  checkCostume(e, look) {
+    const cs = (look && look.costume) || '';
+    if (e.lastCs === undefined) {
+      e.lastCs = cs;
+      return;
+    }
+    if (cs === e.lastCs) return;
+    e.lastCs = cs;
+    if (cs && this.fashionGrade('costume', cs) >= 3) this.fx.costumeSparkle(e.x, e.y - this.lift(e), S.G.rarity[this.fashionGrade('costume', cs)].color);
+  }
+
+  // Bụi tung sau vó thú cưỡi khi chạy trên mặt đất; trang phục Huyền thoại thỉnh thoảng lấp lánh
+  updateFashionFx(dt) {
+    const each = (e, look, walking) => {
+      if (!look) return;
+      if (look.mount && walking) {
+        e.dustT = (e.dustT || 0) - dt;
+        if (e.dustT <= 0) {
+          e.dustT = 0.09;
+          this.fx.mountDust(e.x - (e.dir || 1) * 12, e.y, e.dir || 1);
+        }
+      }
+      if (look.costume && this.fashionGrade('costume', look.costume) >= 4) {
+        e.csT = (e.csT == null ? 2 + Math.random() * 4 : e.csT) - dt;
+        if (e.csT <= 0) {
+          e.csT = 7 + Math.random() * 3;
+          if (Math.abs(e.x - this.me.x) < this.W) this.fx.costumeSparkle(e.x, e.y - this.lift(e), S.G.rarity[4].color);
+        }
+      }
+    };
+    const me = this.me;
+    if (S.me && !S.me.dead) {
+      this.checkCostume(me, S.me.look);
+      each(me, S.me.look, me.onGround && me.st === 1);
+    }
+    for (const p of this.players.values()) if (!p.dead) each(p, p.info.look, p.st === 1);
   }
 
   renderOverlay() {
@@ -999,7 +1674,8 @@ export class Game {
         const wp = ctx.measureText(S.me.name).width;
         const px = this.toScreen(this.me.x, 0)[0];
         if (Math.abs(px - sx) < (wn + wp) / 2 + 4) {
-          sy -= size + 2;
+          // đặt trên tên người chơi (cưỡi thú thì tên người chơi cao hơn tên NPC)
+          sy = Math.min(sy - size - 2, this.toScreen(0, this.me.y - this.nameLift(this.me) - 3)[1] - size - 2);
           const b = this.bubbles.get(S.me.id);
           if (b && b.until >= this.t) sy -= Math.round(size * 1.35) + 10;
         }
@@ -1034,9 +1710,10 @@ export class Game {
     };
     for (const p of this.players.values()) {
       if (p.x < camX - 40 || p.x > camX + W + 40) continue;
-      let line = showNames ? drawName(p.x, p.y, p.info, false, p.pk, this.nameLift(p)) : this.toScreen(p.x, p.y - NINJA_H - 3)[1];
+      const lift = this.nameLift(p);
+      let line = showNames ? drawName(p.x, p.y, p.info, false, p.pk || this.isArenaOpp(p), lift) : this.toScreen(p.x, p.y - lift - 3)[1];
       if (p.hp < p.mhp && !p.dead) {
-        const [bx, by] = this.toScreen(p.x - 8, p.y - NINJA_H - 2);
+        const [bx, by] = this.toScreen(p.x - 8, p.y - lift - 2);
         ctx.fillStyle = '#1a1020';
         ctx.fillRect(bx - 1, by - 1, 16 * z + 2, Math.max(3, z) + 2);
         ctx.fillStyle = '#e53935';
@@ -1118,6 +1795,11 @@ export class Game {
       if (!d || d.day !== today) return '!';
       if (d.task && d.task.prog >= d.task.n) return '!';
       if (!d.task && d.done < 20) return '!';
+    }
+    if (n.type === 'event') {
+      // đang mùa lễ hội và đủ bánh đổi món rẻ nhất
+      const s = activeSeason();
+      if (s && countInv(s.token) >= Math.min(...s.exchange.map((e) => e.cost))) return '!';
     }
     return '';
   }

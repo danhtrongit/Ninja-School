@@ -20,6 +20,13 @@ const THEMES = {
   lava: { sky: ['#2a0808', '#6e1e0c'], far: '#4a1410', mid: '#5c1a10', top: '#4a3434', dirt: '#2e2020', plat: 'stone', ceiling: true, lava: true, dark: 0.32, part: 'ember', decor: ['rock', 'stalag', 'bones', 'pillar', 'torch', 'rock'] },
   hell: { sky: ['#160303', '#4a0b0b'], far: '#2e0606', mid: '#3b0909', top: '#3a1a1a', dirt: '#1f0e0e', plat: 'stone', lava: true, dark: 0.2, part: 'ember', decor: ['bones', 'pillar', 'deadtree', 'skull', 'torch', 'spikes'] },
   arena: { sky: ['#7fb8f0', '#e6f3ff'], far: '#8aa0b8', mid: '#a58a6c', top: '#b9a58a', dirt: '#8a7457', plat: 'stone', part: null, decor: ['banner', 'torch', 'rack', 'banner', 'torch'] },
+  // Hậu kỳ: dayK = mức chịu ảnh hưởng ngày/đêm (1 = ngoài trời, nhỏ = dưới lòng đất/biển)
+  heaven: { sky: ['#8aa8ec', '#fff2d8'], far: '#c8bee6', mid: '#b4a8dc', top: '#f4f0ff', dirt: '#8e82c2', plat: 'cloud', part: 'feather', decor: ['goldtree', 'cloudpillar', 'lotus', 'censer', 'goldtree', 'cloudpuff', 'cloudpillar', 'lotus'], dayK: 0.8 },
+  dragon_palace: { sky: ['#0c3a5a', '#3aa8c8'], far: '#1e5a7a', mid: '#2a7a8a', top: '#ecd49a', dirt: '#b8925a', plat: 'stone', platPal: ['#e0fff2', '#8ad8c0', '#4ea892', '#2a6a60'], platTrim: '#ffd54f', part: 'bubble', decor: ['kelp', 'coral', 'clam', 'jadepillar', 'kelp', 'coral', 'starfish', 'kelp', 'shell'], dayK: 0.55 },
+  sakura: { sky: ['#9ac4f0', '#ffe8f0'], far: '#c8a8d0', mid: '#e8a8c4', top: '#8cc862', dirt: '#7a5038', plat: 'wood', part: 'petal', decor: ['sakura', 'stonelantern', 'pondbridge', 'sakura', 'parasol', 'flower', 'sakura', 'stonelantern', 'bush'] },
+  ruins: { sky: ['#3a78c8', '#fbe0b0'], far: '#d89a68', mid: '#e8c08a', top: '#e8bf78', dirt: '#a87a44', plat: 'stone', platPal: ['#f0d098', '#c89a5e', '#94683a', '#5e3e22'], platEdge: '#2a1810', part: 'sand', decor: ['pillar', 'statue', 'rubble', 'fallen', 'obelisk', 'pillar', 'urn', 'cactus'] },
+  crystal: { sky: ['#0a0818', '#2a2060'], far: '#1e1840', mid: '#2a2250', top: '#6e5c96', dirt: '#3a3058', plat: 'stone', platPal: ['#8a7cbc', '#5c5092', '#40366e', '#28224a'], platCrys: ['#d08aff', '#6ae0ff', '#ff8ad8'], ceiling: true, dark: 0.42, part: 'mote', crys: ['#c07aff', '#5ad8ff', '#ff7ad0'], crysDecor: ['#9a64d0', '#3e9ec0', '#c060a8'], decor: ['crystal', 'geode', 'crystal', 'mushroomglow', 'rock', 'crystal', 'stalag', 'geode'], dayK: 0.2 },
+  abyss: { sky: ['#05010a', '#4a1048'], far: '#24102e', mid: '#1a0a22', top: '#4a4252', dirt: '#1c1820', plat: 'stone', platPal: ['#7a7084', '#544c5e', '#3a3444', '#221e2a'], platGlow: '#d040ff', dark: 0.22, part: 'void', crys: ['#d040ff', '#ff3a8a'], decor: ['deadtree', 'thorn', 'spikes', 'eyestalk', 'skull', 'voidcrystal', 'bones', 'thorn'], dayK: 0.45 },
 };
 
 const C0 = 120; // camY điển hình: mặt đất nằm ở khoảng 3/4 màn hình
@@ -364,7 +371,14 @@ const LEAF = {
   dark: ['#7a6a9a', '#56497a', '#3a3058', '#251e3c'],
   palm: ['#9ad65a', '#5eaa3e', '#3c8034', '#28582a'],
   bamboo: ['#bfe27a', '#86c04c', '#5a9238', '#3a6628'],
+  gold: ['#fff4b4', '#ffd25e', '#e0a032', '#a8701e'],
+  jade: ['#d4ffe8', '#7ee0b8', '#3eae8c', '#1f6e62'],
+  kelp: ['#a8e070', '#62b058', '#3a8050', '#24543c'],
 };
+// mây: sáng, gốc, bóng, bóng sâu
+const CLOUD = ['#ffffff', '#f2eefc', '#d6d0ee', '#b0aad4'];
+// mây tông trung/tối cho lớp gần và mép đất thiên cung (tách quái trắng khỏi nền)
+const CLOUD_D = ['#f4f0ff', '#cdc4ea', '#9e94cc', '#6e64a4'];
 const BARK = {
   brown: ['#a8764e', '#7a5034', '#523422'],
   dark: ['#7a5450', '#56383a', '#382228'],
@@ -408,7 +422,7 @@ function trunk(s, cx, base, h, tw, bark, lean = 0) {
 }
 
 function sprTree(kind, h, seed, o = {}) {
-  const key = `t:${kind}:${h}:${seed}:${o.leaf || ''}:${o.snow ? 1 : 0}`;
+  const key = `t:${kind}:${h}:${seed}:${o.leaf || ''}:${o.snow ? 1 : 0}:${o.bark || ''}:${o.eyes ? o.eyeCol || 1 : 0}:${o.noOutline ? 1 : 0}`;
   return cached(key, () => {
     const R = rng(seed * 977 + h);
     let s;
@@ -418,13 +432,14 @@ function sprTree(kind, h, seed, o = {}) {
     else if (kind === 'dead') s = deadSpr(R, h, o);
     else if (kind === 'cactus') s = cactusSpr(R, h);
     else if (kind === 'willow') s = willowSpr(R, h);
+    else if (kind === 'kelp') s = kelpSpr(R, h);
     else {
       const W = Math.round(h * 1.05) + 8;
       s = new Buf(W, h + 4);
       const cx = W / 2;
       const base = h + 2;
-      const leaf = LEAF[o.leaf || (kind === 'sakura' ? 'sakura' : kind === 'maple' ? 'maple' : 'green')];
-      const bark = kind === 'sakura' ? BARK.dark : BARK.brown;
+      const leaf = LEAF[o.leaf || (kind === 'sakura' ? 'sakura' : kind === 'maple' ? 'maple' : kind === 'gold' ? 'gold' : kind === 'jade' ? 'jade' : 'green')];
+      const bark = kind === 'sakura' ? BARK.dark : kind === 'gold' || kind === 'jade' ? BARK.pale : BARK.brown;
       const th = Math.round(h * 0.45);
       trunk(s, cx, base, th + 6, Math.max(3, Math.round(h / 11)), bark, kind === 'sakura' ? (R() - 0.5) * 6 : 0);
       const top = base - th;
@@ -604,8 +619,8 @@ function deadSpr(R, h, o) {
   if (o.eyes) {
     // hốc cây có đôi mắt phát sáng (rừng ma)
     s.r(W / 2 - 2, base - h * 0.3, 4, 3, '#140c1c');
-    s.p(W / 2 - 1, base - h * 0.3 + 1, '#ffe066');
-    s.p(W / 2 + 1, base - h * 0.3 + 1, '#ffe066');
+    s.p(W / 2 - 1, base - h * 0.3 + 1, o.eyeCol || '#ffe066');
+    s.p(W / 2 + 1, base - h * 0.3 + 1, o.eyeCol || '#ffe066');
   }
   return s;
 }
@@ -652,6 +667,35 @@ function willowSpr(R, h) {
     const len = h * (0.25 + R() * 0.35) * (1 - Math.abs(x - cx) / (h * 0.6));
     const y0 = top - h * 0.05 + Math.abs(x - cx) * 0.25;
     for (let y = 0; y < len; y++) s.p(x + Math.round(Math.sin(y * 0.3 + x) * 0.6), y0 + y, y > len - 3 ? pal[0] : (x & 2) ? pal[1] : pal[2]);
+  }
+  return s;
+}
+
+// Rong biển: vài dải lá lượn sóng có túi khí
+function kelpSpr(R, h) {
+  const W = 26;
+  const s = new Buf(W, h + 4);
+  const base = h + 2;
+  const pal = LEAF.kelp;
+  const n = 3 + ((R() * 2) | 0);
+  for (let k = 0; k < n; k++) {
+    const bx = 6 + k * 4 + R() * 3;
+    const sh = h * (0.55 + R() * 0.45);
+    const ph = R() * TAU;
+    for (let y = 0; y < sh; y++) {
+      const x = Math.round(bx + Math.sin(y * 0.11 + ph) * 3 * (y / sh + 0.2));
+      const yy = base - y;
+      const w = y > sh - 4 ? 1 : 2;
+      s.p(x, yy, pal[1]);
+      if (w > 1) s.p(x + 1, yy, pal[2]);
+      // lá dẹt mọc so le
+      if (y % 7 === 3 && y < sh - 4) {
+        const d = (y / 7) & 1 ? 1 : -1;
+        for (let i = 1; i <= 4; i++) { s.p(x + (d > 0 ? 1 : 0) + d * i, yy - (i >> 1), i < 3 ? pal[1] : pal[0]); s.p(x + (d > 0 ? 1 : 0) + d * i, yy - (i >> 1) + 1, pal[2]); }
+        s.p(x + d * 2 + (d > 0 ? 1 : 0), yy + 1, '#d8c860');
+      }
+    }
+    s.p(Math.round(bx + Math.sin(sh * 0.11 + ph) * 3 * 1.2), base - sh, pal[0]);
   }
   return s;
 }
@@ -732,7 +776,78 @@ function sprCrystal(h, col, seed) {
   });
 }
 
+// Tô sáng mép trên-trái, tối mép dưới-phải cho khối đã tô một màu (ánh sáng trên-trái)
+function edgeShade(s, L, D) {
+  const { w, h, d } = s;
+  const out = new Uint32Array(d);
+  const lu = u32(L);
+  const du = u32(D);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const i = y * w + x;
+    if (!(d[i] >>> 24)) continue;
+    if (x === 0 || y === 0 || !(d[i - 1] >>> 24) || !(d[i - w] >>> 24)) out[i] = lu;
+    else if (x === w - 1 || y === h - 1 || !(d[i + 1] >>> 24) || !(d[i + w] >>> 24)) out[i] = du;
+  }
+  d.set(out);
+  return s;
+}
+
+// Cột đá có rãnh (đền mây, phế tích); broken = đỉnh gãy lởm chởm
+function colSpr(h, P, trim, broken, seed) {
+  return cached(`col:${h}:${P.join()}:${trim}:${broken ? 1 : 0}:${seed}`, () => {
+    const R = rng(seed * 31 + h);
+    const s = new Buf(14, h + 2);
+    const base = h + 1;
+    const top = 5;
+    // thân cột: từng cột điểm ảnh để đỉnh gãy không đều
+    for (let x = 3; x <= 10; x++) {
+      const y0 = broken ? top + 1 + ((R() * 6) | 0) : top + 2;
+      const c = x < 5 ? P[0] : x === 6 || x === 9 ? P[2] : x === 10 ? P[3] : P[1];
+      s.r(x, y0, 1, base - 5 - y0, c);
+      if (broken) s.p(x, y0, x < 7 ? P[0] : P[1]);
+    }
+    for (let y = top + 6; y < base - 6; y += 9 + ((R() * 5) | 0)) s.p(4 + ((R() * 6) | 0), y, P[3]);
+    if (!broken) {
+      s.r(1, top, 12, 2, P[1]); s.r(1, top, 12, 1, P[0]);
+      s.r(0, top - 3, 14, 3, P[1]); s.r(0, top - 3, 14, 1, P[0]); s.r(0, top - 1, 14, 1, P[2]);
+      if (trim) { s.r(1, top + 1, 12, 1, trim); s.r(0, top - 2, 14, 1, trim); s.p(0, top - 2, shd(trim, 0.4)); }
+    }
+    s.r(1, base - 5, 12, 2, P[1]); s.r(1, base - 5, 12, 1, P[0]);
+    s.r(0, base - 3, 14, 3, P[2]); s.r(0, base - 3, 14, 1, P[1]);
+    if (trim) s.r(1, base - 4, 12, 1, trim);
+    return s.outline(0.55);
+  });
+}
+
+// Tượng thần hộ vệ cổ (tự thiết kế): bệ vuông, áo choàng, mũ cao, tay khoanh
+function statueSpr(P, seed) {
+  return cached(`statue:${P.join()}:${seed}`, () => {
+    const s = new Buf(24, 42);
+    const cx = 12;
+    s.r(2, 33, 20, 9, P[1]);
+    s.poly([[cx - 5, 14], [cx + 5, 14], [cx + 8, 33], [cx - 8, 33]], P[1]);
+    s.ell(cx, 10, 4.5, 5, P[1]);
+    s.r(cx - 3, 0, 6, 6, P[1]);
+    s.r(cx - 4, 0, 8, 2, P[1]);
+    s.r(cx - 7, 15, 3, 9, P[1]); s.r(cx + 4, 15, 3, 9, P[1]);
+    edgeShade(s, P[0], P[2]);
+    // nếp áo + tay khoanh + mặt
+    s.r(cx - 6, 21, 12, 2, P[2]); s.r(cx - 6, 21, 12, 1, P[0]);
+    s.r(cx - 1, 24, 1, 9, P[2]); s.r(cx + 3, 25, 1, 8, P[2]);
+    s.p(cx - 2, 9, P[3]); s.p(cx + 1, 9, P[3]); s.r(cx - 1, 12, 2, 1, P[2]);
+    s.r(cx - 4, 5, 8, 1, P[2]);
+    s.r(3, 34, 18, 1, P[0]); s.r(2, 38, 20, 1, P[2]);
+    for (let x = 5; x < 20; x += 4) s.p(x, 36, P[3]);
+    // vết nứt + mẻ vai
+    s.line(cx + 2, 15, cx + 5, 22, P[3]);
+    if (seed & 1) { s.d.fill(0, 14 * 24 + cx + 4, 14 * 24 + cx + 8); s.d.fill(0, 15 * 24 + cx + 5, 15 * 24 + cx + 8); s.p(cx + 4, 15, P[2]); }
+    return s.outline(0.6);
+  });
+}
+
 // --------- Đồ vật nhỏ (dùng chung cho nhiều chủ đề)
+// Màu theo làng/chủ đề cho đồ vật có vải sơn
+const PROP_TINT = { fire: '#d8402a', water: '#2e6ad0', wind: '#3e9a48', sakura: '#d8405a', wood: '#c84a32', bamboo: '#3e9a48' };
 function sprProp(kind, seed, th) {
   return cached(`p:${kind}:${seed}:${th}`, () => {
     const R = rng(seed);
@@ -933,7 +1048,7 @@ function sprProp(kind, seed, th) {
         break;
       }
       case 'pillar': {
-        const pal = th === 'desert' ? ['#f0d8a8', '#d8b67c', '#b08a54', '#8a6a40'] : th === 'hell' || th === 'lava' ? ['#7a5a5a', '#5a4040', '#402c2c', '#2a1c1c'] : ['#d8d8d8', '#b4b4b4', '#8a8a8a', '#666666'];
+        const pal = th === 'desert' || th === 'ruins' ? ['#f0d8a8', '#d8b67c', '#b08a54', '#8a6a40'] : th === 'hell' || th === 'lava' ? ['#7a5a5a', '#5a4040', '#402c2c', '#2a1c1c'] : th === 'abyss' ? ['#6a4a7a', '#4c3460', '#342246', '#22162e'] : ['#d8d8d8', '#b4b4b4', '#8a8a8a', '#666666'];
         const h = 34 + ((R() * 22) | 0);
         s = new Buf(20, h + 4);
         const top = 4;
@@ -946,7 +1061,8 @@ function sprProp(kind, seed, th) {
         s.poly([[3, top + 1], [7, top - 3], [11, top], [14, top - 2], [17, top + 1]], pal[1]);
         s.r(4, top + 14, 3, 2, pal[3]); s.r(12, top + 22, 3, 3, pal[3]);
         if (th === 'hell' || th === 'lava') { s.r(6, top + 18, 1, 6, '#ff7a2a'); s.r(13, top + 9, 1, 4, '#ff9a3a'); }
-        if (th === 'desert') { s.r(1, h, 18, 2, '#e8c07a'); }
+        if (th === 'abyss') { s.r(6, top + 18, 1, 6, '#d040ff'); s.r(13, top + 9, 1, 4, '#ff6ad8'); }
+        if (th === 'desert' || th === 'ruins') { s.r(1, h, 18, 2, '#e8c07a'); }
         break;
       }
       case 'torch': {
@@ -971,7 +1087,274 @@ function sprProp(kind, seed, th) {
       }
       case 'spikes': {
         s = new Buf(24, 14);
-        for (let i = 0; i < 5; i++) { const x = 2 + i * 5; const h = 7 + ((i * 7) % 6); s.poly([[x - 2, 14], [x, 14 - h], [x + 2, 14]], '#4a3a3a'); s.line(x, 14 - h, x - 1, 13, '#7a6060'); s.p(x, 14 - h, '#c84a2a'); }
+        const sp = th === 'abyss' ? ['#3a2448', '#6a4a80', '#e050ff'] : ['#4a3a3a', '#7a6060', '#c84a2a'];
+        for (let i = 0; i < 5; i++) { const x = 2 + i * 5; const h = 7 + ((i * 7) % 6); s.poly([[x - 2, 14], [x, 14 - h], [x + 2, 14]], sp[0]); s.line(x, 14 - h, x - 1, 13, sp[1]); s.p(x, 14 - h, sp[2]); }
+        break;
+      }
+      // ---- làng
+      case 'potplant': {
+        // cây cảnh dáng thông trong chậu men
+        s = new Buf(20, 22);
+        const pot = th === 'water' ? ['#7aa8e0', '#3a6aaa', '#244a80'] : th === 'wind' ? ['#9ad0a0', '#4a8a5a', '#2e6040'] : ['#e09060', '#a8502e', '#74321c'];
+        s.poly([[3, 16], [17, 16], [15, 21], [5, 21]], pot[1]); s.r(2, 15, 16, 2, pot[0]); s.r(2, 16, 16, 1, pot[2]);
+        s.r(5, 20, 10, 1, pot[2]); s.r(4, 17, 2, 3, pot[0]);
+        s.line(10, 15, 8, 11, '#6a4428', 2); s.line(8, 11, 12, 6, '#6a4428', 2); s.line(9, 10, 4, 8, '#6a4428');
+        const lf = ['#9ad06a', '#5a9a46', '#3a7036', '#264e28'];
+        blob(s, 5, 7, 4, 2.6, lf); blob(s, 13, 5, 5, 3, lf); blob(s, 10, 2.6, 3, 2, lf);
+        break;
+      }
+      case 'flowerpot': {
+        s = new Buf(16, 16);
+        const fl = th === 'water' ? ['#8ab4ff', '#5a7ae8', '#ffffff'] : th === 'wind' ? ['#ffe066', '#ffb020', '#ffffff'] : ['#ff7a8a', '#e83a4a', '#ffd8a0'];
+        s.poly([[3, 10], [13, 10], [12, 15], [4, 15]], '#b0603a'); s.r(2, 9, 12, 2, '#d08050'); s.r(2, 10, 12, 1, '#7a3a22'); s.r(4, 11, 1, 3, '#d08050');
+        blob(s, 8, 6, 6, 4, ['#8ac860', '#5a9a46', '#3a7036', '#264e28'], { cut: 9 });
+        for (let i = 0; i < 9; i++) { const x = 3 + ((i * 5) % 11); const y = 2 + ((i * 3) % 6); s.p(x, y, fl[i % 3 === 2 ? 1 : 0]); if (i % 3 === 0) s.p(x + 1, y, fl[2]); }
+        break;
+      }
+      case 'rickshaw': {
+        // xe kéo tay: bánh lớn, ghế sơn mài, mui vải, càng kéo chạm đất
+        s = new Buf(42, 30);
+        const c = ramp(PROP_TINT[th] || '#c84a32');
+        s.line(26, 17, 41, 27, '#6e4a2e', 2); s.r(39, 27, 3, 2, '#4a3020');
+        s.r(8, 12, 20, 8, c[1]); s.r(8, 12, 20, 1, c[0]); s.r(8, 19, 20, 1, c[2]); s.r(26, 12, 2, 8, c[2]);
+        s.r(10, 9, 14, 3, '#f0e4c8'); s.r(10, 9, 14, 1, '#ffffff');
+        s.poly([[7, 12], [9, 3], [15, 0], [21, 1], [19, 4], [13, 5], [11, 12]], c[2]);
+        s.line(9, 4, 15, 1, c[1]); s.r(8, 11, 4, 1, c[3]);
+        for (let y = 12; y < 30; y++) for (let x = 5; x < 24; x++) {
+          const d = Math.hypot(x + 0.5 - 14, y + 0.5 - 21);
+          if (d <= 8.5 && d > 6.4) s.p(x, y, d > 7.6 ? '#3a2416' : x + y < 33 ? '#a07040' : '#6e4a2e');
+        }
+        for (let a = 0; a < 8; a++) s.line(14, 21, 14 + Math.cos(a * 0.785) * 7, 21 + Math.sin(a * 0.785) * 7, '#8a6038');
+        s.ell(14, 21, 1.6, 1.6, '#c8a060');
+        break;
+      }
+      case 'taiko': {
+        // trống taiko nhìn chéo 3/4: thân gỗ hình thùng trên giá chữ X, mặt da có dấu tam ba đỏ
+        s = new Buf(30, 28);
+        s.line(6, 27, 21, 15, '#4a2e1e', 2); s.line(25, 27, 10, 15, '#5a3a26', 2);
+        s.r(4, 26, 5, 2, '#3a2418'); s.r(22, 26, 5, 2, '#3a2418');
+        const WD = ['#e07a52', '#b8482c', '#8a3020', '#5e1e16'];
+        for (let x = 10; x <= 26; x++) {
+          const f = (x - 10) / 16;
+          const hh = Math.round(8 + Math.sin(f * Math.PI) * 2);
+          for (let y = 12 - hh; y <= 12 + hh; y++) {
+            const v = (y - (12 - hh)) / (hh * 2);
+            s.p(x, y, v < 0.18 ? WD[0] : v < 0.62 ? WD[1] : v < 0.86 ? WD[2] : WD[3]);
+          }
+          if ((x - 10) % 5 === 4) for (let y = 13 - hh; y < 12 + hh; y++) s.p(x, y, WD[2]);
+          // hàng đinh tán đồng ở mép trống
+          if (x === 12 || x === 25) for (let y = 13 - hh; y < 12 + hh; y += 2) s.p(x, y, '#ffd54f');
+        }
+        s.ell(10, 12, 6.5, 10.5, '#3a1a12');
+        s.ell(10, 12, 5.5, 9.5, '#efdcb4');
+        s.ell(9, 10, 3.5, 6.5, '#fff6e0');
+        // tam ba: ba dấu phẩy đỏ cùng màu xoáy quanh tâm
+        for (let k = 0; k < 3; k++) {
+          const a = k * 2.094 + 0.4;
+          const hx = 10 + Math.cos(a) * 2.6 * 0.6;
+          const hy = 12 + Math.sin(a) * 2.6;
+          s.r(Math.round(hx) - 1, Math.round(hy) - 1, 2, 2, '#c8302a');
+          for (let j = 1; j <= 3; j++) {
+            const a2 = a + j * 0.5;
+            s.p(10 + Math.cos(a2) * (2.6 + j * 0.7) * 0.6, 12 + Math.sin(a2) * (2.6 + j * 0.7), '#c8302a');
+          }
+        }
+        s.p(10, 12, '#8a1e1a');
+        // dùi trống gác trên thân
+        s.line(17, 1, 23, 5, '#c8a070'); s.line(20, 0, 26, 4, '#b08a58');
+        break;
+      }
+      case 'parasol': {
+        // ô giấy lớn che ghế ngồi (kiểu quán trà ngoài trời)
+        s = new Buf(36, 36);
+        const c = ramp(PROP_TINT[th] || '#d8402a');
+        s.r(17, 8, 2, 28, '#5a3a26');
+        s.r(3, 27, 30, 3, '#b0303a'); s.r(3, 27, 30, 1, '#e05a5a'); s.r(5, 30, 2, 6, '#5a3a26'); s.r(29, 30, 2, 6, '#5a3a26');
+        for (let x = 1; x < 35; x++) {
+          const f = Math.abs(x - 17.5) / 17;
+          const y0 = Math.round(2 + f * f * 9);
+          const y1 = Math.round(8 + f * 4);
+          for (let y = y0; y <= y1; y++) s.p(x, y, y === y0 ? c[0] : (x - 1) % 6 === 0 ? c[2] : x < 17 ? c[1] : shd(c[1], -0.1));
+        }
+        for (let x = 2; x < 34; x += 6) s.p(x, Math.round(9 + (Math.abs(x - 17.5) / 17) * 4), '#f0e4c8');
+        s.r(17, 0, 2, 2, '#2a1a14');
+        break;
+      }
+      case 'koipole': {
+        s = new Buf(8, 74);
+        s.r(3, 3, 2, 67, '#8a6a4a'); s.r(3, 3, 1, 67, '#b08a62');
+        // bánh xe gió + quả cầu vàng trên đỉnh
+        s.r(1, 3, 6, 1, '#e8e0d0'); s.r(3, 1, 2, 5, '#e8e0d0'); s.ell(4, 2, 1.5, 1.5, '#ffd54f'); s.p(3, 1, '#fff4c0');
+        // chân đá
+        s.r(1, 69, 6, 5, '#9a958c'); s.r(1, 69, 6, 1, '#c8c2b6'); s.r(6, 70, 1, 4, '#6a665e');
+        break;
+      }
+      // ---- thiên cung
+      case 'cloudpillar': {
+        s = new Buf(24, 60);
+        const col = colSpr(50, ['#ffffff', '#e8e6f4', '#bcb8d8', '#8a86b0'], '#f0b840', false, seed);
+        blit(s, col, 5, 4);
+        blob(s, 12, 55, 11, 5, CLOUD, { cut: 59, dither: false });
+        blob(s, 6, 57, 6, 3, CLOUD, { cut: 59, dither: false });
+        s.ell(12, 3, 3, 3, '#fff2b0'); s.p(11, 2, '#ffffff');
+        return s;
+      }
+      case 'censer': {
+        // lư hương đồng ba chân
+        s = new Buf(20, 20);
+        const b = ['#f4c870', '#c8903a', '#8a5a24', '#5a3a18'];
+        s.r(4, 16, 2, 4, b[2]); s.r(14, 16, 2, 4, b[2]); s.r(9, 17, 2, 3, b[3]);
+        s.ell(10, 12, 8, 5, b[1]); s.r(2, 8, 16, 2, b[1]);
+        s.r(1, 6, 3, 4, b[2]); s.r(16, 6, 3, 4, b[2]);
+        edgeShade(s, b[0], b[2]);
+        s.r(4, 11, 12, 1, b[3]); for (let x = 5; x < 16; x += 3) s.p(x, 13, '#ffe8a0');
+        s.ell(10, 7, 6, 2, b[2]); s.ell(10, 5, 4, 2.5, b[1]); s.r(9, 1, 2, 3, b[0]);
+        break;
+      }
+      case 'lotus': {
+        s = new Buf(18, 12);
+        s.ell(9, 9.5, 8.5, 2.5, '#6ab07a'); s.ell(8, 9, 6, 1.5, '#8ad09a');
+        const p = ['#ffffff', '#ffc4dc', '#ec7aa8', '#c04a80'];
+        // cánh sen nhọn: ngoài hồng đậm, trong trắng
+        for (const [x, l] of [[3, 3], [15, 3], [6, 5], [12, 5], [9, 7]]) {
+          s.poly([[x - 2, 9], [x, 9 - l - 1], [x + 2, 9]], x === 9 ? p[1] : p[2]);
+          s.line(x, 9 - l, x - 1, 8, p[0]);
+          s.p(x, 9 - l - 1, p[3]);
+        }
+        s.r(8, 7, 3, 2, '#ffe066'); s.p(8, 7, '#fff8c0');
+        break;
+      }
+      // ---- long cung
+      case 'coralfan': {
+        s = new Buf(30, 30);
+        const c = [['#ffb0c8', '#f06a9a', '#b83a6a'], ['#ffc890', '#ff8a4a', '#c8582a'], ['#e0b0ff', '#b070e8', '#7a40b0']][seed % 3];
+        const br = (x, y, a, len, d) => {
+          const x2 = x + Math.cos(a) * len;
+          const y2 = y + Math.sin(a) * len;
+          s.line(x, y, x2, y2, d > 1 ? c[2] : c[1], d > 2 ? 2 : 1);
+          if (d <= 0) { s.p(x2, y2, c[0]); s.p(x2 + 1, y2, c[0]); return; }
+          br(x2, y2, a - 0.45, len * 0.75, d - 1);
+          br(x2, y2, a + 0.4, len * 0.7, d - 1);
+        };
+        br(15, 26, -Math.PI / 2, 8, 3);
+        s.ell(15, 27, 7, 3, '#8a8f98'); s.ell(14, 26.5, 5, 1.5, '#aab0b8');
+        break;
+      }
+      case 'clam': {
+        // sò khổng lồ mở miệng, ngọc trai phát sáng
+        s = new Buf(24, 18);
+        const sh = ['#c8b4f0', '#9a80d8', '#6a54a8', '#463478'];
+        for (let x = 1; x < 23; x++) {
+          const f = (x - 12) / 11;
+          const top = Math.round(4 + f * f * 6 - ((x & 3) === 0 ? 1 : 0));
+          for (let y = top; y < 9; y++) s.p(x, y, y === top ? sh[0] : x % 4 === 0 ? sh[2] : sh[1]);
+          const bot = Math.round(17 - f * f * 3 + ((x & 3) === 2 ? 1 : 0));
+          for (let y = 12; y < bot; y++) s.p(x, y, y === 12 ? sh[0] : x % 4 === 0 ? sh[3] : sh[2]);
+        }
+        s.r(3, 9, 18, 3, '#4ac8b8'); s.r(3, 9, 18, 1, '#8af0e0');
+        s.ell(12, 10, 2.6, 2.6, '#f4f8ff'); s.p(11, 9, '#ffffff'); s.p(13, 11, '#c8d8e8');
+        break;
+      }
+      case 'jadepillar': {
+        s = new Buf(18, 56);
+        const J = ['#c8f8e0', '#6ac8a4', '#3a9476', '#22604c'];
+        s.r(4, 8, 10, 44, J[1]);
+        edgeShade(s, J[0], J[2]);
+        for (let y = 12; y < 50; y += 6) s.r(9, y, 1, 3, J[3]);
+        for (const y of [8, 22, 38]) { s.r(3, y, 12, 2, '#e8b030'); s.r(3, y, 12, 1, '#fff0a0'); }
+        s.r(1, 50, 16, 6, '#c8a060'); s.r(1, 50, 16, 1, '#f0d090'); s.r(1, 55, 16, 1, '#7a5a30');
+        s.r(2, 4, 14, 4, '#c8302a'); s.r(2, 4, 14, 1, '#f0604a'); s.r(1, 3, 16, 1, '#e8b030');
+        s.ell(9, 1.5, 2.5, 2.5, '#f4fbff'); s.p(8, 0, '#ffffff');
+        break;
+      }
+      // ---- phế tích
+      case 'obelisk': {
+        s = new Buf(16, 48);
+        const P = ['#f8e0b0', '#e0b880', '#b48a58', '#80603a'];
+        s.poly([[3, 47], [5, 8], [11, 8], [13, 47]], P[1]); s.poly([[5, 8], [8, 1], [11, 8]], P[1]);
+        edgeShade(s, P[0], P[2]);
+        s.poly([[6, 7], [8, 2], [8, 7]], '#ffe8a0');
+        for (let y = 12; y < 42; y += 5) { s.r(7, y, 2, 1, P[3]); s.p(7 + ((y >> 2) & 1), y + 2, P[3]); }
+        s.r(1, 44, 14, 4, P[2]); s.r(1, 44, 14, 1, P[1]);
+        break;
+      }
+      case 'fallen': {
+        // đoạn cột đổ nằm ngang, đầu vỡ bên trái
+        s = new Buf(42, 14);
+        const P = ['#f8e0b0', '#e0b880', '#b48a58', '#80603a'];
+        for (let x = 0; x < 34; x++) {
+          const x0 = x + (x < 4 ? ((x * 7) % 3) : 0);
+          for (let y = 3; y < 13; y++) s.p(x0, y, y < 5 ? P[0] : y === 7 || y === 10 ? P[2] : y > 11 ? P[3] : P[1]);
+        }
+        s.ell(35, 8, 4, 5, P[2]); s.ell(35, 8, 3, 4, P[1]); s.ell(35, 8, 1.5, 2, P[2]);
+        s.r(0, 13, 42, 1, '#e8c07a');
+        break;
+      }
+      case 'rubble': {
+        s = new Buf(24, 12);
+        const P = th === 'abyss' ? ['#6a4a7a', '#48305a', '#30203e', '#1e1428'] : ['#f8e0b0', '#e0b880', '#b48a58', '#80603a'];
+        for (const [x, y, w, h] of [[1, 6, 9, 6], [9, 7, 8, 5], [16, 8, 7, 4], [5, 2, 7, 5], [12, 4, 5, 4]]) { s.r(x, y, w, h, P[1]); s.r(x, y, w, 1, P[0]); s.r(x, y, 1, h, P[0]); s.r(x + w - 1, y + 1, 1, h - 1, P[2]); s.r(x + 1, y + h - 1, w - 1, 1, P[2]); }
+        break;
+      }
+      case 'urn': {
+        s = new Buf(14, 16);
+        s.ell(7, 10, 5.5, 5.5, '#b8683a'); s.r(5, 2, 4, 4, '#b8683a'); s.r(4, 1, 6, 2, '#b8683a');
+        s.r(1, 6, 2, 4, '#9a5230'); s.r(11, 6, 2, 4, '#9a5230');
+        edgeShade(s, '#e09a60', '#7a3e20');
+        s.r(3, 9, 8, 1, '#2a1a14'); for (let x = 3; x < 11; x += 2) s.p(x, 10, '#f0d090');
+        if (seed & 1) { s.d.fill(0, 1 * 14 + 4, 1 * 14 + 7); s.d.fill(0, 2 * 14 + 5, 2 * 14 + 7); }
+        break;
+      }
+      // ---- hang pha lê / ma giới
+      case 'geode': {
+        s = new Buf(24, 16);
+        const g = ['#8a80a0', '#6a6082', '#4c4466', '#34304a'];
+        blob(s, 12, 16, 11, 12, g, { cut: 15, wob: 0.08, ph: 2 });
+        s.ell(12, 12, 7, 5, '#2a1a40');
+        const cc = ['#e0a0ff', '#a060f0', '#7ae8ff'];
+        for (let i = 0; i < 6; i++) { const x = 7 + i * 2; const h = 2 + ((i * 5) % 4); s.poly([[x - 1, 15], [x, 15 - h - 1], [x + 1.5, 15]], cc[i % 3]); s.p(x, 15 - h, '#ffffff'); }
+        break;
+      }
+      case 'thorn': {
+        s = new Buf(28, 24);
+        const v = ['#6a3a7a', '#4a2458', '#2e1638'];
+        const vine = (x0, a, len, k) => {
+          let x = x0;
+          let y = 23;
+          for (let i = 0; i < len; i++) {
+            x += Math.cos(a + Math.sin(i * 0.25 + k) * 0.7);
+            y += Math.sin(a + Math.sin(i * 0.25 + k) * 0.7);
+            s.p(x, y, v[1]); s.p(x + 1, y, v[2]);
+            if (i % 4 === 2) { s.p(x - 1, y - 1, v[0]); s.p(x - 2, y - 2, '#c8a0d8'); }
+          }
+          s.r(x - 1, y - 1, 2, 2, '#ff3a6a'); s.p(x - 1, y - 1, '#ffb0c8');
+        };
+        vine(6, -1.9, 18, 1); vine(13, -1.5, 22, 2); vine(20, -1.2, 16, 3); vine(10, -2.4, 12, 4);
+        break;
+      }
+      case 'eyestalk': {
+        // cuống thịt cong, gốc tỏa rễ, đầu là nhãn cầu có mí che nửa trên
+        s = new Buf(18, 36);
+        for (let y = 9; y < 36; y++) {
+          const f = (y - 9) / 27;
+          const x = Math.round(8 + Math.sin(y * 0.22 + 0.6) * 2.5 * (1 - f * 0.6));
+          const tw = 2 + Math.round(f * 3);
+          s.r(x - (tw >> 1), y, tw, 1, '#5a2a48');
+          s.p(x - (tw >> 1), y, '#8a4a6a');
+          if (tw > 2) s.p(x + tw - 1 - (tw >> 1), y, '#3a1830');
+          if (y % 5 === 0) s.r(x - (tw >> 1), y, tw, 1, '#47203a');
+        }
+        s.line(8, 35, 2, 33, '#4a2240'); s.line(9, 35, 15, 32, '#4a2240'); s.line(8, 34, 4, 35, '#5a2a48');
+        s.ell(8.5, 7, 6, 6, '#3a1830');
+        s.ell(8.5, 7.5, 5, 4.6, '#ead2c0');
+        s.ell(8.5, 9, 4.4, 2.6, '#c89c8c');
+        s.ell(9, 7.5, 2.6, 2.6, '#d81e36');
+        s.ell(9, 7.5, 1.7, 1.7, '#ff4a5a');
+        s.r(9, 6, 1, 4, '#12060c');
+        s.p(7, 6, '#ffffff');
+        s.line(4, 9, 6, 8, '#c0403a'); s.line(13, 8, 11, 9, '#c0403a');
+        // mí thịt trên
+        for (let x = 3; x <= 14; x++) { const yy = Math.round(4 - Math.sin(((x - 3) / 11) * Math.PI) * 2.2); s.r(x, yy, 1, 7 - yy - 2, '#6a3456'); s.p(x, 7 - 2, '#2a0e20'); s.p(x, yy, '#9a5a7a'); }
         break;
       }
       case 'icecrystal': {
@@ -1148,11 +1531,12 @@ function bTreeRow(b, o, R) {
     while (x < W) {
       const kind = o.kinds[(R() * o.kinds.length) | 0];
       const h = Math.round(hmin + R() * (hmax - hmin));
-      const spr = sprTree(kind, h, (R() * 4) | 0, { leaf: o.leaf, snow: o.snow, bark: o.bark, noOutline: o.noOutline, eyes: o.eyes });
+      const spr = sprTree(kind, h, (R() * 4) | 0, { leaf: o.leaf, snow: o.snow, bark: o.bark, noOutline: o.noOutline, eyes: o.eyes, eyeCol: o.eyeCol });
       blit(b, spr, x - spr.w / 2, H - gh + 3 - spr.h, { haze: o.haze, amt, flip: R() < 0.5 });
       x += gap * (0.6 + R() * 0.8);
     }
   });
+  if (o.front) o.front(b, R, H - gh);
 }
 
 function bMesa(b, o, R) {
@@ -1266,12 +1650,24 @@ function bCave(b, o, R) {
   const pal = o.pal; // [lit, mid, dark, base]
   // cột đá nối trần - đất
   for (let i = 0; i < (o.cols || 5); i++) {
-    const cx = R() * W;
+    const cx0 = R() * W;
     const cw = 8 + R() * 16;
     const ph = R() * TAU;
+    // vary: mỗi cột một dáng (thắt eo khác nhau, nghiêng, gãy giữa) để không lặp lại
+    const kind = o.vary ? i % 3 : 0;
+    const pinch = o.vary ? 0.3 + R() * 0.5 : 0.55;
+    const lean = o.vary ? (R() - 0.5) * 36 : 0;
+    const wob = o.vary ? 1 + R() * 3 : 2;
+    const fr = o.vary ? 0.07 + R() * 0.16 : 0.15;
+    const gap = kind === 2 ? [H * (0.3 + R() * 0.15), H * (0.55 + R() * 0.15)] : null;
     for (let y = 0; y < H; y++) {
       const f = y / H;
-      const w = cw * (0.55 + 0.45 * Math.abs(Math.cos(f * Math.PI))) + Math.sin(y * 0.15 + ph) * 2;
+      if (gap && y > gap[0] && y < gap[1]) continue;
+      const cx = cx0 + lean * (f - 0.5);
+      let w = cw * (pinch + (1 - pinch) * Math.abs(Math.cos(f * Math.PI))) + Math.sin(y * fr + ph) * wob;
+      if (kind === 1) w *= 0.75 + 0.5 * f;
+      if (gap) w *= Math.min(1, Math.min(Math.abs(y - gap[0]), Math.abs(y - gap[1])) / 22);
+      if (w < 0.5) continue;
       for (let x = Math.floor(cx - w); x <= cx + w; x++) {
         const u = (x - (cx - w)) / (2 * w);
         const fi = fadeIdx(x, y, H, H * 0.25);
@@ -1299,11 +1695,12 @@ function bCave(b, o, R) {
     }
   }
   // tinh thể / dòng dung nham trong vách
-  if (o.crystal) for (let i = 0; i < 10; i++) {
-    const spr = sprCrystal(8 + ((R() * 8) | 0), o.crystal, i % 4);
+  if (o.crystal) for (let i = 0; i < (o.crysN || 10); i++) {
+    const col = Array.isArray(o.crystal) ? o.crystal[i % o.crystal.length] : o.crystal;
+    const spr = sprCrystal(8 + ((R() * (o.crysH || 8)) | 0), col, i % 4);
     const cx = R() * W;
     const cy = H - spr.h - R() * 8;
-    halo(b, cx + spr.w / 2, cy + spr.h * 0.6, 18, o.crystal, 0.35);
+    halo(b, cx + spr.w / 2, cy + spr.h * 0.6, 18 + spr.h * 0.4, col, 0.35);
     blit(b, spr, cx, cy, { haze: pal[3], amt: o.camt || 0.25 });
   }
   if (o.lavafall) for (let i = 0; i < 3; i++) {
@@ -1344,7 +1741,7 @@ function bRuins(b, o, R) {
     b.r(gx, H - gh, 1, gh, rim); b.r(gx - 6, H - gh - 10, gw + 12, 1, rim);
     b.line(gx - 6, H - gh - 10, gx - 16, H - gh - 30, S, 3); b.line(gx + gw + 6, H - gh - 10, gx + gw + 16, H - gh - 30, S, 3);
     b.ell(gx + gw / 2, H - gh + 2, 8, 6, S); b.p(gx + gw / 2 - 3, H - gh + 1, o.win); b.p(gx + gw / 2 + 3, H - gh + 1, o.win);
-    for (let y = H - gh + 14; y < H; y++) for (let xx = gx + 16; xx < gx + gw - 16; xx++) b.a(xx, y, '#ff5a2a', 0.18 + 0.25 * ((y - (H - gh)) / gh));
+    for (let y = H - gh + 14; y < H; y++) for (let xx = gx + 16; xx < gx + gw - 16; xx++) b.a(xx, y, o.gateCol || '#ff5a2a', 0.18 + 0.25 * ((y - (H - gh)) / gh));
   }
 }
 
@@ -1410,6 +1807,105 @@ function bCeiling(b, o, R) {
     }
     if (o.drip) b.p(x, y0 + len + 1, o.drip);
   }
+  // tinh thể mọc ngược từ trần (lật dọc sprite)
+  if (o.crys) for (let i = 0; i < 16; i++) {
+    const col = o.crys[i % o.crys.length];
+    const spr = sprCrystal(10 + ((R() * 14) | 0), col, i % 4);
+    const x0 = Math.floor(R() * W);
+    const y0 = Math.round(8 + band[x0 % W]);
+    halo(b, x0 + spr.w / 2, y0 + spr.h * 0.5, 14 + spr.h * 0.5, col, 0.3);
+    for (let y = 0; y < spr.h; y++) for (let x = 0; x < spr.w; x++) {
+      const v = spr.d[(spr.h - 1 - y) * spr.w + x];
+      const k = b.ix(x0 + x, y0 + y);
+      if (v >>> 24 === 255 && k >= 0) b.d[k] = v;
+    }
+  }
+}
+
+// Một dải mây cuồn cuộn (đỉnh ở yBase ± amp), lấp kín bên dưới, nhạt dần về màu sương
+function puffRow(b, R, yBase, amp, n, rmin, rmax, pal, haze) {
+  const W = b.w;
+  const H = b.h;
+  const c = new Buf(W, H, true);
+  const prof = periodic(W, R, [[3, amp * 0.5], [7, amp * 0.3], [13, amp * 0.2]]);
+  for (let i = 0; i < n; i++) {
+    const x = ((i + R() * 0.8) * W) / n;
+    const r = rmin + R() * (rmax - rmin);
+    blob(c, x, yBase - prof[Math.floor(x) % W] + r * 0.35, r * 1.3, r, pal, { wob: 0.1, lobes: 5, ph: R() * 6, dither: false });
+  }
+  const F = fades(pal[2], haze || pal[3]);
+  for (let x = 0; x < W; x++) {
+    let on = -1;
+    for (let y = 0; y < H; y++) {
+      const i = y * W + x;
+      if (c.d[i] >>> 24) { if (on < 0) on = y; continue; }
+      if (on >= 0) c.d[i] = u32(F[Math.min(2, (((y - on) / 10) + ((x + y) & 1 ? 0.15 : -0.15)) | 0)]);
+    }
+  }
+  blit(b, c, 0, 0);
+}
+
+function bCloudBank(b, o, R) {
+  const H = b.h;
+  // công trình vẽ trước để mây phủ chân
+  if (o.feat) for (const f of o.feat) {
+    const spr = featSpr(f, o.featCol);
+    blit(b, spr, Math.floor(R() * b.w), H - o.base - spr.h + 8 - Math.floor(R() * o.amp * 0.6), { haze: o.haze, amt: o.featHaze != null ? o.featHaze : 0.3 });
+  }
+  puffRow(b, R, H - o.base, o.amp, o.n || 30, o.rmin, o.rmax, o.pal, o.haze);
+  if (o.front) puffRow(b, R, H - o.front, o.amp * 0.5, o.n || 30, o.rmin * 0.7, o.rmax * 0.7, o.pal, o.haze);
+}
+
+// Hàng cột: cổng đền trên mây (mái vàng) hoặc phế tích (cột gãy, tượng, đoạn cột đổ)
+function bColonnade(b, o, R) {
+  const W = b.w;
+  const H = b.h;
+  const gh = o.gh || 8;
+  const P = o.pal;
+  const gy = H - gh;
+  if (o.ground) {
+    const prof = periodic(W, R, [[6, 1.5], [17, 0.8]]);
+    const G = fades(o.ground, o.dark || shd(o.ground, -0.4));
+    for (let x = 0; x < W; x++) {
+      const t = Math.round(gy + prof[x]);
+      for (let y = t; y < H; y++) b.p(x, y, y === t ? shd(o.ground, 0.18) : G[Math.min(2, ((y - t) / 3) | 0)]);
+    }
+  }
+  let x = R() * 30;
+  while (x < W - 10) {
+    const k = 2 + ((R() * 3) | 0);
+    const gap = 16 + ((R() * 6) | 0);
+    const h = Math.round(o.hmin + R() * (o.hmax - o.hmin));
+    const broken = R() < (o.broken || 0);
+    const gw = (k - 1) * gap + 14;
+    const g = new Buf(gw + 24, h + 30);
+    const bx = 12;
+    const by = g.h - 1;
+    for (let i = 0; i < k; i++) {
+      const ch = broken && R() < 0.75 ? Math.round(h * (0.3 + R() * 0.6)) : h;
+      blit(g, colSpr(ch, P, o.trim, broken, (R() * 3) | 0), bx + i * gap, by - ch - 1);
+    }
+    if (!broken) {
+      const ly = by - h - 5;
+      g.r(bx - 3, ly, gw + 6, 4, P[1]); g.r(bx - 3, ly, gw + 6, 1, P[0]); g.r(bx - 3, ly + 3, gw + 6, 1, P[2]);
+      if (o.trim) g.r(bx - 3, ly + 2, gw + 6, 1, o.trim);
+      if (o.roof) roofDraw(g, bx + gw / 2, ly - 1, gw / 2 + 10, 9, o.roof, Math.max(4, gw / 2 - 8));
+    }
+    blit(b, g, x - bx, gy + 3 - g.h, { haze: o.haze, amt: o.amt });
+    let nx = x + gw;
+    if (o.statue && R() < 0.6) {
+      const st = statueSpr(P, (R() * 4) | 0);
+      blit(b, st, nx + 10, gy + 3 - st.h, { haze: o.haze, amt: o.amt, flip: R() < 0.5 });
+      nx += 34;
+    }
+    if (broken && o.fallen && R() < 0.7) {
+      const f = sprProp('fallen', 0, 'ruins');
+      blit(b, f, nx + 6, gy + 3 - f.h, { haze: o.haze, amt: o.amt, flip: R() < 0.5 });
+      nx += 46;
+    }
+    x = nx + (o.space || 30) + R() * 50;
+  }
+  if (o.cloud) puffRow(b, R, gy + 4, 3, 26, 5, 9, o.cloud, o.cloudHaze);
 }
 
 // ---------- Công trình nhỏ trên đồi xa (tháp chùa, lâu đài, nhà)
@@ -1446,6 +1942,39 @@ function featSpr(kind, roof) {
       s = new Buf(24, 34);
       s.poly([[8, 34], [10, 12], [14, 12], [16, 34]], wall); s.poly([[8, 13], [12, 8], [16, 13]], roof);
       s.line(12, 12, 2, 2, wd); s.line(12, 12, 22, 22, wd); s.line(12, 12, 22, 2, wd); s.line(12, 12, 2, 22, wd);
+    } else if (kind === 'skytemple') {
+      // điện trên mây: thềm trắng, hàng cột, mái vàng hai tầng
+      s = new Buf(64, 58);
+      s.r(4, 50, 56, 8, '#f4f0ff'); s.r(4, 50, 56, 1, '#ffffff'); s.r(8, 46, 48, 4, '#e8e4f6');
+      for (let x = 12; x < 54; x += 7) { s.r(x, 28, 3, 18, '#ffffff'); s.r(x + 2, 28, 1, 18, '#cfc8e8'); }
+      s.r(10, 26, 44, 3, '#c8382a');
+      roofDraw(s, 32, 25, 30, 9, roof, 16);
+      s.r(18, 12, 28, 6, '#fff6e0'); s.r(20, 13, 24, 4, '#ffe08a');
+      roofDraw(s, 32, 11, 20, 7, roof, 8);
+      s.r(31, 0, 2, 4, '#ffe066');
+    } else if (kind === 'seapalace') {
+      // long cung dưới biển: cổng vòm, mái ngọc bích, cột đỏ
+      s = new Buf(72, 64);
+      s.r(2, 56, 68, 8, '#8a9aa8'); s.r(2, 56, 68, 1, '#b8c8d0');
+      s.r(8, 34, 56, 22, '#e8eef0');
+      for (let x = 10; x < 62; x += 8) { s.r(x, 34, 3, 22, '#c8382a'); s.r(x, 34, 1, 22, '#e8584a'); }
+      s.ell(36, 50, 8, 10, '#1a3a4a'); s.r(28, 50, 16, 6, '#1a3a4a');
+      roofDraw(s, 36, 33, 34, 10, roof, 18);
+      s.r(20, 16, 32, 8, '#e8eef0'); for (let x = 22; x < 50; x += 6) s.r(x, 17, 3, 6, '#ffd890');
+      roofDraw(s, 36, 15, 22, 8, roof, 10);
+      s.r(35, 0, 2, 5, '#e8b030'); s.ell(36, 1, 2, 2, '#f4fbff');
+    } else if (kind === 'ziggurat') {
+      s = new Buf(60, 40);
+      for (let i = 0; i < 5; i++) { const w = 58 - i * 11; const y = 40 - (i + 1) * 7; s.r(30 - w / 2, y, w, 7, '#e0b880'); s.r(30 - w / 2, y, w, 1, '#f8e0b0'); s.r(30 + w / 2 - 2, y, 2, 7, '#b48a58'); }
+      s.r(27, 0, 6, 6, '#c8a070'); s.r(28, 2, 2, 3, '#5a3a20');
+      for (let y = 8; y < 40; y++) s.r(28, y, 4, 1, y % 2 ? '#c8a070' : '#e0b880');
+    } else if (kind === 'spire') {
+      // tháp gai ma giới
+      s = new Buf(30, 64);
+      s.poly([[6, 64], [12, 14], [15, 0], [18, 14], [24, 64]], '#1e0c28');
+      s.poly([[2, 64], [6, 36], [9, 30], [10, 64]], '#1e0c28'); s.poly([[20, 64], [22, 40], [26, 32], [28, 64]], '#1e0c28');
+      s.line(15, 2, 13, 60, '#4a2a5a');
+      for (const y of [24, 36, 48]) { s.r(14, y, 2, 2, roof); }
     } else s = new Buf(2, 2);
     return s;
   });
@@ -1504,7 +2033,13 @@ function sunSpr(o) {
       const al = d < r * 1.6 ? 0.42 : d < r * 2.3 ? 0.24 : d < G ? 0.1 : 0;
       if (al) s.a(x, y, o.glow, al);
     }
-    if (o.k === 'moon' || o.k === 'redmoon') {
+    if (o.k === 'eclipse') {
+      // nhật thực: đĩa tối, vành sáng
+      s.ell(c, c, r + 1.5, r + 1.5, shd(o.glow, 0.5));
+      s.ell(c, c, r + 0.5, r + 0.5, o.glow);
+      s.ell(c + 1, c, r - 0.5, r - 0.5, '#12061a');
+      s.ell(c - r * 0.25, c - r * 0.3, r * 0.25, r * 0.2, '#22102e');
+    } else if (o.k === 'moon' || o.k === 'redmoon') {
       blob(s, c, c, r, r, o.k === 'redmoon' ? ['#ffb08a', '#ff6a3a', '#d8401e', '#a82a14'] : ['#ffffff', '#f4ecd8', '#d8cfb8', '#c0b49a'], { dither: true });
       const cr = o.k === 'redmoon' ? '#b83014' : '#cfc4a8';
       s.ell(c - r * 0.3, c - r * 0.1, r * 0.22, r * 0.2, cr); s.ell(c + r * 0.35, c + r * 0.35, r * 0.15, r * 0.14, cr); s.ell(c + r * 0.1, c - r * 0.5, r * 0.1, r * 0.1, cr);
@@ -1514,6 +2049,26 @@ function sunSpr(o) {
     }
     return s;
   });
+}
+
+// Cầu vồng mờ (vẽ sẵn): cung 7 dải màu, nhạt dần ở hai chân
+function rainbowSpr(r) {
+  return cached(`rainbow:${r}`, () => {
+    const cols = ['#ff7a7a', '#ffb060', '#fff080', '#90f090', '#80c8ff', '#9a90ff', '#d090ff'];
+    const bw = 2;
+    const R2 = r + cols.length * bw;
+    const s = new Buf(R2 * 2 + 2, R2 + 2);
+    const cx = R2 + 1;
+    const cy = R2 + 1;
+    for (let y = 0; y < s.h; y++) for (let x = 0; x < s.w; x++) {
+      const d = Math.hypot(x + 0.5 - cx, y + 0.5 - cy);
+      const k = Math.floor((R2 - d) / bw);
+      if (k < 0 || k >= cols.length) continue;
+      const foot = Math.min(1, (cy - y) / (R2 * 0.55));
+      s.a(x, y, cols[k], 0.34 * foot * ((x + y) & 1 ? 1 : 0.8));
+    }
+    return s;
+  }).canvas;
 }
 
 function cloudSpr(pal, seed, w) {
@@ -1846,6 +2401,75 @@ const SCENES = {
     ],
     ground: 'tiles', light: { top: ['#fff4d0', 0.05], vig: 0.2 }, portal: '#ffd86a',
   },
+  heaven: {
+    sky: ['#4a7ada', '#7aa4ec', '#b8c8f4', '#e8dcf2', '#ffe8d6', '#fff4e2'], skyH: 260,
+    sun: { k: 'sun', x: 0.72, y: 50, r: 14, col: '#fffbe8', glow: '#ffe08a' },
+    rainbow: { x: 0.3, y: 158, r: 104 },
+    clouds: { pal: ['#ffffff', '#fff6ea', '#f2dccc', '#d8c0bc'], n: 8, y: [8, 84] }, birds: 'bird', birdCol: 'rgba(255,255,255,0.9)',
+    layers: [
+      { t: 'clouds', h: 140, fx: 0.06, fy: 0.1, off: 30, base: 46, amp: 18, n: 24, rmin: 11, rmax: 24, pal: ['#ffffff', '#ece6fa', '#cfc6ec', '#b0a8d8'], haze: '#e4def6', feat: ['skytemple', 'skytemple', 'pagoda'], featCol: '#f0b840', featHaze: 0.38 },
+      { t: 'colonnade', h: 116, fx: 0.22, fy: 0.28, off: 8, gh: 10, pal: ['#ffffff', '#ece8f8', '#c4bee0', '#9690c0'], trim: '#f0b840', roof: '#e8a830', hmin: 48, hmax: 70, haze: '#e8e2f6', amt: 0.3, space: 70, cloud: CLOUD, cloudHaze: '#e0daf2' },
+      { t: 'trees', h: 110, fx: 0.42, fy: 0.5, off: 0, gh: 10, ground: '#c4bae4', dark: '#9a8ecc', kinds: ['gold', 'jade', 'gold'], hmin: 44, hmax: 70, haze: '#b8acd8', amt: 0.16, gap: 74, rows: [[74, 44, 70, 0.16]], front: (b, R, gy) => puffRow(b, R, gy + 3, 3, 34, 5, 10, CLOUD_D, '#8a80bc') },
+    ],
+    fog: true, fogA: 0.22, ground: 'cloud', cliff: ['#f4f0ff', '#c8c0e4', '#988ec8', '#6a60a0'], cap: '#ffffff',
+    light: { top: ['#fff0c0', 0.08], rays: 0.035, vig: 0.14 }, portal: '#ffd86a',
+  },
+  dragon_palace: {
+    sky: ['#4cc4d4', '#2c9cbc', '#1a7aa0', '#125c82', '#0e466a'], skyH: 280, surface: true,
+    birds: 'fish',
+    layers: [
+      { t: 'hills', h: 130, fx: 0.06, fy: 0.1, off: 26, base: 40, amp: 18, col: '#0e4466', lit: '#1a5c7e', dark: '#145a7c', rim: '#3a8aa8', trees: ['#c86a90', '#a04a78', '#7a3466', '#582654'], treeN: 40, treeR: 3, feat: ['seapalace', 'seapalace'], featCol: '#2ab08a', featHaze: 0.36 },
+      { t: 'props', h: 76, fx: 0.22, fy: 0.28, off: 6, gh: 10, ground: '#2e7a86', rim: '#5aa8a8', haze: '#1a5a7a', amt: 0.52, gap: 38, items: [(R) => sprProp('coralfan', (R() * 3) | 0, 'dragon_palace'), (R) => sprTree('kelp', 40 + ((R() * 30) | 0), (R() * 3) | 0), (R) => sprRock(24, 12, (R() * 3) | 0, ['#7a9aa8', '#5a7a8a', '#40606e', '#2a4652'])] },
+      { t: 'trees', h: 110, fx: 0.42, fy: 0.5, off: 0, gh: 10, ground: '#c8ac78', dark: '#a48654', kinds: ['kelp'], hmin: 36, hmax: 80, haze: '#1e6a86', amt: 0.42, gap: 78, rows: [[78, 36, 80, 0.42]] },
+    ],
+    ground: 'sand', cliff: ['#8ab0b8', '#6a8e9a', '#4e6e7c', '#34505e'], cap: '#e2d4a6',
+    light: { top: ['#6af0ff', 0.1], bot: ['#003a5a', 0.22], rays: 0.12, raysCol: '#c8fff4', vig: 0.32 }, portal: '#6af0ff',
+  },
+  sakura: {
+    sky: ['#6aa6e8', '#9cc4f0', '#d8d6f4', '#ffe0ec', '#fff2f6'],
+    sun: { k: 'sun', x: 0.24, y: 40, r: 10, col: '#fffbe8', glow: '#ffe8f0' },
+    clouds: { pal: ['#ffffff', '#fff0f6', '#f0d0e0', '#d0a8c4'], n: 7, y: [8, 70] }, birds: 'bird',
+    layers: [
+      { t: 'mount', h: 150, fx: 0.06, fy: 0.1, off: 24, n: 6, hmin: 52, hmax: 118, lit: '#c8aad8', shd: '#a08abc', rim: '#ffe8f4', base: '#e8d2ea', snow: '#ffffff', snowS: '#e0d2ec', snowLine: 80 },
+      { t: 'hills', h: 96, fx: 0.2, fy: 0.25, off: 8, base: 28, amp: 14, col: '#8ab070', lit: '#a8c888', dark: '#ecd8e6', trees: ['#ffe4ee', '#f8aac8', '#e082a8', '#b05a88'], treeN: 100, treeR: 5, feat: ['pagoda', 'torii', 'house', 'house'], featCol: '#c8403a' },
+      { t: 'trees', h: 110, fx: 0.42, fy: 0.5, off: 0, gh: 12, ground: '#6a9a50', dark: '#4a7a40', kinds: ['sakura', 'sakura', 'pine'], hmin: 46, hmax: 76, haze: '#e8c8d8', amt: 0.24, gap: 64, rows: [[64, 46, 76, 0.24]], extra: sakuraStream },
+    ],
+    ground: 'grass', flowers: ['#ffd6e6', '#ff9ac0', '#ffffff', '#ffe066'], petals: true, steps: true, light: { top: ['#ffd0e0', 0.08], vig: 0.18 }, portal: '#ffb0d0',
+  },
+  ruins: {
+    sky: ['#2462b0', '#3e86cc', '#7ab6de', '#cfd8c8', '#f6cc92'],
+    sun: { k: 'sun', x: 0.78, y: 74, r: 15, col: '#fff2d0', glow: '#ffc070' },
+    clouds: { pal: ['#ffffff', '#f4f0ea', '#d8d4d0', '#aab0bc'], n: 4, y: [10, 60] }, birds: 'bird',
+    layers: [
+      { t: 'mesa', h: 120, fx: 0.06, fy: 0.1, off: 18, n: 5, hmin: 36, hmax: 78, lit: '#e8a46c', shd: '#c07a52', band: '#d08a5a', base: '#f0cc9c', rim: '#ffdcac' },
+      { t: 'hills', h: 90, fx: 0.2, fy: 0.25, off: 8, base: 22, amp: 10, col: '#e0b070', lit: '#f2c88a', dark: '#f4d8a8', rim: '#ffe4b0', feat: ['ziggurat', 'ziggurat', 'ziggurat'], featCol: '#c8a070', featHaze: 0.32 },
+      { t: 'colonnade', h: 100, fx: 0.42, fy: 0.5, off: 0, gh: 10, ground: '#e8c080', dark: '#c89a5a', pal: ['#f8e0b0', '#e0b880', '#b48a58', '#80603a'], hmin: 40, hmax: 66, broken: 0.7, statue: true, fallen: true, haze: '#f0d4a4', amt: 0.32, space: 30 },
+    ],
+    ground: 'sand', paved: true, light: { top: ['#ffb050', 0.04], vig: 0.22 }, portal: '#ffd86a',
+  },
+  crystal: {
+    sky: ['#08061a', '#120e2c', '#1c1640', '#2a2058'], birds: 'bat',
+    layers: [
+      { t: 'cave', h: 250, fx: 0.15, fy: 0.2, off: 0, pal: ['#3e3666', '#2e2852', '#221e40', '#1a1632'], cols: 6, vary: true, spikes: 22, minS: 20, maxS: 70, crystal: ['#b070ff', '#4ad0ff', '#ff70d0'], crysN: 18, crysH: 16, camt: 0.36 },
+      { t: 'cave', h: 210, fx: 0.32, fy: 0.4, off: 0, pal: ['#4c4478', '#3a3462', '#2a264c', '#201c3a'], cols: 4, vary: true, spikes: 26, minS: 15, maxS: 60, crystal: ['#a070d8', '#4ab0d0'], crysN: 10, crysH: 12, camt: 0.3 },
+      { t: 'props', h: 80, fx: 0.55, fy: 0.62, off: 0, gh: 8, ground: '#221e38', rim: '#4a4070', haze: '#1c1830', amt: 0.4, gap: 40, items: [(R) => sprCrystal(18 + ((R() * 24) | 0), ['#8a5ab8', '#3a88a8', '#a85a90'][(R() * 3) | 0], (R() * 4) | 0), (R) => sprProp('geode', 0, 'crystal'), (R) => sprRock(20, 10, (R() * 3) | 0, ['#6a6090', '#4c4470', '#3a3458', '#2a2442'])] },
+    ],
+    ceil: { h: 90, fx: 0.6, fy: 0.7, pal: ['#4a3e70', '#30284e', '#201a36'], drip: '#c8a0ff', n: 34, crys: ['#c07aff', '#5ad8ff', '#ff7ad0'] },
+    ground: 'rock', gpal: ['#6a5e98', '#4c4278', '#383060', '#282244', '#1a1630'], veins: ['#d08aff', '#6ae0ff', '#ff8ad8'],
+    light: { dark: 0.34, darkCol: '#06040e', top: ['#7a4aff', 0.1], vig: 0.3 }, portal: '#d08aff',
+  },
+  abyss: {
+    sky: ['#040108', '#12041c', '#260a34', '#421046', '#6a1a4e'], stars: 40, eyes: 7,
+    sun: { k: 'eclipse', x: 0.62, y: 44, r: 14, glow: '#e060ff' },
+    clouds: { pal: ['#6a2a7a', '#4a1a5a', '#331044', '#200a2e'], n: 6, y: [10, 80] }, birds: 'bat',
+    layers: [
+      { t: 'mount', h: 170, fx: 0.06, fy: 0.1, off: 16, n: 13, hmin: 40, hmax: 136, steep: 3, lit: '#341a44', shd: '#200c2c', rim: '#c04aff', base: '#5a1a5a', fade: 50 },
+      { t: 'ruins', h: 140, fx: 0.22, fy: 0.28, off: 6, n: 8, hmin: 30, hmax: 96, col: '#180a20', rim: '#7a3aa8', win: '#6a2252', gate: true, gateCol: '#c040ff', horns: true },
+      { t: 'trees', h: 120, fx: 0.45, fy: 0.55, off: 0, gh: 10, ground: '#16121c', dark: '#0e0b12', kinds: ['dead'], bark: 'dark', eyes: true, eyeCol: '#ff3a5a', hmin: 50, hmax: 96, haze: '#1c1622', amt: 0.5, gap: 60 },
+    ],
+    ground: 'basalt', zig: true, bpal: ['#4e4858', '#36303e', '#25212c', '#16131c'], crack: ['#d040ff', '#7a20b0', '#ffb0ff'], cliff: ['#4e4858', '#36303e', '#25212c', '#16131c'],
+    light: { top: ['#a020ff', 0.08], bot: ['#ff2a8a', 0.1], dark: 0.2, darkCol: '#0c0214', vig: 0.42 }, portal: '#e070ff',
+  },
 };
 
 // ======================= Mặt đất =======================
@@ -1988,6 +2612,25 @@ function buildGround(T, m, th, sc, R) {
         T.p(x, G - h - 1, '#fff6a0');
       }
     }
+    // đá bước chân (tobi-ishi) kiểu vườn Nhật
+    if (sc.steps) {
+      let x = R() * 30;
+      while (x < W) {
+        const sw = 9 + ((R() * 6) | 0);
+        T.r(x + 1, G, sw - 2, 1, '#e4e0d8');
+        T.r(x, G + 1, sw, 2, '#b4b0a8');
+        T.r(x + 1, G + 3, sw - 2, 1, '#7a766e');
+        T.p(x + 2, G + 1, '#f4f2ec');
+        x += sw + 10 + R() * 26;
+      }
+    }
+    // thảm cánh hoa rụng trên cỏ
+    if (sc.petals) for (let i = 0; i < W / 3; i++) {
+      const x = R() * W;
+      const y = G - 1 + ((R() * 4) | 0);
+      T.p(x, y, R() < 0.6 ? '#ffc8dc' : '#fff0f6');
+      if (R() < 0.3) T.p(x + 1, y, '#f490b4');
+    }
   } else if (kind === 'cobble') {
     const v = VILLAGE[th.town] || VILLAGE.fire;
     const S = v.stone;
@@ -2052,7 +2695,28 @@ function buildGround(T, m, th, sc, R) {
     strata(T, R, W, G + 22, H, shd(th.dirt, 0.12), 9);
     speck(T, R, 0, G + 2, W, H - G, W * 0.6, [Sd[0], Sd[3], shd(th.dirt, -0.3)]);
     pebbles(T, R, W, G + 12, H, W / 20, ['#e8dcc8', '#c8b498', '#a08a70', '#7a6852']);
-    if (m.theme === 'beach') for (let i = 0; i < W / 110; i++) blit(T, sprProp(R() < 0.7 ? 'shell' : 'starfish', i % 3), R() * W, G - 4 + R() * 3);
+    if (m.theme === 'beach' || m.theme === 'dragon_palace') for (let i = 0; i < W / 110; i++) blit(T, sprProp(R() < 0.7 ? 'shell' : 'starfish', i % 3), R() * W, G - 4 + R() * 3);
+    if (sc.paved) {
+      // phiến đá cổ lát đường, bị cát vùi từng đoạn
+      const P = ['#fff0c8', '#e8c890', '#c09a62', '#8a6a40'];
+      let x = 0;
+      while (x < W) {
+        const sw = 16 + ((R() * 12) | 0);
+        if (R() < 0.72) {
+          const sink = (R() * 2) | 0;
+          T.r(x, G + sink, sw - 1, 7 - sink, P[1]);
+          T.r(x, G + sink, sw - 1, 1, P[0]);
+          T.r(x, G + 6, sw - 1, 1, P[2]);
+          T.r(x + sw - 1, G + sink, 1, 7 - sink, P[3]);
+          if (R() < 0.35) { const gx = x + 4 + ((R() * (sw - 10)) | 0); T.r(gx, G + 3, 3, 1, P[2]); T.p(gx + 1, G + 2, P[2]); T.p(gx + 1, G + 4, P[2]); }
+          if (R() < 0.3) T.line(x + 3, G + 1, x + 6, G + 5, P[2]);
+          // cát phủ một góc phiến đá
+          const dr = (R() * 6) | 0;
+          for (let k = 0; k < dr; k++) T.p(x + k, G + sink, th.top);
+        }
+        x += sw;
+      }
+    }
   } else if (kind === 'snow') {
     T.r(0, G, W, H - G, D[1]);
     strata(T, R, W, G + 16, H, D[2], 12);
@@ -2091,8 +2755,49 @@ function buildGround(T, m, th, sc, R) {
       if (R() < 0.04) T.r(x, G - 2, 2, 2, P[1]);
     }
     if (m.theme === 'cave') for (let i = 0; i < W / 25; i++) { const c = R() < 0.5 ? '#b388ff' : '#4fc3f7'; const x = R() * W; const yy = G + 6 + R() * 40; T.p(x, yy, c); T.p(x + 1, yy - 1, shd(c, 0.5)); }
+    if (sc.veins) for (let i = 0; i < W / 14; i++) {
+      // mạch tinh thể lộ trong đá
+      const c = sc.veins[(R() * sc.veins.length) | 0];
+      let x = R() * W;
+      let yy = G + 5 + R() * 44;
+      const len = 3 + ((R() * 6) | 0);
+      for (let k = 0; k < len; k++) { T.p(x, yy, k === 0 ? shd(c, 0.6) : c); x += R() < 0.5 ? 1 : 0; yy += R() < 0.6 ? 1 : 0; }
+    }
+  } else if (kind === 'basalt' && sc.zig) {
+    // đá ma giới: khối đá vỡ + khe nứt phát sáng ngoằn ngoèo, phân nhánh, cách nhau không đều
+    const P = sc.bpal;
+    const K = sc.crack;
+    voronoiRock(T, R, W, G + 3, H, [P[1], P[2], P[3], '#0e0c12']);
+    for (let xx = 0; xx < W; xx++) {
+      const b = Math.round(Math.sin(xx * 0.23) * 0.7 + Math.sin(xx * 0.061) * 1.1);
+      T.r(xx, G - Math.max(0, b), 1, 4 + Math.max(0, b), P[1]);
+      T.p(xx, G - Math.max(0, b), P[0]);
+      T.p(xx, G + 3, P[3]);
+    }
+    const crack = (x, y, len, a, depth) => {
+      let k = 0;
+      while (k < len) {
+        const seg = 2 + ((R() * 4) | 0);
+        const x1 = x + Math.cos(a) * seg;
+        const y1 = y + Math.sin(a) * seg;
+        const f = k / len;
+        T.line(x, y, x1, y1, f < 0.35 ? K[2] : f < 0.75 ? K[0] : K[1]);
+        if (depth === 0 && f < 0.6) T.line(x + 1, y, x1 + 1, y1, K[1]);
+        x = x1; y = y1; k += seg;
+        a = clamp(a + (R() - 0.5) * 1.6, 0.35, Math.PI - 0.35);
+        if (depth < 2 && R() < 0.22) crack(x, y, (len - k) * (0.4 + R() * 0.3), a + (R() < 0.5 ? -0.9 : 0.9), depth + 1);
+      }
+    };
+    let cx = R() * 30;
+    while (cx < W) {
+      crack(cx, G + 2, 14 + R() * 30, Math.PI / 2 + (R() - 0.5) * 1.2, 0);
+      cx += 22 + R() * 90;
+    }
+    // vài vết nứt ngang sâu trong đá
+    for (let i = 0; i < W / 160; i++) crack(R() * W, G + 26 + R() * 30, 10 + R() * 14, R() < 0.5 ? 0.4 : Math.PI - 0.4, 1);
   } else if (kind === 'basalt') {
-    const P = ['#5a4444', '#3e2e2e', '#2a1e1e', '#1a1212'];
+    const P = sc.bpal || ['#5a4444', '#3e2e2e', '#2a1e1e', '#1a1212'];
+    const K = sc.crack || ['#ff6a1a', '#c83a10', '#ff8a3a'];
     T.r(0, G, W, H - G, P[2]);
     // cột đá bazan + khe nứt nóng chảy
     let x = 0;
@@ -2103,14 +2808,49 @@ function buildGround(T, m, th, sc, R) {
       T.r(x, G + 4 + off, 1, H, P[0]);
       T.r(x + cw - 2, G + 4 + off, 1, H, P[3]);
       for (let yy = G + 12 + off; yy < H; yy += 10 + ((R() * 6) | 0)) T.r(x, yy, cw - 1, 1, P[3]);
-      if (R() < 0.35) for (let yy = G + 5 + off; yy < H; yy++) T.p(x + cw - 1, yy, (yy + x) % 7 < 4 ? '#ff6a1a' : '#c83a10');
+      if (R() < 0.35) for (let yy = G + 5 + off; yy < H; yy++) T.p(x + cw - 1, yy, (yy + x) % 7 < 4 ? K[0] : K[1]);
       x += cw;
     }
     for (let xx = 0; xx < W; xx++) {
       T.r(xx, G, 1, 4, P[1]);
       T.p(xx, G, P[0]);
-      if (R() < 0.05) T.p(xx, G + 1, '#ff8a3a');
+      if (R() < 0.05) T.p(xx, G + 1, K[2]);
       if (R() < 0.03) T.r(xx, G - 1, 2, 1, P[1]);
+    }
+  } else if (kind === 'cloud') {
+    // nền thiên cung: mép mây bồng, phiến cẩm thạch viền vàng, bên dưới là biển mây
+    const M = ['#ffffff', '#e2dcf2', '#b4aad8', '#7c70b0'];
+    T.r(0, G, W, H - G, '#8076b4');
+    const cb = new Buf(W, H - G);
+    for (let i = 0; i < W / 9; i++) {
+      const x = R() * W;
+      const r = 6 + R() * 8;
+      blob(cb, x, 30 + R() * 22 + r * 0.3, r * 1.3, r, CLOUD_D, { wob: 0.1, ph: R() * 6, dither: false });
+    }
+    blit(T, cb, 0, G);
+    // bóng đổ dưới mép phiến đá
+    T.r(0, G + 18, W, 2, '#5a5090');
+    let x = 0;
+    while (x < W) {
+      const sw = 22 + ((R() * 10) | 0);
+      T.r(x, G + 4, sw, 13, M[1]);
+      T.r(x, G + 4, sw, 1, M[0]);
+      T.r(x, G + 15, sw, 2, M[2]);
+      T.r(x + sw - 1, G + 4, 1, 13, M[3]);
+      if (R() < 0.45) T.line(x + 4, G + 7, x + 8 + ((R() * 6) | 0), G + 12, M[2]);
+      x += sw;
+    }
+    T.r(0, G + 9, W, 1, '#f0b840');
+    T.r(0, G + 10, W, 1, '#b8802a');
+    for (let xx = 4; xx < W; xx += 12) { T.r(xx, G + 8, 3, 3, '#ffd870'); T.p(xx + 1, G + 9, '#fff4c0'); }
+    T.r(0, G + 17, W, 1, '#4a4080');
+    // mép mây phủ lên mặt đường
+    for (let xx = 0; xx < W; xx++) {
+      const bump = Math.max(0, Math.round(Math.sin(xx * 0.21) * 1.2 + Math.sin(xx * 0.07 + 1) * 1.4));
+      T.r(xx, G - bump, 1, 4 + bump, M[0]);
+      T.p(xx, G + 3, (xx * 5) % 7 < 3 ? M[2] : M[1]);
+      T.p(xx, G + 4, M[3]);
+      if (R() < 0.12) T.p(xx, G + 2, M[1]);
     }
   } else if (kind === 'tiles') {
     const S = ['#f0e6d2', '#d8cab0', '#b4a486', '#8a7a60'];
@@ -2128,7 +2868,7 @@ function buildGround(T, m, th, sc, R) {
     for (let x = 2; x < W; x += 8) T.r(x, G + 7, 3, 1, '#ffd54f');
     T.r(0, G + 9, W, 1, '#5a2020');
   }
-  if (kind !== 'tiles') depthShade(T, W, G + 14, H, [1, 0.9, 0.8, 0.7]);
+  if (kind !== 'tiles') depthShade(T, W, G + 14, H, kind === 'cloud' ? [1, 0.92, 0.84, 0.76] : [1, 0.9, 0.8, 0.7]);
 }
 
 // Vách đá hai đầu bản đồ
@@ -2136,7 +2876,7 @@ function buildCliffs(T, m, th, sc, R) {
   const G = m.ground;
   const dk = m.theme === 'dark_forest' ? ['#5a4e6e', '#433a56', '#30293f', '#211c2c'] : m.theme === 'mist' ? ['#8a948e', '#6a746e', '#525a56', '#3c423f'] : null;
   const pal = dk || sc.cliff || (sc.ground === 'snow' || sc.ground === 'ice' ? ['#d4e2ee', '#a6b8cc', '#7a8ea6', '#566a82'] : sc.ground === 'sand' ? ['#f0c890', '#d0a068', '#a87a4a', '#7a5634'] : sc.ground === 'basalt' ? ['#5a4040', '#3e2c2c', '#2a1c1c', '#1a1010'] : sc.ground === 'rock' ? sc.gpal : ['#a89c8c', '#857a6c', '#62584c', '#463e36']);
-  const cap = sc.ground === 'snow' || sc.ground === 'ice' ? '#ffffff' : sc.ground === 'sand' ? th.top : sc.ground === 'basalt' || sc.ground === 'rock' || sc.ground === 'tiles' ? null : th.top;
+  const cap = sc.cap ? sc.cap : sc.ground === 'snow' || sc.ground === 'ice' ? '#ffffff' : sc.ground === 'sand' ? th.top : sc.ground === 'basalt' || sc.ground === 'rock' || sc.ground === 'tiles' ? null : th.top;
   for (const side of [0, 1]) {
     const cw = 20;
     const Hc = 84 + R() * 30;
@@ -2240,6 +2980,24 @@ function buildPlatform(T, m, th, sc, R, px, py, pw, anims) {
     for (const sx of [x0 + 4, x0 + w - 7]) for (let k = 0; k < 3; k++) { T.r(sx - 1, y + k * 2, 5, 1, '#d8b070'); T.p(sx + 3, y + k * 2 + 1, '#a07a40'); }
     // lá tre ở đầu bục
     for (const [lx, d] of [[x0, -1], [x0 + w, 1]]) for (let i = 0; i < 6; i++) T.p(lx + d * i, y - 1 - (i >> 1), i < 3 ? B[1] : B[0]);
+  } else if (type === 'cloud') {
+    // bục mây: mặt phẳng trắng, đáy bồng bềnh, viền vàng mảnh
+    const cb = new Buf(w + 16, 24);
+    const n = Math.max(3, Math.round(w / 14));
+    for (let i = 0; i < n; i++) {
+      const cx = 8 + (w * (i + 0.5)) / n + (R() - 0.5) * 4;
+      const r = 5 + R() * 3 + Math.sin((i / (n - 1 || 1)) * Math.PI) * 2;
+      blob(cb, cx, 6 + r * 0.25, r * 1.25, r, CLOUD_D, { wob: 0.1, ph: R() * 6, dither: false });
+    }
+    for (let x = 0; x < cb.w; x++) for (let y = 0; y < 3; y++) cb.d[y * cb.w + x] = 0;
+    cb.outline(0.55, '#3a3070');
+    blit(T, cb, x0 - 8, y - 1);
+    T.r(x0 - 2, y, w + 4, 2, '#ffffff');
+    T.r(x0 - 2, y + 2, w + 4, 1, '#e8e4f6');
+    for (let x = x0; x < x0 + w; x += 9) T.p(x + ((R() * 4) | 0), y + 4, '#ffffff');
+    T.r(x0 + 4, y + 3, w - 8, 1, '#f0c860');
+    for (const ex of [x0 - 2, x0 + w + 1]) { T.p(ex, y - 1, '#ffffff'); T.p(ex, y + 1, '#d6d0ee'); }
+    anims.lights.push({ x: x0 + w / 2, y: y + 4, r: Math.min(40, w / 3), col: '#fff0c0', a: 0.18, f: 0.05 });
   } else if (type === 'ice') {
     for (let x = x0; x < x0 + w; x++) {
       const bump = (Math.sin(x * 0.4) > 0.6) ? 1 : 0;
@@ -2260,7 +3018,7 @@ function buildPlatform(T, m, th, sc, R, px, py, pw, anims) {
   } else {
     // bục đá theo chủ đề
     const t = m.theme;
-    const P = t === 'desert' ? ['#ffe0a8', '#e8bc7c', '#c0905a', '#8a6038'] : t === 'cave' ? ['#8a80a8', '#625a80', '#463e60', '#2e2842'] : t === 'mist' ? ['#b8beb8', '#8e968e', '#6a726a', '#4a524c'] : t === 'arena' ? ['#ffffff', '#e2d8c6', '#b8aa90', '#857660'] : ['#6e5050', '#4a3434', '#332222', '#201414'];
+    const P = th.platPal ? th.platPal : t === 'desert' ? ['#ffe0a8', '#e8bc7c', '#c0905a', '#8a6038'] : t === 'cave' ? ['#8a80a8', '#625a80', '#463e60', '#2e2842'] : t === 'mist' ? ['#b8beb8', '#8e968e', '#6a726a', '#4a524c'] : t === 'arena' ? ['#ffffff', '#e2d8c6', '#b8aa90', '#857660'] : ['#6e5050', '#4a3434', '#332222', '#201414'];
     if (t === 'arena') {
       for (const sx of [x0 + 8, x0 + w - 18]) {
         const fy = floorBelow(m, sx, y);
@@ -2277,14 +3035,36 @@ function buildPlatform(T, m, th, sc, R, px, py, pw, anims) {
     T.r(x0, y + 5, w, 1, P[2]);
     T.r(x0, y + 7, w, 1, P[3]);
     if (t === 'arena') { T.r(x0, y + 4, w, 1, '#b03030'); for (let x = x0 + 3; x < x0 + w; x += 6) T.p(x, y + 4, '#ffd54f'); }
+    if (th.platTrim) { T.r(x0, y + 3, w, 1, th.platTrim); for (let x = x0 + 4; x < x0 + w; x += 10) { T.r(x, y + 2, 2, 3, th.platTrim); T.p(x, y + 2, shd(th.platTrim, 0.5)); } }
     // mặt dưới lởm chởm
     if (t !== 'arena') for (let x = x0 + 1; x < x0 + w - 1; x++) {
       const l = Math.max(0, Math.round(2 + Math.sin(x * 0.45 + y) * 2 + Math.sin(x * 0.13) * 2 - Math.abs((x - x0 - w / 2) / (w / 2)) * 3));
       for (let k = 0; k < l; k++) T.p(x, y + 8 + k, k === l - 1 ? P[3] : P[2]);
     }
+    if (th.platEdge) {
+      // viền tối + dải hoa văn khắc + rễ khô rủ: tách bục khỏi nền trời cùng tông
+      const E = th.platEdge;
+      T.r(x0, y - 1, w, 1, E);
+      T.r(x0 - 1, y, 1, 8, E); T.r(x0 + w, y, 1, 8, E);
+      for (let x = x0; x < x0 + w; x++) { let yy = y + 8; while (yy < y + 16 && T.has(x, yy)) yy++; T.p(x, yy, E); }
+      for (let x = x0 + 3; x < x0 + w - 4; x += 6) { T.p(x, y + 3, P[3]); T.p(x + 1, y + 4, P[3]); T.p(x + 2, y + 3, P[3]); }
+      for (let x = x0 + 6; x < x0 + w - 6; x += 14 + ((R() * 16) | 0)) {
+        const l = 3 + ((R() * 8) | 0);
+        for (let k = 0; k < l; k++) T.p(x + (k > 3 ? 1 : 0), y + 10 + k, k === l - 1 ? '#8a7a40' : '#4a3a22');
+      }
+    }
     if (t === 'mist') for (let x = x0; x < x0 + w; x++) { T.p(x, y, '#7a9a6a'); if ((x * 7) % 5 < 2) T.p(x, y + 1, '#5e7e52'); if ((x * 13) % 17 === 0) T.r(x, y + 2, 1, 3, '#5e7e52'); }
-    if (t === 'lava' || t === 'hell') for (let x = x0 + 4; x < x0 + w - 4; x += 7 + ((R() * 8) | 0)) { T.r(x, y + 3, 1, 4, '#ff7a2a'); T.p(x + 1, y + 5, '#ffb04a'); anims.lights.push({ x, y: y + 6, r: 10, col: '#ff6a1a', a: 0.25, f: 0.3 }); }
-    if (t === 'cave' && R() < 0.8) { const spr = sprCrystal(8 + ((R() * 5) | 0), R() < 0.5 ? '#b388ff' : '#4fc3f7', 1); const cx = x0 + 6 + R() * (w - 20); blit(T, spr, cx, y - spr.h + 3); anims.lights.push({ x: cx + spr.w / 2, y: y - 4, r: 24, col: '#a080ff', a: 0.35, f: 0.15 }); }
+    if (t === 'lava' || t === 'hell' || th.platGlow) {
+      const gc = th.platGlow || '#ff7a2a';
+      for (let x = x0 + 4; x < x0 + w - 4; x += 7 + ((R() * 8) | 0)) { T.r(x, y + 3, 1, 4, gc); T.p(x + 1, y + 5, shd(gc, 0.35)); anims.lights.push({ x, y: y + 6, r: 10, col: th.platGlow || '#ff6a1a', a: 0.25, f: 0.3 }); }
+    }
+    if ((t === 'cave' || th.platCrys) && R() < 0.8) {
+      const cc = th.platCrys ? th.platCrys[(R() * th.platCrys.length) | 0] : R() < 0.5 ? '#b388ff' : '#4fc3f7';
+      const spr = sprCrystal(8 + ((R() * 5) | 0), cc, 1);
+      const cx = x0 + 6 + R() * (w - 20);
+      blit(T, spr, cx, y - spr.h + 3);
+      anims.lights.push({ x: cx + spr.w / 2, y: y - 4, r: 24, col: th.platCrys ? cc : '#a080ff', a: 0.35, f: 0.15 });
+    }
     if (t === 'desert') { T.r(x0, y - 1, w, 1, '#f8dca8'); for (let x = x0; x < x0 + w; x += 3) T.p(x, y - 2, '#f8dca8'); }
   }
   // cỏ phủ mép bục cho chủ đề cỏ
@@ -2311,6 +3091,8 @@ const SHOP = {
   storage: { w: 100, wh: 36, noren: '#6d4c41', icon: 'box', kura: true },
   arena: { w: 96, wh: 34, noren: '#b71c1c', icon: 'sword' },
   dungeon: { shrine: true, icon: 'skull' },
+  // quầy Sứ Giả Lễ Hội: rèm đỏ thắm, biển trăng rằm
+  event: { w: 100, wh: 34, noren: '#c62828', icon: 'moon' },
 };
 const ICONS = {
   scroll: ['.yyyyy.', 'y.....y', '.wwwww.', '.wkkkw.', '.wwwww.', '.wkkw..', '.yyyyy.'],
@@ -2322,6 +3104,7 @@ const ICONS = {
   box: ['yyyyyyy', 'ybbbbby', 'yyyyyyy', 'yb.y.by', 'yb.y.by', 'ybbbbby', 'yyyyyyy'],
   sword: ['......w', '.....w.', '....w..', '.y.w...', '..y....', '.b.y...', 'b......'],
   skull: ['.wwwww.', 'wwwwwww', 'wkwwwkw', 'wwwwwww', '.wwkww.', '.w.w.w.', '.......'],
+  moon: ['..yyy..', '.yywyy.', 'yywyyyy', 'yyyyyby', 'yyyybby', '.yybby.', '..yyy..'],
 };
 const ICON_PAL = { y: '#ffd54f', w: '#fff8e8', k: '#2a1a14', r: '#e53935', b: '#a0703a' };
 
@@ -2574,7 +3357,8 @@ function buildVillage(T, m, th, sc, R, A) {
     for (const l of sp.lights) A.lights.push({ ...l, x: n.x + l.x, y: G + l.y });
     for (const a of sp.anims) if (!a.skip) A.anims.push({ ...a, x: n.x + a.x, y: G + a.y });
   }
-  // dây đèn lồng lễ hội giữa các mái nhà gần nhau
+  // dây đèn lồng lễ hội (xen kẽ dây cờ đuôi nheo) giữa các mái nhà gần nhau
+  const PEN = vk === 'water' ? ['#2e6ad0', '#ffffff', '#8ad0ff'] : vk === 'wind' ? ['#3e9a48', '#ffd54f', '#ffffff'] : ['#e0352b', '#ffd54f', '#ffffff'];
   for (let i = 0; i + 1 < houses.length; i++) {
     const a = houses[i];
     const b = houses[i + 1];
@@ -2585,21 +3369,31 @@ function buildVillage(T, m, th, sc, R, A) {
     const y2 = G + b.sp.eave + 2;
     if (x2 - x1 < 12) continue;
     let k = 0;
+    const pen = (i & 1) === 1;
     for (let x = x1; x <= x2; x++) {
       const f = (x - x1) / (x2 - x1);
       const y = Math.round(y1 + (y2 - y1) * f + Math.sin(f * Math.PI) * 7);
       T.p(x, y, '#3a2a20');
-      if ((x - x1) % 9 === 4 && x < x2 - 2) {
+      if (pen) {
+        if ((x - x1) % 5 === 2 && x < x2 - 2) {
+          const c = PEN[k++ % 3];
+          T.r(x - 1, y + 1, 3, 1, c); T.r(x - 1, y + 2, 2, 1, c); T.p(x, y + 3, c);
+          T.p(x - 1, y + 1, shd(c, 0.3)); T.p(x + 1, y + 1, shd(c, -0.3));
+        }
+      } else if ((x - x1) % 9 === 4 && x < x2 - 2) {
         const c = k++ % 3 === 1 ? '#f0f0e8' : '#e0352b';
         lanternMini(T, x, y + 1, c);
         A.lights.push({ x, y: y + 4, r: 14, col: c === '#e0352b' ? '#ff7a3a' : '#fff0c0', a: 0.4, f: 0.3 });
       }
     }
   }
+  // khoảng đã chiếm trên mặt đất (để đặt thêm đồ trang trí không chồng lấn)
+  const occ = houses.map(({ n, sp }) => [n.x - sp.w / 2, n.x + sp.w / 2]);
+  if (door) occ.push([door.x - 52, door.x + 52]);
   // đồ vật phía trước theo loại nhà
   for (const { n, sp } of houses) {
     const x = n.x;
-    const put = (kind, dx, seed = 0) => { const p = sprProp(kind, seed, vk); blit(T, p, x + dx - p.w / 2, G - p.h + 1); return p; };
+    const put = (kind, dx, seed = 0) => { const p = sprProp(kind, seed, vk); blit(T, p, x + dx - p.w / 2, G - p.h + 1); occ.push([x + dx - p.w / 2, x + dx + p.w / 2]); return p; };
     if (n.type === 'smith') { put('anvil', -sp.w / 2 + 10); put('barrel', sp.w / 2 - 6); }
     else if (n.type === 'potion') { put('pots', -sp.w / 2 + 12); put('pots', sp.w / 2 - 12, 1); }
     else if (n.type === 'storage') { put('barrel', -sp.w / 2 + 4); put('crate', -sp.w / 2 + 16); put('crate', sp.w / 2 - 8); }
@@ -2607,28 +3401,70 @@ function buildVillage(T, m, th, sc, R, A) {
     else if (n.type === 'tele') put(vk === 'water' ? 'boat' : 'cart', -sp.w / 2 - 6);
     else if (n.type === 'elder') { put('bench', -sp.w / 2 + 18); put('bench', sp.w / 2 - 18); }
     else if (n.type === 'clan') for (const d of [-sp.w / 2 - 4, sp.w / 2 + 4]) { const p = put('banner', d); A.anims.push({ k: 'nobori', x: x + d - p.w / 2 + 4, y: G - p.h + 4, col: '#6a1b9a' }); }
+    else if (n.type === 'event') for (const d of [-sp.w / 2 - 4, sp.w / 2 + 4]) { put('lanternpost', d); A.lights.push({ x: x + d, y: G - 24, r: 28, col: '#ff8a3a', a: 0.5, f: 0.3 }); }
     else if (n.type === 'dungeon') {
       for (const d of [-40, 40]) { put('torch', d); A.anims.push({ k: 'flame', x: x + d, y: G - 28 }); A.lights.push({ x: x + d, y: G - 30, r: 30, col: '#ff8a2a', a: 0.55, f: 0.4 }); }
     }
   }
-  // giếng / hàng rào / đèn ở vùng trống hai đầu
-  const first = houses.length ? houses[0].n.x - houses[0].sp.w / 2 : m.w / 2;
-  const last = houses.length ? houses[houses.length - 1].n.x + houses[houses.length - 1].sp.w / 2 : m.w / 2;
-  if (first > 120) { const p = sprProp('well', 0, vk); blit(T, p, first - 30 - p.w / 2, G - p.h + 1); }
-  if (m.w - last > 110) {
-    const p = sprProp('fence', 0, vk === 'wind' ? 'bamboo' : 'wood');
-    blit(T, p, last + 10, G - p.h + 1);
-    const lp = sprProp('lanternpost', 0, vk);
-    blit(T, lp, last + 56 - lp.w / 2, G - lp.h + 1);
-    A.lights.push({ x: last + 56, y: G - 24, r: 28, col: '#ff8a3a', a: 0.5, f: 0.3 });
-  }
-  // cờ cá chép (làng Phong) / hoa ven đường
-  if (vk === 'wind') for (const x of [first - 70, last + 90]) if (x > 90 && x < m.w - 90) { T.r(x, G - 70, 2, 70, '#8a6a4a'); T.r(x, G - 70, 1, 70, '#b08a62'); T.r(x - 2, G - 72, 6, 2, '#ffd54f'); A.anims.push({ k: 'koi', x: x + 2, y: G - 66 }); }
+  // giếng, xe kéo, trống, ô giấy, chậu cây, cột đèn, cờ cá chép: lấp các khoảng trống còn lại
+  villageExtras(T, m, vk, R, A, occ, backTrees);
+  // hoa ven đường
   for (let i = 0; i < m.w / 50; i++) {
     const x = R() * m.w;
     if (m.portals.some((p) => Math.abs(p.x - x) < 40)) continue;
     const fl = sprBush(10 + ((R() * 6) | 0), i % 4, vk === 'fire' ? 'green' : vk === 'water' ? 'lush' : 'willow', vk === 'fire' ? ['#ff8ab0', '#ffffff'] : vk === 'water' ? ['#8ab4ff', '#ffffff'] : ['#ffe066', '#ffffff']);
     blit(T, fl, x - fl.w / 2, G - fl.h + 2);
+  }
+}
+
+// Đồ trang trí thêm cho làng theo thứ tự ưu tiên; mỗi món đặt vào khoảng trống vừa nhất
+const VILLAGE_EXTRAS = {
+  fire: ['rickshaw', 'taiko', 'well', 'potplant', 'flowerpot', 'lanternpost', 'potplant', 'flowerpot'],
+  water: ['parasol', 'well', 'rickshaw', 'potplant', 'flowerpot', 'lanternpost', 'potplant', 'flowerpot'],
+  wind: ['koipole', 'parasol', 'well', 'rickshaw', 'potplant', 'flowerpot', 'lanternpost', 'potplant'],
+};
+// phần chiếm chỗ [trái, phải] tính từ tâm khi khác bề rộng sprite (cờ cá chép bay sang phải)
+const EXTRA_SPAN = { koipole: [-3, 27] };
+function villageExtras(T, m, vk, R, A, occ, backs = []) {
+  const G = m.ground;
+  // luật DESIGN_RULES: cách NPC >= 26px, cách cổng >= 70px
+  const bad = (a, b) => a < 8 || b > m.w - 8
+    || occ.some(([o0, o1]) => a < o1 + 3 && b > o0 - 3)
+    || m.portals.some((p) => a < p.x + 70 && b > p.x - 70)
+    || (m.npcs || []).some((n) => a < n.x + 26 && b > n.x - 26);
+  const free = [];
+  let s0 = -1;
+  for (let x = 0; x <= m.w; x++) {
+    const ok = x < m.w && !bad(x, x + 1);
+    if (ok && s0 < 0) s0 = x;
+    else if (!ok && s0 >= 0) { free.push([s0, x]); s0 = -1; }
+  }
+  for (const kind of VILLAGE_EXTRAS[vk] || VILLAGE_EXTRAS.fire) {
+    const p = sprProp(kind, 0, vk);
+    const sp = EXTRA_SPAN[kind] || [-Math.ceil(p.w / 2), Math.ceil(p.w / 2)];
+    const need = sp[1] - sp[0];
+    let bi = -1;
+    let x = 0;
+    if (kind === 'koipole') {
+      // cột cờ cao: chọn chỗ xa cây phía sau nhất để cá chép không lẫn vào tán tre
+      let best = -1;
+      for (let i = 0; i < free.length; i++) {
+        const [a, b] = free[i];
+        for (let xx = a - sp[0]; xx <= b - sp[1]; xx += 2) {
+          const d = backs.reduce((mn, bx) => Math.min(mn, Math.abs(bx - (xx + 12))), 999);
+          if (d > best) { best = d; bi = i; x = xx; }
+        }
+      }
+    } else {
+      for (let i = 0; i < free.length; i++) if (free[i][1] - free[i][0] >= need && (bi < 0 || free[i][1] - free[i][0] < free[bi][1] - free[bi][0])) bi = i;
+      if (bi >= 0) x = Math.round((free[bi][0] + free[bi][1]) / 2 - (sp[0] + sp[1]) / 2);
+    }
+    if (bi < 0) continue;
+    const [a, b] = free[bi];
+    free.splice(bi, 1, [a, x + sp[0] - 4], [x + sp[1] + 4, b]);
+    blit(T, p, kind === 'koipole' ? x - 3 : x - p.w / 2, G - p.h + 1);
+    if (kind === 'lanternpost') A.lights.push({ x, y: G - 24, r: 28, col: '#ff8a3a', a: 0.5, f: 0.3 });
+    if (kind === 'koipole') A.anims.push({ k: 'koi', x: x + 1, y: G - 66 });
   }
 }
 
@@ -2645,12 +3481,52 @@ function placeDecor(T, m, th, sc, R, A, kind, x) {
     case 'pine': return put(sprTree('pine', 52 + ((R() * 30) | 0), (R() * 3) | 0, { snow: !!th.snowcap, leaf: t === 'mist' ? 'mist' : undefined }), 2);
     case 'bamboo': return put(sprTree('bamboo', 100 + ((R() * 50) | 0), (R() * 3) | 0), 2);
     case 'palm': return put(sprTree('palm', 58 + ((R() * 22) | 0), (R() * 3) | 0), 3);
-    case 'deadtree': return put(sprTree('dead', 54 + ((R() * 28) | 0), (R() * 3) | 0, { bark: t === 'dark_forest' ? 'purple' : t === 'hell' ? 'dark' : 'grey', eyes: t === 'dark_forest' && R() < 0.5 }), 2);
+    case 'deadtree': return put(sprTree('dead', 54 + ((R() * 28) | 0), (R() * 3) | 0, { bark: t === 'dark_forest' || t === 'abyss' ? 'purple' : t === 'hell' ? 'dark' : 'grey', eyes: (t === 'dark_forest' || t === 'abyss') && R() < 0.5, eyeCol: t === 'abyss' ? '#ff3a5a' : undefined }), 2);
+    case 'goldtree': return put(sprTree('gold', 56 + ((R() * 24) | 0), (R() * 3) | 0), 2);
+    case 'kelp': return put(sprTree('kelp', 44 + ((R() * 44) | 0), (R() * 3) | 0), 2);
+    case 'cloudpuff': return put(sprBush(18 + ((R() * 14) | 0), (R() * 4) | 0, CLOUD, ['#ffe8a0', '#ffffff']), 3);
+    case 'censer': {
+      const spr = put(sprProp('censer', 0, t), 1);
+      A.anims.push({ k: 'smoke', x: x - 1, y: G - 20 });
+      A.lights.push({ x, y: G - 12, r: 22, col: '#ffc860', a: 0.4, f: 0.2 });
+      return spr;
+    }
+    case 'lotus': {
+      const spr = put(sprProp('lotus', 0, t), 1);
+      A.lights.push({ x, y: G - 6, r: 18, col: '#ffe8a0', a: 0.4, f: 0.1, s: 0.6 });
+      return spr;
+    }
+    case 'cloudpillar': {
+      const spr = put(sprProp('cloudpillar', (R() * 3) | 0, t), 2);
+      A.lights.push({ x, y: G - spr.h + 4, r: 14, col: '#fff2b0', a: 0.5, f: 0.1 });
+      return spr;
+    }
+    case 'clam': {
+      const spr = put(sprProp('clam', 0, t), 1);
+      A.lights.push({ x, y: G - 7, r: 22, col: '#c8f4ff', a: 0.5, f: 0.15, s: 0.5 });
+      return spr;
+    }
+    case 'jadepillar': {
+      const spr = put(sprProp('jadepillar', 0, t), 1);
+      A.lights.push({ x, y: G - spr.h + 2, r: 16, col: '#e0f8ff', a: 0.5, f: 0.1 });
+      return spr;
+    }
+    case 'geode': {
+      const spr = put(sprProp('geode', 0, t), 1);
+      A.lights.push({ x, y: G - 5, r: 22, col: '#c080ff', a: 0.45, f: 0.15, s: 0.7 });
+      return spr;
+    }
+    case 'eyestalk': {
+      const spr = put(sprProp('eyestalk', 0, t), 1);
+      A.lights.push({ x, y: G - spr.h + 8, r: 16, col: '#ff2a4a', a: 0.3, f: 0.3, s: 0.5 });
+      return spr;
+    }
+    case 'statue': return put(statueSpr(['#f8e0b0', '#e0b880', '#b48a58', '#80603a'], (R() * 4) | 0), 1);
     case 'cactus': return put(sprTree('cactus', 22 + ((R() * 14) | 0), (R() * 3) | 0), 2);
-    case 'bush': return put(sprBush(18 + ((R() * 12) | 0), (R() * 4) | 0, t === 'mist' ? 'mist' : t === 'dark_forest' ? 'dark' : t === 'bamboo' ? 'lush' : 'green', t === 'grass_fire' || t === 'grass_wind' ? ['#ff6f91', '#ffffff', '#ffd54f'] : null), 2);
+    case 'bush': return put(sprBush(18 + ((R() * 12) | 0), (R() * 4) | 0, t === 'mist' ? 'mist' : t === 'dark_forest' ? 'dark' : t === 'bamboo' ? 'lush' : 'green', t === 'grass_fire' || t === 'grass_wind' ? ['#ff6f91', '#ffffff', '#ffd54f'] : t === 'sakura' ? ['#ffc8dc', '#ffffff', '#f490b4'] : null), 2);
     case 'flower': {
       const lf = t === 'dark_forest' ? 'dark' : t === 'mist' ? 'mist' : t === 'bamboo' ? 'lush' : 'green';
-      const fl = t === 'dark_forest' ? ['#c070ff', '#60d0ff', '#ffffff'] : t === 'grass_fire' ? ['#ff6a3a', '#ffd54f', '#ffffff'] : ['#ff6f91', '#ffd54f', '#ffffff', '#b388ff'];
+      const fl = t === 'dark_forest' ? ['#c070ff', '#60d0ff', '#ffffff'] : t === 'grass_fire' ? ['#ff6a3a', '#ffd54f', '#ffffff'] : t === 'sakura' ? ['#ff9ac0', '#ffffff', '#ffe066'] : ['#ff6f91', '#ffd54f', '#ffffff', '#b388ff'];
       return put(sprBush(12, (R() * 4) | 0, lf, fl), 2);
     }
     case 'grass':
@@ -2660,24 +3536,33 @@ function placeDecor(T, m, th, sc, R, A, kind, x) {
       return null;
     }
     case 'rock': {
-      const pal = t === 'desert' ? ['#f0c890', '#d0a068', '#a87a4a', '#7a5634'] : t === 'cave' ? ['#8a80a8', '#625a80', '#463e60', '#2e2842'] : t === 'lava' || t === 'hell' ? ['#7a4a40', '#5a3430', '#40241f', '#2a1714'] : ['#b8b4ae', '#948f88', '#6e6a65', '#4e4a46'];
-      return put(sprRock(16 + ((R() * 12) | 0), 9 + ((R() * 6) | 0), (R() * 5) | 0, pal, { moss: t === 'mist' || t === 'bamboo' || t === 'lake' ? '#6a9a4a' : null, snow: !!th.snowcap }), 2);
+      const pal = t === 'desert' || t === 'ruins' ? ['#f0c890', '#d0a068', '#a87a4a', '#7a5634'] : t === 'cave' || t === 'crystal' ? ['#8a80a8', '#625a80', '#463e60', '#2e2842'] : t === 'lava' || t === 'hell' ? ['#7a4a40', '#5a3430', '#40241f', '#2a1714'] : t === 'abyss' ? ['#6e6478', '#4c4456', '#342e3e', '#201c28'] : t === 'dragon_palace' ? ['#8ab0b8', '#6a8e9a', '#4e6e7c', '#34505e'] : ['#b8b4ae', '#948f88', '#6e6a65', '#4e4a46'];
+      return put(sprRock(16 + ((R() * 12) | 0), 9 + ((R() * 6) | 0), (R() * 5) | 0, pal, { moss: t === 'mist' || t === 'bamboo' || t === 'lake' || t === 'sakura' ? '#6a9a4a' : t === 'dragon_palace' ? '#4ab090' : null, snow: !!th.snowcap }), 2);
     }
     case 'crystal':
+    case 'voidcrystal':
     case 'icecrystal': {
-      const col = t === 'ice' || t === 'snow' || kind === 'icecrystal' ? '#80e0ff' : R() < 0.5 ? '#b388ff' : '#4fc3f7';
+      const col = t === 'ice' || t === 'snow' || kind === 'icecrystal' ? '#80e0ff' : th.crys ? (th.crysDecor || th.crys)[(R() * th.crys.length) | 0] : R() < 0.5 ? '#b388ff' : '#4fc3f7';
       const spr = put(sprCrystal(14 + ((R() * 14) | 0), col, (R() * 4) | 0), 2);
       A.lights.push({ x, y: G - spr.h / 2, r: 30 + spr.h / 2, col, a: 0.45, f: 0.15, s: 1.2 });
       return spr;
     }
     case 'mushroomglow': {
-      const spr = put(sprProp('mushroomglow', 0, t), 1);
-      A.lights.push({ x, y: G - 6, r: 22, col: t === 'cave' ? '#60d0ff' : '#c070ff', a: 0.5, f: 0.25, s: 0.8 });
+      const tt = t === 'crystal' ? 'cave' : t;
+      const spr = put(sprProp('mushroomglow', 0, tt), 1);
+      A.lights.push({ x, y: G - 6, r: 22, col: tt === 'cave' ? '#60d0ff' : '#c070ff', a: 0.5, f: 0.25, s: 0.8 });
       return spr;
     }
     case 'pumpkin': {
       const spr = put(sprProp('pumpkin', 0, t), 1);
       A.lights.push({ x, y: G - 6, r: 20, col: '#ffa030', a: 0.55, f: 0.35 });
+      return spr;
+    }
+    case 'pondbridge': {
+      // cầu cong qua hồ cá koi: sprite rộng nên giữ cách cổng/NPC xa hơn bình thường
+      const spr = pondBridgeSpr();
+      if (m.portals.some((p) => Math.abs(p.x - x) < 70 + spr.w / 2) || (m.npcs || []).some((n) => Math.abs(n.x - x) < 26 + spr.w / 2)) return null;
+      blit(T, spr, x - spr.w / 2, G - spr.h + 3);
       return spr;
     }
     case 'stonelantern': {
@@ -2697,7 +3582,8 @@ function placeDecor(T, m, th, sc, R, A, kind, x) {
       A.anims.push({ k: 'flag', x: x, y: G - spr.h + 4, col: ['#c62828', '#1565c0', '#2e7d32', '#f9a825'][(R() * 4) | 0] });
       return spr;
     }
-    case 'stalag': return put(sprProp('stalag', (R() * 3) | 0, t), 1);
+    case 'stalag': return put(sprProp('stalag', (R() * 3) | 0, t === 'crystal' ? 'cave' : t), 1);
+    case 'coral': return put(sprProp(t === 'dragon_palace' ? 'coralfan' : 'coral', (R() * 3) | 0, t), 1);
     case 'pillar': return put(sprProp('pillar', (R() * 3) | 0, t), 2);
     case 'icespike': return put(sprProp('icespike', 0, t), 1);
     default: return put(sprProp(kind, (R() * 3) | 0, t), 1);
@@ -2713,7 +3599,7 @@ function buildFieldDecor(T, m, th, sc, R, A) {
   while (x < m.w - 50) {
     const kind = R() < 0.25 ? list[(R() * list.length) | 0] : list[k++ % list.length];
     if (!skip(x)) placeDecor(T, m, th, sc, R, A, kind, x);
-    const big = ['round', 'maple', 'sakura', 'willow', 'pine', 'bamboo', 'palm', 'deadtree'].includes(kind);
+    const big = ['round', 'maple', 'sakura', 'willow', 'pine', 'bamboo', 'palm', 'deadtree', 'goldtree', 'kelp', 'cloudpillar', 'jadepillar', 'statue', 'obelisk'].includes(kind);
     x += (big ? 70 : 44) + R() * 70;
   }
   for (const p of m.portals) if (p.door) {
@@ -2772,8 +3658,9 @@ const LW = 1024;
 const LAYER_CACHE = new Map();
 
 // Biến thể theo bản đồ: dùng lại chủ đề có sẵn nhưng đổi loại cây/hạt cho hợp tên bản đồ
+// (chỉ áp dụng khi bản đồ còn dùng chủ đề gốc `from`)
 const MAP_VARIANTS = {
-  sakura_garden: { part: 'petal', swap: { maple: 'sakura' } },
+  sakura_garden: { from: 'grass_fire', part: 'petal', swap: { maple: 'sakura' } },
 };
 function avgRow(b, y) {
   let r = 0;
@@ -2794,7 +3681,7 @@ function getLayers(theme, sc) {
   L = sc.layers.map((spec, i) => {
     const R = rng(seed + i * 101);
     const b = new Buf(spec.w || LW, spec.h, true);
-    const fn = { mount: bMount, hills: bHills, trees: bTreeRow, mesa: bMesa, dunes: bDunes, karst: bKarst, cave: bCave, ruins: bRuins, stands: bStands, props: bProps, wall: bWall }[spec.t];
+    const fn = { mount: bMount, hills: bHills, trees: bTreeRow, mesa: bMesa, dunes: bDunes, karst: bKarst, cave: bCave, ruins: bRuins, stands: bStands, props: bProps, wall: bWall, clouds: bCloudBank, colonnade: bColonnade }[spec.t];
     if (fn) fn(b, spec, R);
     return { cv: b.canvas, b, w: b.w, h: spec.h, fx: spec.fx, fy: spec.fy, off: spec.off || 0, fill: avgRow(b, spec.h - 1) };
   });
@@ -2896,8 +3783,9 @@ function fogSpr() {
     return b;
   }).canvas;
 }
-function raysSpr() {
-  return cached('rays', () => {
+function raysSpr(col = '#fffadc') {
+  return cached(`rays:${col}`, () => {
+    const rc = rgbOf(col).join(',');
     const cv = document.createElement('canvas');
     cv.width = 320;
     cv.height = 260;
@@ -2907,8 +3795,8 @@ function raysSpr() {
       const x = 30 + i * 80 + R() * 30;
       const w = 14 + R() * 26;
       const g = c.createLinearGradient(0, 0, 0, 260);
-      g.addColorStop(0, 'rgba(255,250,220,0.9)');
-      g.addColorStop(1, 'rgba(255,250,220,0)');
+      g.addColorStop(0, `rgba(${rc},0.9)`);
+      g.addColorStop(1, `rgba(${rc},0)`);
       c.fillStyle = g;
       c.beginPath();
       c.moveTo(x, 0);
@@ -2921,12 +3809,200 @@ function raysSpr() {
   }).canvas;
 }
 
+// Sao đêm vẽ sẵn (dải lặp ngang, nền trong suốt)
+function nightStars() {
+  return cached('nstars', () => {
+    const b = new Buf(512, 150, true);
+    const R = rng(91);
+    for (let i = 0; i < 130; i++) {
+      const x = (R() * 512) | 0;
+      const y = (Math.pow(R(), 1.3) * 150) | 0;
+      b.a(x, y, R() < 0.2 ? '#ffe8c0' : '#ffffff', 0.5 + R() * 0.5);
+      if (R() < 0.1) { b.a(x - 1, y, '#ffffff', 0.4); b.a(x + 1, y, '#ffffff', 0.4); b.a(x, y - 1, '#ffffff', 0.4); b.a(x, y + 1, '#ffffff', 0.4); }
+    }
+    return b;
+  }).canvas;
+}
+// Vân sáng mặt nước nhìn từ dưới lên (long cung)
+function causticSpr() {
+  return cached('caustic', () => {
+    const b = new Buf(256, 30, true);
+    for (let k = 0; k < 3; k++) {
+      const ph = k * 2.1;
+      for (let x = 0; x < 256; x++) {
+        const y = Math.round(8 + k * 6 + Math.sin((x / 256) * TAU * (3 + k) + ph) * 3 + Math.sin((x / 256) * TAU * 11 + ph * 2) * 1.5);
+        b.a(x, y, '#e8ffff', 0.55 - k * 0.12);
+        if ((x + k) % 3 === 0) b.a(x, y + 1, '#bff6ff', 0.3);
+      }
+    }
+    return b;
+  }).canvas;
+}
+
+// Cầu cong đỏ (taikobashi) bắc qua hồ cá koi viền đá
+function pondBridgeSpr() {
+  return cached('pondbridge', () => {
+    const s = new Buf(66, 28);
+    // hồ: viền đá, nước, cá koi, lá súng
+    s.ell(33, 24, 31, 4, '#7a766e');
+    s.ell(33, 23.5, 30, 3.5, '#b4b0a8');
+    s.ell(33, 24, 27, 2.6, '#2e7aa8');
+    s.r(14, 23, 10, 1, '#7ac8ec'); s.r(40, 25, 8, 1, '#7ac8ec');
+    s.r(19, 25, 3, 1, '#ff7a30'); s.p(22, 25, '#ffffff'); s.r(44, 23, 3, 1, '#ffffff'); s.p(47, 23, '#ff7a30');
+    s.r(10, 24, 3, 1, '#5aa04a'); s.p(11, 23, '#7ac85a'); s.r(52, 24, 3, 1, '#5aa04a'); s.p(53, 23, '#ffb0c8');
+    for (let x = 4; x < 62; x += 5) s.p(x, 21 + ((x * 3) % 2), '#d8d4cc');
+    // cầu cong: mặt cầu, dầm dưới, lan can, trụ đầu có nắp vàng
+    const yAt = (x) => 21 - Math.sin(Math.PI * clamp((x - 6) / 54, 0, 1)) * 12;
+    for (let x = 6; x <= 60; x++) {
+      const y = Math.round(yAt(x));
+      s.r(x, y, 1, 3, '#c8302a'); s.p(x, y, '#ec6a4a'); s.p(x, y + 3, '#6e1a14');
+      s.p(x, y - 5, '#c8302a'); s.p(x, y - 6, '#ec6a4a');
+    }
+    for (let x = 8; x <= 58; x += 10) {
+      const y = Math.round(yAt(x));
+      s.r(x, y - 6, 1, 6, '#a8261e');
+      if (x === 8 || x === 58) { s.r(x - 1, y - 8, 3, 2, '#ffd54f'); s.p(x, y - 9, '#fff2a0'); }
+    }
+    s.r(6, 21, 2, 6, '#8a2a1e'); s.r(58, 21, 2, 6, '#8a2a1e');
+    return s.outline();
+  });
+}
+
+// Lớp gần vườn anh đào: suối nhỏ có cầu cong đỏ và đèn đá (vẽ trước hàng cây)
+function sakuraStream(b, R, gy) {
+  const W = b.w;
+  for (let k = 0; k < 2; k++) {
+    const x0 = Math.floor((k * W) / 2 + 60 + R() * (W / 2 - 200));
+    const ww = 90 + Math.floor(R() * 40);
+    for (let x = x0; x < x0 + ww; x++) {
+      const e = Math.min(x - x0, x0 + ww - x);
+      const d = Math.min(4, e >> 2);
+      for (let y = 0; y <= d; y++) b.p(x, gy + 1 + y, y === 0 ? '#9ad4ee' : y < 2 ? '#5aa6d4' : '#3a86b8');
+    }
+    const br = pondBridgeSpr();
+    blit(b, br, x0 + ww / 2 - br.w / 2, gy + 4 - br.h, { haze: '#e8c8d8', amt: 0.22 });
+  }
+  for (let i = 0; i < 4; i++) {
+    const sp = sprProp('stonelantern', 0, 'sakura');
+    blit(b, sp, R() * W, gy + 3 - sp.h, { haze: '#e8c8d8', amt: 0.24 });
+  }
+}
+
+// Cờ cá chép (đen, đỏ, xanh): miệng tròn, mắt, vảy, đuôi chẻ, viền tối
+const KOI = [['#2a2a3e', '#6a6a8e', 26], ['#d8302a', '#ff9a7a', 22], ['#2e6ad8', '#9ac0ff', 18]];
+function koiSpr(c1, c2, L) {
+  return cached(`koi:${c1}:${L}`, () => {
+    const s = new Buf(L, 9);
+    const O = '#1d1424';
+    for (let i = 0; i < L; i++) {
+      const k = i - (L - 4);
+      if (k >= 0) {
+        // đuôi chẻ hai thùy
+        const t0 = Math.max(0, 1 - (k >> 1));
+        for (let y = t0; y <= 3; y++) s.p(i, y, y === t0 || (k === 3 && y > t0) ? O : y === 3 && k > 0 ? O : c1);
+        for (let y = 5; y <= 8 - t0; y++) s.p(i, y, y === 8 - t0 || (k === 3 && y < 8 - t0) ? O : y === 5 && k > 0 ? O : c2);
+        if (k === 0) s.p(i, 4, c1);
+        continue;
+      }
+      const top = i < 2 ? 0 : i === L - 5 ? 2 : 1;
+      const bot = 8 - top;
+      for (let y = top; y <= bot; y++) {
+        let c = y >= bot - 2 ? c2 : c1;
+        if (i > 6 && y > top + 1 && y < bot - 2 && (i + (y & 1) * 2) % 4 === 0) c = c2;
+        if (i < 2) c = i === 0 && y > top && y < bot ? '#f4f0e8' : '#c8c0b0';
+        s.p(i, y, y === top || y === bot ? O : c);
+      }
+    }
+    s.p(0, 4, '#3a2a30');
+    s.r(4, 2, 2, 2, '#ffffff'); s.p(5, 3, '#101018'); s.p(3, 2, O); s.p(3, 3, O);
+    s.r(6, 6, 2, 1, shd(c2, 0.3));
+    return s;
+  }).canvas;
+}
+
+// Cá nhỏ bơi xa ở long cung: 10x5, 2 khung vẫy đuôi, d = hướng bơi
+function fishSpr(d, fr) {
+  return cached(`fish:${d}:${fr}`, () => {
+    const s = new Buf(10, 5);
+    const rows = fr
+      ? ['.....ooo..', 'o..oobbbo.', 'tooobbbbeo', 'o..olllllo', '.....ooo..']
+      : ['.....ooo..', '...oobbbo.', 'ttoobbbbeo', '...olllllo', '.....ooo..'];
+    const pal = { o: '#163c56', b: '#4e98b4', l: '#b8e6ee', e: '#0a1622', t: '#2a6a88' };
+    for (let j = 0; j < 5; j++) for (let i = 0; i < 10; i++) {
+      const c = pal[rows[j][d > 0 ? i : 9 - i]];
+      if (c) s.p(i, j, c);
+    }
+    return s;
+  }).canvas;
+}
+
+// Giờ thực Việt Nam (UTC+7) dạng số thực 0-24
+export function vnHour(now = Date.now()) {
+  return (((now / 3600000 + 7) % 24) + 24) % 24;
+}
+const smooth = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
+const bump = (h, c, w) => { const d = Math.abs(h - c) / w; return d >= 1 ? 0 : (1 - d * d) * (1 - d * d); };
+// Pha trong ngày: night (đêm), dusk (hoàng hôn), dawn (bình minh), mỗi giá trị 0-1
+export function dayPhase(h) {
+  return { night: h < 12 ? 1 - smooth(4.6, 6.4, h) : smooth(18.2, 19.6, h), dusk: bump(h, 17.9, 1.5), dawn: bump(h, 5.8, 1.2) };
+}
+const NIGHT_RGB = [80, 98, 172];
+const DUSK_RGB = [255, 168, 116];
+const DAWN_RGB = [255, 188, 212];
+// Phần bóng tối còn đè lên nhân vật/quái khi game gọi drawNight trước thực thể (để quái vẫn đọc rõ ban đêm)
+const ENT_DARK = 0.4;
+// Chỉ gọi drawLighting (không có drawNight): giảm độ tối toàn khung cho thực thể khỏi chìm
+const SINGLE_DARK = 0.78;
+const _mulCol = new Map();
+function mulColor(r, g, b) {
+  r = clamp(r | 0, 0, 255); g = clamp(g | 0, 0, 255); b = clamp(b | 0, 0, 255);
+  const k = ((r >> 1) << 16) | ((g >> 1) << 8) | (b >> 1);
+  let v = _mulCol.get(k);
+  if (!v) { v = hx((r >> 1) * 2, (g >> 1) * 2, (b >> 1) * 2); _mulCol.set(k, v); }
+  return v;
+}
+// Vệt sáng đục (nền đen, tâm trắng) dùng với 'lighten': chồng nhiều đèn chỉ lấy đèn sáng nhất, không cộng dồn thành mảng trắng
+const LSPR = new Map();
+function lightSpr(r) {
+  let g = LSPR.get(r);
+  if (!g) {
+    g = document.createElement('canvas');
+    g.width = g.height = r * 2;
+    const c = g.getContext('2d');
+    c.fillStyle = '#000000';
+    c.fillRect(0, 0, r * 2, r * 2);
+    const gr = c.createRadialGradient(r, r, 0, r, r, r);
+    gr.addColorStop(0, 'rgba(255,255,255,1)');
+    gr.addColorStop(0.4, 'rgba(255,255,255,0.55)');
+    gr.addColorStop(1, 'rgba(255,255,255,0)');
+    c.fillStyle = gr;
+    c.fillRect(0, 0, r * 2, r * 2);
+    LSPR.set(r, g);
+  }
+  return g;
+}
+// Mức lớp ngày/đêm người chơi chọn: 1 = đủ, 0 = tắt (lưu theo trình duyệt)
+const LIGHT_KEY = 'ninja.daynight';
+let lightPref = 1;
+try {
+  const v = localStorage.getItem(LIGHT_KEY);
+  if (v != null && v !== '') lightPref = clamp(Number(v) || 0, 0, 1);
+} catch (e) { /* trình duyệt chặn lưu trữ: giữ mặc định */ }
+export function setLighting(k) {
+  lightPref = clamp(Number(k) || 0, 0, 1);
+  try { localStorage.setItem(LIGHT_KEY, String(lightPref)); } catch (e) { /* không lưu được thì chỉ áp dụng phiên này */ }
+}
+export function getLighting() {
+  return lightPref;
+}
+
 export class MapRenderer {
   constructor(map) {
     this.map = map;
     this.th = THEMES[map.theme] || THEMES.grass_fire;
     this.sc = SCENES[map.theme] || SCENES.grass_fire;
-    const v = MAP_VARIANTS[map.id];
+    const v0 = MAP_VARIANTS[map.id];
+    const v = v0 && (!v0.from || v0.from === map.theme) ? v0 : null;
     if (v) {
       const sw = (k) => v.swap[k] || k;
       this.th = { ...this.th, part: v.part || this.th.part, decor: (this.th.decor || []).map(sw) };
@@ -2954,6 +4030,119 @@ export class MapRenderer {
     this.birds = [];
     if (this.sc.birds) for (let i = 0; i < 4; i++) this.birds.push({ x: R() * 800, y: 30 + R() * 60, sp: (this.sc.birds === 'bat' ? 14 : 9) + R() * 8, ph: R() * 6, d: R() < 0.5 ? 1 : -1 });
     this.lightK = this.th.dark ? 1 : this.sc.light && this.sc.light.top && this.map.theme === 'village_fire' ? 0.9 : 0.65;
+    // mức ảnh hưởng ngày/đêm: dưới lòng đất gần như không đổi
+    this.dayK = this.th.dayK != null ? this.th.dayK : this.th.ceiling ? 0.2 : this.th.dark ? 0.5 : 1;
+    this.nightK = 0;
+    this.frame = 0;
+    this._lit = false;
+    this.fx = null;
+    this.fy = null;
+  }
+
+  // Pha ngày/đêm của khung hiện tại (tính một lần mỗi khung, dùng chung cho nền và lớp phủ)
+  _phase(hour) {
+    const P = this._P || (this._P = { f: -1, h: undefined });
+    if (P.f === this.frame && P.h === hour) return P;
+    const h = hour == null ? vnHour() : ((hour % 24) + 24) % 24;
+    const ph = dayPhase(h);
+    const k = this.dayK * lightPref;
+    const n = ph.night * k;
+    const soft = 1 - ph.night * 0.5;
+    const du = ph.dusk * k * 0.6 * soft;
+    const da = ph.dawn * k * 0.55 * soft;
+    let r = 255 + (NIGHT_RGB[0] - 255) * n;
+    let g = 255 + (NIGHT_RGB[1] - 255) * n;
+    let b = 255 + (NIGHT_RGB[2] - 255) * n;
+    r += (DUSK_RGB[0] - r) * du; g += (DUSK_RGB[1] - g) * du; b += (DUSK_RGB[2] - b) * du;
+    r += (DAWN_RGB[0] - r) * da; g += (DAWN_RGB[1] - g) * da; b += (DAWN_RGB[2] - b) * da;
+    P.n = n; P.du = du; P.da = da; P.r = r; P.g = g; P.b = b;
+    P.nightK = ph.night * Math.min(1, this.dayK * 1.25) * lightPref;
+    P.f = this.frame;
+    P.h = hour;
+    return P;
+  }
+
+  // Màu nhân (multiply) giữ lại phần tối s (0-1) của màu đêm
+  _tint(P, s) {
+    return mulColor(255 - (255 - P.r) * s, 255 - (255 - P.g) * s, 255 - (255 - P.b) * s);
+  }
+
+  _canvas(key, W, H) {
+    let c = this[key];
+    if (!c || c.width !== W || c.height !== H) {
+      c = document.createElement('canvas');
+      c.width = W;
+      c.height = H;
+      this[key] = c;
+    }
+    return c;
+  }
+
+  // Một vòng qua nguồn sáng: vệt sáng vào bản đồ sáng m ('lighten') và/hoặc quầng màu vào g
+  _lightPass(m, g, camX, camY, W, H, n) {
+    const t = this.t;
+    const ka = Math.min(1, n * 1.4);
+    if (m && this.fx != null) {
+      // quầng sáng nhẹ quanh người chơi (tọa độ do game truyền vào)
+      m.globalAlpha = 0.55 * ka;
+      const x = Math.round(this.fx - camX);
+      const y = Math.round(this.fy - camY);
+      m.drawImage(lightSpr(48), x - 48, y - 48);
+    }
+    const mo = this._moonS;
+    if (mo) {
+      if (m) { m.globalAlpha = ka * mo[2]; m.drawImage(lightSpr(26), mo[0] - 26, mo[1] - 26); }
+      if (g) { g.globalAlpha = 0.75 * mo[2]; g.drawImage(glow('#b8ccff', 34), mo[0] - 34, mo[1] - 34); }
+    }
+    for (const l of this.lights) {
+      if (l.a * n < 0.02) continue;
+      const x = l.x - camX;
+      const y = l.y - camY;
+      const rr = l.r * 2;
+      if (x < -rr || x > W + rr || y < -rr || y > H + rr) continue;
+      if (m) {
+        m.globalAlpha = Math.min(0.92, l.a * 1.8) * ka;
+        m.drawImage(lightSpr(rr), Math.round(x - rr), Math.round(y - rr));
+      }
+      if (g && x > -l.r && x < W + l.r && y > -l.r && y < H + l.r) {
+        const fl = 1 + (l.f || 0) * Math.sin(t * 7.3 * (l.s || 1) + l.x) * 0.5;
+        g.globalAlpha = clamp(l.a * fl * 1.3, 0, 1);
+        g.drawImage(glow(l.col, l.r), Math.round(x - l.r), Math.round(y - l.r));
+      }
+    }
+    if (m) m.globalAlpha = 1;
+    if (g) g.globalAlpha = 1;
+  }
+
+  // Bản đồ sáng: nền màu c, các nguồn sáng 'lighten' lên (lấy max, không cộng dồn)
+  _lightMap(c, camX, camY, W, H, n, withGlow) {
+    const cv = this._canvas('nmask', W, H);
+    const m = cv.getContext('2d');
+    m.globalCompositeOperation = 'source-over';
+    m.globalAlpha = 1;
+    m.fillStyle = c;
+    m.fillRect(0, 0, W, H);
+    m.globalCompositeOperation = 'lighten';
+    const g = withGlow ? this._glowCtx(W, H) : null;
+    this._lightPass(m, g, camX, camY, W, H, n);
+    m.globalCompositeOperation = 'source-over';
+    return cv;
+  }
+
+  _glowCtx(W, H) {
+    const g = this._canvas('ncv', W, H).getContext('2d');
+    g.globalCompositeOperation = 'source-over';
+    g.clearRect(0, 0, W, H);
+    return g;
+  }
+
+  // Quầng màu đèn: gộp sẵn rồi phủ 'screen' với alpha giới hạn nên không bao giờ cháy trắng
+  _drawGlow(ctx, n) {
+    ctx.globalCompositeOperation = 'screen';
+    ctx.globalAlpha = Math.min(0.7, n * 0.8);
+    ctx.drawImage(this.ncv, 0, 0);
+    ctx.globalAlpha = 1;
+    ctx.globalCompositeOperation = 'source-over';
   }
 
   buildTerrain() {
@@ -2961,7 +4150,7 @@ export class MapRenderer {
     const T = new Buf(m.w, m.h);
     const R = rng(this.seed + 3);
     const A = { lights: this.lights, anims: this.anims };
-    if (m.town) buildVillage(T, m, this.th, this.sc, R, A);
+    if (m.town && this.th.town) buildVillage(T, m, this.th, this.sc, R, A);
     else buildFieldDecor(T, m, this.th, this.sc, R, A);
     buildGround(T, m, this.th, this.sc, R);
     buildCliffs(T, m, this.th, this.sc, R);
@@ -2976,6 +4165,9 @@ export class MapRenderer {
   // Bầu trời + 3 lớp parallax + mặt nước (gọi mỗi khung hình)
   drawBackground(ctx, camX, camY, W, H, t) {
     this.t = t;
+    this.frame = (this.frame + 1) | 0;
+    // tính pha ngay đầu khung (giờ lấy theo lần gọi lớp sáng trước) để sao/trăng không trễ 1 khung
+    if (this._lit) this.nightK = this._phase(this._hour).nightK;
     const sc = this.sc;
     const G = this.map.ground;
     const gs = G - camY;
@@ -3000,10 +4192,55 @@ export class MapRenderer {
       for (let x = -ox; x < W; x += 512) ctx.drawImage(a, Math.round(x), Math.round(8 - dy * 0.1));
       ctx.globalAlpha = 1;
     }
-    if (sc.sun) {
-      const sp = sunSpr(sc.sun).canvas;
-      ctx.drawImage(sp, Math.round(W * sc.sun.x - camX * 0.01 - sp.width / 2), Math.round(sc.sun.y - dy * 0.1 - sp.height / 2));
+    const nk = this.nightK;
+    const open = !this.th.ceiling;
+    if (nk > 0.02 && open) {
+      ctx.globalAlpha = Math.min(1, nk * 1.2);
+      const ns = nightStars();
+      const ox = ((((camX * 0.02) % 512) + 512) % 512);
+      for (let x = -ox; x < W; x += 512) ctx.drawImage(ns, Math.round(x), Math.round(sy * 0.3 - dy * 0.05));
+      ctx.globalAlpha = 1;
     }
+    if (sc.rainbow) {
+      const rb = rainbowSpr(sc.rainbow.r);
+      ctx.globalAlpha = 1 - nk;
+      ctx.drawImage(rb, Math.round(W * sc.rainbow.x - camX * 0.012 - rb.width / 2), Math.round(sc.rainbow.y - dy * 0.1 - rb.height));
+      ctx.globalAlpha = 1;
+    }
+    if (sc.sun) {
+      const daySun = sc.sun.k === 'sun';
+      if (!daySun || nk < 0.98) {
+        const sp = sunSpr(sc.sun).canvas;
+        if (daySun) ctx.globalAlpha = 1 - nk;
+        ctx.drawImage(sp, Math.round(W * sc.sun.x - camX * 0.01 - sp.width / 2), Math.round(sc.sun.y + (daySun ? nk * 40 : 0) - dy * 0.1 - sp.height / 2));
+        ctx.globalAlpha = 1;
+      }
+    }
+    if (nk > 0.02 && open && (!sc.sun || sc.sun.k === 'sun')) {
+      // trăng lên khi trời tối
+      const mp = sunSpr({ k: 'moon', r: 9, glow: '#c8d8ff' }).canvas;
+      ctx.globalAlpha = nk;
+      const mx = Math.round(W * (sc.sun ? 1 - sc.sun.x : 0.3) - camX * 0.01);
+      const my = Math.round(40 + (1 - nk) * 30 - dy * 0.1);
+      ctx.drawImage(mp, mx - (mp.width >> 1), my - (mp.height >> 1));
+      ctx.globalAlpha = 1;
+      // trăng là nguồn sáng: lớp đêm chừa lại đĩa trăng và thêm quầng
+      this._moonS = [mx, my, nk];
+    } else this._moonS = null;
+    if (sc.surface) {
+      // mặt nước gợn sáng phía trên (nhìn từ đáy biển)
+      const cs = causticSpr();
+      const yy = Math.round(Math.max(sy, 0) - 4 - dy * 0.05);
+      ctx.globalCompositeOperation = 'lighter';
+      for (const [sp2, a] of [[7, 0.55], [-5, 0.4]]) {
+        ctx.globalAlpha = a;
+        const ox = ((((camX * 0.05 + t * sp2) % 256) + 256) % 256);
+        for (let x = -ox; x < W; x += 256) ctx.drawImage(cs, Math.round(x), yy + (sp2 < 0 ? 5 : 0));
+      }
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = 'source-over';
+    }
+    if (sc.eyes) this.drawSkyEyes(ctx, camX, dy, W, t, sc.eyes);
     // mây trôi
     for (const c of this.clouds) {
       const span = W + c.cv.width * 2 + 40;
@@ -3032,9 +4269,49 @@ export class MapRenderer {
     }
   }
 
+  // Những cặp mắt đỏ chớp chớp giữa trời ma giới
+  drawSkyEyes(ctx, camX, dy, W, t, n) {
+    const span = W + 200;
+    for (let i = 0; i < n; i++) {
+      const x = Math.round(((((hash1(i * 17 + 3) * 1400 - camX * 0.03) % span) + span) % span) - 100);
+      const y = Math.round(26 + hash1(i * 29 + 7) * 80 - dy * 0.1);
+      const blink = Math.sin(t * 0.6 + i * 2.3);
+      if (blink < -0.92) continue;
+      const big = hash1(i * 5) > 0.6 ? 1 : 0;
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.globalAlpha = 0.45 + Math.sin(t * 1.3 + i) * 0.15;
+      ctx.drawImage(glow('#ff2a4a', 12), x - 8, y - 12);
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = 'source-over';
+      const look = Math.round(Math.sin(t * 0.4 + i * 1.7));
+      const half = blink < -0.8 ? 1 : 0;
+      for (const ex of [x - 4 - big, x + 2 + big]) {
+        ctx.fillStyle = '#ff3a4a';
+        ctx.fillRect(ex, y + half, 3 + big, 2 - half);
+        ctx.fillStyle = '#ffd0d8';
+        ctx.fillRect(ex, y + half, 1, 1);
+        ctx.fillStyle = '#1a0408';
+        ctx.fillRect(ex + 1 + (look > 0 ? 1 : 0), y + half, 1, 2 - half);
+      }
+    }
+  }
+
   drawBirds(ctx, camX, dy, W, t) {
     const bat = this.sc.birds === 'bat';
-    ctx.fillStyle = bat ? '#120a18' : 'rgba(60,50,70,0.75)';
+    if (this.sc.birds === 'fish') {
+      // đàn cá nhỏ bơi xa (sprite có thân, đuôi, mắt)
+      ctx.globalAlpha = 0.85;
+      for (const b of this.birds) for (let k = 0; k < 3; k++) {
+        const span = W + 120;
+        const x = Math.round(((((b.x + k * 13 + t * b.sp * 0.6 * b.d - camX * 0.12) % span) + span) % span) - 60);
+        const y = Math.round(b.y + 20 + (k % 2) * 6 + k * 2 - dy * 0.15 + Math.sin(t * 0.9 + b.ph + k) * 4);
+        const fr = Math.sin(t * 8 + b.ph + k) > 0 ? 1 : 0;
+        ctx.drawImage(fishSpr(b.d > 0 ? 1 : -1, fr), x - 5, y - 2);
+      }
+      ctx.globalAlpha = 1;
+      return;
+    }
+    ctx.fillStyle = bat ? '#120a18' : this.sc.birdCol || 'rgba(60,50,70,0.75)';
     for (const b of this.birds) {
       const span = W + 120;
       const x = Math.round(((((b.x + t * b.sp * b.d - camX * 0.12) % span) + span) % span) - 60);
@@ -3165,15 +4442,13 @@ export class MapRenderer {
       }
       if (a.k === 'nobori') { ctx.fillStyle = '#ffffff'; for (let k = 0; k < 4; k++) ctx.fillRect(x + 4, Math.round(y + 12 + k * 6 + Math.sin(t * 4 - 2.2 + ph) * 1.1), 2, 3); }
     } else if (a.k === 'koi') {
-      const fish = [['#2a2a3a', '#4a4a6a', 24], ['#e0352b', '#ff8a7a', 20], ['#2e6ad8', '#8ab4ff', 16]];
-      fish.forEach(([c1, c2, len], j) => {
+      // cờ cá chép: sprite vẽ sẵn, uốn sóng bằng cách lệch từng cột 1px
+      KOI.forEach(([c1, c2, len], j) => {
+        const sp = koiSpr(c1, c2, len);
         const fy = y + 2 + j * 11;
         for (let i = 0; i < len; i++) {
           const o = Math.round(Math.sin(t * 5 - i * 0.35 + j) * (i / len) * 3);
-          const thk = i < 3 ? 6 : i > len - 4 ? 3 + (len - i) % 2 : 5;
-          ctx.fillStyle = (i % 4 < 2) ? c1 : c2;
-          ctx.fillRect(x + i, fy + o - (thk >> 1), 1, thk);
-          if (i === 2) { ctx.fillStyle = '#ffffff'; ctx.fillRect(x + i, fy + o - 1, 1, 1); }
+          ctx.drawImage(sp, i, 0, 1, 9, x + i, fy + o - 4, 1, 9);
         }
       });
     }
@@ -3291,7 +4566,7 @@ export class MapRenderer {
     const kind = this.th.part;
     if (!kind) return;
     const ps = this.particles;
-    const want = kind === 'mist' ? 10 : kind === 'firefly' ? 26 : kind === 'sparkle' ? 18 : kind === 'sand' ? 30 : 46;
+    const want = kind === 'mist' ? 10 : kind === 'firefly' ? 26 : kind === 'sparkle' ? 18 : kind === 'sand' ? 30 : kind === 'mote' ? 24 : kind === 'feather' || kind === 'bubble' ? 30 : 46;
     while (ps.length < want) ps.push({ x: Math.random() * W, y: Math.random() * H, v: Math.random(), s: Math.random(), z: 0.5 + Math.random() * 0.7 });
     // dịch theo camera để có chiều sâu
     if (this._pc) {
@@ -3310,6 +4585,10 @@ export class MapRenderer {
       else if (kind === 'mist') { p.x += (4 + p.v * 6) * dt; const gs = this.map.ground - camY; if (p.y > gs - 6 || p.y < gs - 90) p.y = gs - 8 - p.v * 80; }
       else if (kind === 'sand') { p.x += (60 + p.v * 60) * dt; p.y += Math.sin(now * 3 + p.s * 9) * 4 * dt; }
       else if (kind === 'sparkle') { p.y -= (2 + p.v * 4) * dt; p.x += Math.sin(now * 0.8 + p.s * 20) * 4 * dt; }
+      else if (kind === 'feather') { p.y += (4 + p.v * 6) * dt; p.x += Math.sin(now * 1.2 + p.s * 9) * 10 * dt - 2 * dt; }
+      else if (kind === 'bubble') { p.y -= (8 + p.v * 16) * p.z * dt; p.x += Math.sin(now * 2.4 + p.s * 9) * 7 * dt; }
+      else if (kind === 'mote') { p.y -= (2 + p.v * 5) * dt; p.x += Math.sin(now * 0.6 + p.s * 30) * 5 * dt; }
+      else if (kind === 'void') { p.y -= (6 + p.v * 14) * dt; p.x += Math.sin(p.y * 0.05 + p.s * 5) * 8 * dt; }
       if (p.y > H + 6) { p.y = -4; p.x = Math.random() * W; }
       if (p.y < -6) { p.y = H + 4; p.x = Math.random() * W; }
       if (p.x < -60) p.x = W + 4;
@@ -3376,6 +4655,42 @@ export class MapRenderer {
           if (a > 0.8) { ctx.fillStyle = `rgba(255,255,240,${(a * 0.4).toFixed(2)})`; ctx.fillRect(x - 1, y, 3, 1); ctx.fillRect(x, y - 1, 1, 3); }
           break;
         }
+        case 'feather': {
+          if (p.s < 0.6) {
+            // lông vũ trắng chao lượn
+            ctx.fillStyle = '#ffffff';
+            if (spin > 0) { ctx.fillRect(x, y, 3, 1); ctx.fillStyle = '#d6d0ee'; ctx.fillRect(x + 1, y + 1, 2, 1); }
+            else { ctx.fillRect(x, y, 1, 3); ctx.fillStyle = '#d6d0ee'; ctx.fillRect(x + 1, y + 1, 1, 2); }
+          } else {
+            const a = Math.max(0, Math.sin(now * 2 + p.s * 40));
+            ctx.fillStyle = a > 0.7 ? '#fff8d0' : '#ffd860';
+            ctx.fillRect(x, y, 1, 1);
+            if (a > 0.85) { ctx.fillStyle = 'rgba(255,230,140,0.6)'; ctx.fillRect(x - 1, y, 3, 1); ctx.fillRect(x, y - 1, 1, 3); }
+          }
+          break;
+        }
+        case 'bubble':
+          if (p.z > 0.95) {
+            ctx.fillStyle = 'rgba(210,250,255,0.75)';
+            ctx.fillRect(x, y - 1, 2, 1); ctx.fillRect(x - 1, y, 1, 2); ctx.fillRect(x + 2, y, 1, 2); ctx.fillRect(x, y + 2, 2, 1);
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(x, y, 1, 1);
+          } else { ctx.fillStyle = 'rgba(210,250,255,0.6)'; ctx.fillRect(x, y, 1, 1); }
+          break;
+        case 'mote':
+        case 'void': {
+          const cs = kind === 'void' ? ['#d040ff', '#ffb0ff'] : this.th.crys || ['#c07aff', '#5ad8ff'];
+          const c = cs[(p.s * cs.length) | 0] || cs[0];
+          const on = Math.sin(now * 1.6 + p.s * 40);
+          ctx.globalCompositeOperation = 'lighter';
+          ctx.globalAlpha = (0.35 + Math.max(0, on) * 0.4) * (kind === 'void' ? 0.7 : 1);
+          ctx.drawImage(glow(c, 6), x - 6, y - 6);
+          ctx.globalAlpha = 1;
+          ctx.globalCompositeOperation = 'source-over';
+          ctx.fillStyle = on > 0.3 ? '#ffffff' : c;
+          ctx.fillRect(x, y, 1, kind === 'void' && p.z > 1 ? 2 : 1);
+          break;
+        }
         default:
       }
     }
@@ -3385,16 +4700,16 @@ export class MapRenderer {
   drawForeground(ctx, camX, camY, W, H, t) {
     const L = this.sc.light || {};
     const dy = camY - C0;
-    if (L.rays) {
-      const rc = raysSpr();
+    if (L.rays && this.nightK < 0.95) {
+      const rc = raysSpr(L.raysCol);
       ctx.globalCompositeOperation = 'lighter';
-      ctx.globalAlpha = L.rays * (0.75 + Math.sin(t * 0.4) * 0.25);
+      ctx.globalAlpha = L.rays * (0.75 + Math.sin(t * 0.4) * 0.25) * (1 - this.nightK);
       const ox = ((((camX * 0.25) % 320) + 320) % 320);
       for (let x = -ox; x < W; x += 320) ctx.drawImage(rc, Math.round(x), Math.round(-20 - dy * 0.3), 320, H + 40);
       ctx.globalAlpha = 1;
       ctx.globalCompositeOperation = 'source-over';
     }
-    if (this.sc.fog) this.drawFog(ctx, camX * 2.2, dy, W, t * 1.6, this.map.ground - camY - 40, 0.55);
+    if (this.sc.fog) this.drawFog(ctx, camX * 2.2, dy, W, t * 1.6, this.map.ground - camY - 40, (this.sc.fogA || 0.55) * (1 - this.nightK * 0.6));
     if (L.top) ctx.drawImage(vGrad(L.top[0], L.top[1], 0), 0, 0, W, Math.round(H * 0.65));
     if (L.bot) ctx.drawImage(vGrad(L.bot[0], 0, L.bot[1]), 0, Math.round(H * 0.4), W, Math.ceil(H * 0.6));
     if (L.dark) {
@@ -3410,7 +4725,10 @@ export class MapRenderer {
       m.fillRect(0, 0, W, H);
       m.globalCompositeOperation = 'destination-out';
       m.globalAlpha = 0.85;
-      m.drawImage(hole(96), Math.round(W / 2 - 96), Math.round(H * 0.62 - 96));
+      // vùng nhìn quanh người chơi nếu game đã truyền tọa độ (drawNight/drawLighting), không thì giữa màn hình
+      const fx = this.fx != null ? this.fx - camX : W / 2;
+      const fy = this.fy != null ? this.fy - camY : H * 0.62;
+      m.drawImage(hole(96), Math.round(fx - 96), Math.round(fy - 96));
       for (const l of this.lights) {
         const x = l.x - camX;
         const y = l.y - camY;
@@ -3441,6 +4759,68 @@ export class MapRenderer {
       ctx.drawImage(this.vig, 0, 0);
       ctx.globalAlpha = 1;
     }
+  }
+
+  // ---- Ngày/đêm theo giờ Việt Nam (UTC+7). hour: số thực 0-24 (bỏ trống = giờ thực).
+  // px, py: tọa độ THẾ GIỚI của người chơi (tùy chọn) để có quầng sáng quanh nhân vật.
+  // Cách nối đề xuất trong game.js:
+  //   sau R.drawPortals(...)    -> R.drawNight(c, camX, camY, W, H, undefined, me.x, me.y - 20)
+  //   sau R.drawForeground(...) -> R.drawLighting(c, camX, camY, W, H)
+  // drawNight làm tối nền + địa hình (có lỗ sáng ở đèn); drawLighting chỉ ám nhẹ lên thực thể rồi thêm quầng đèn.
+  // Chỉ gọi drawLighting cũng được: khi đó cả khung tối vừa phải (không tách lớp).
+
+  // Lớp tối cho nền/địa hình. Gọi SAU drawPortals, TRƯỚC khi vẽ NPC/quái/người chơi.
+  drawNight(ctx, camX, camY, W, H, hour, px, py) {
+    this._lit = true;
+    this._hour = hour;
+    if (px != null && py != null) { this.fx = px; this.fy = py; }
+    const P = this._phase(hour);
+    if (P.n < 0.03) return;
+    // nền = màu đêm chia cho phần sẽ phủ lên thực thể, để tổng hai lớp đúng bằng màu đêm
+    const e = (c) => 255 - (255 - c) * ENT_DARK;
+    const col = mulColor((255 * P.r) / e(P.r), (255 * P.g) / e(P.g), (255 * P.b) / e(P.b));
+    const cv = this._lightMap(col, camX, camY, W, H, P.n, false);
+    ctx.globalCompositeOperation = 'multiply';
+    ctx.drawImage(cv, 0, 0);
+    ctx.globalCompositeOperation = 'source-over';
+    this._nb = this.frame;
+  }
+
+  // Lớp phủ cuối: ám màu hoàng hôn/bình minh/đêm + quầng đèn. Gọi SAU drawForeground (và drawParticles),
+  // TRƯỚC khi vẽ chữ/khung giao diện. Chỉ dùng ảnh vẽ sẵn, không tạo gradient mỗi khung.
+  drawLighting(ctx, camX, camY, W, H, hour, px, py) {
+    this._lit = true;
+    this._hour = hour;
+    if (px != null && py != null) { this.fx = px; this.fy = py; }
+    const P = this._phase(hour);
+    const { n, du, da } = P;
+    if (n < 0.01 && du < 0.01 && da < 0.01) return;
+    // ráng chiều / ráng sáng trên nền trời (cộng màu)
+    if (du > 0.01 || da > 0.01) {
+      ctx.globalCompositeOperation = 'lighter';
+      if (du > 0.01) { ctx.globalAlpha = du; ctx.drawImage(vGrad('#ff6a2a', 0.3, 0), 0, 0, W, Math.round(H * 0.7)); }
+      if (da > 0.01) { ctx.globalAlpha = da; ctx.drawImage(vGrad('#ff8ac0', 0.26, 0), 0, 0, W, Math.round(H * 0.7)); }
+      ctx.globalAlpha = 1;
+    }
+    const split = this._nb === this.frame && n >= 0.03;
+    const glowOn = n >= 0.05;
+    if (split || n < 0.03) {
+      ctx.globalCompositeOperation = 'multiply';
+      ctx.fillStyle = this._tint(P, split ? ENT_DARK : 1);
+      ctx.fillRect(0, 0, W, H);
+      ctx.globalCompositeOperation = 'source-over';
+      if (glowOn) {
+        this._lightPass(null, this._glowCtx(W, H), camX, camY, W, H, n);
+        this._drawGlow(ctx, n);
+      }
+      return;
+    }
+    // một lớp duy nhất: bản đồ sáng + quầng màu trong cùng một vòng lặp đèn
+    const cv = this._lightMap(this._tint(P, SINGLE_DARK), camX, camY, W, H, n, glowOn);
+    ctx.globalCompositeOperation = 'multiply';
+    ctx.drawImage(cv, 0, 0);
+    ctx.globalCompositeOperation = 'source-over';
+    if (glowOn) this._drawGlow(ctx, n);
   }
 }
 

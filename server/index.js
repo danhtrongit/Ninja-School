@@ -8,21 +8,32 @@ const { WebSocketServer } = require('ws');
 
 const { DB } = require('./db');
 const { World } = require('./game/world');
-const { newChar } = require('./game/player');
+const { newChar, lookOf: playerLook } = require('./game/player');
 const { CLASSES, ELEMENTS, STAT_NAMES } = require('./data/classes');
-const { SKILLS, SKILL_MAX_LV } = require('./data/skills');
-const { ITEMS, SLOTS, SLOT_NAMES, RARITY, TIER_COLORS, STAT_LABELS, UPGRADE, TIERS } = require('./data/items');
+const { SKILLS, SKILL_MAX_LV, PASSIVE_STATS } = require('./data/skills');
+const { ITEMS, SLOTS, GEAR_SLOTS, FASHION_SLOTS, SLOT_NAMES, RARITY, TIER_COLORS, STAT_LABELS, UPGRADE, TIERS, GEM, GEM_TYPES } = require('./data/items');
 const { MONSTERS } = require('./data/monsters');
 const { clientMaps, NPC_TYPES, GROUND } = require('./data/maps');
 const { MAIN_QUESTS } = require('./data/quests');
-const { CHECKIN, WHEEL } = require('./data/extras');
-const { expNeed, MAX_LEVEL, HOTBAR } = require('./game/player');
+const { CHECKIN, WHEEL, MAIL } = require('./data/extras');
+const { seasonClient } = require('./game/season');
+const { petClientInfo } = require('./data/pets');
+const { arenaClient } = require('./game/arena');
+const { expNeed, MAX_LEVEL, HOTBAR, HOTBAR_SETS } = require('./game/player');
 
 const config = {
   port: +process.env.PORT || 3000,
   dataDir: process.env.DATA_DIR || path.join(__dirname, '..', 'data'),
   admins: (process.env.ADMINS || '').split(',').map((s) => s.trim().toLowerCase()).filter(Boolean),
   motd: process.env.MOTD || '',
+  // TATHU=0 tắt lịch tự động của sự kiện Tà Thú (lệnh admin /event vẫn dùng được)
+  tathu: process.env.TATHU !== '0',
+  // SEASON=0 tắt lịch lễ hội theo mùa (lệnh admin /sukien vẫn ép bật được)
+  season: process.env.SEASON !== '0',
+  // số proxy tin cậy đứng trước server (Caddy, Render...): 'auto' = 1 nếu kết nối tới từ mạng nội bộ/loopback, 0 = bỏ X-Forwarded-For
+  trustProxy: /^\d+$/.test(process.env.TRUST_PROXY || '') ? +process.env.TRUST_PROXY : 'auto',
+  // số tài khoản tạo mới tối đa mỗi IP mỗi giờ (0 = không giới hạn; kết nối loopback khi chạy thử không bị tính)
+  regPerHour: /^\d+$/.test(process.env.REG_LIMIT || '') ? +process.env.REG_LIMIT : 10,
   maxChars: 3,
 };
 
@@ -38,17 +49,25 @@ const UPGRADE_INFO = {
   cost: Array.from({ length: TIERS }, (_, t) => Array.from({ length: UPGRADE.max }, (_, i) => UPGRADE.cost(i, t))),
   bonus: UPGRADE.bonus,
 };
+// Ngọc khảm: bảng tra sẵn (máy khách không cần công thức)
+const GEM_INFO = {
+  max: GEM.max, types: GEM_TYPES, rate: GEM.rate, lifestealCap: GEM.lifestealCap,
+  mergeCost: Array.from({ length: GEM.max + 1 }, (_, lv) => (lv ? GEM.mergeCost(lv) : 0)),
+  takeCost: Array.from({ length: GEM.max + 1 }, (_, lv) => (lv ? GEM.takeCost(lv) : 0)),
+  holes: Array.from({ length: TIERS }, (_, t) => GEM.holes(t)),
+};
 const GAME_DATA = JSON.stringify({
   t: 'data', version: VERSION,
-  classes: CLASSES, elements: ELEMENTS, statNames: STAT_NAMES, skills: SKILLS, skillMax: SKILL_MAX_LV,
-  items: ITEMS, slots: SLOTS, slotNames: SLOT_NAMES, rarity: RARITY, tierColors: TIER_COLORS, statLabels: STAT_LABELS,
-  upgrade: UPGRADE_INFO,
-  monsters: Object.fromEntries(Object.entries(MONSTERS).map(([k, m]) => [k, { name: m.name, lv: m.lv, type: m.type, pal: m.pal, el: m.el, boss: !!m.boss, scale: m.scale, w: m.w, h: m.h, fly: m.fly, ranged: m.ranged, aggro: m.aggro }])),
+  classes: CLASSES, elements: ELEMENTS, statNames: STAT_NAMES, skills: SKILLS, skillMax: SKILL_MAX_LV, passiveStats: PASSIVE_STATS,
+  items: ITEMS, slots: SLOTS, gearSlots: GEAR_SLOTS, fashionSlots: FASHION_SLOTS, slotNames: SLOT_NAMES, rarity: RARITY, tierColors: TIER_COLORS, statLabels: STAT_LABELS,
+  upgrade: UPGRADE_INFO, gems: GEM_INFO, pet: petClientInfo(),
+  monsters: Object.fromEntries(Object.entries(MONSTERS).map(([k, m]) => [k, { name: m.name, lv: m.lv, type: m.type, pal: m.pal, el: m.el, boss: !!m.boss, event: !!m.event, scale: m.scale, w: m.w, h: m.h, fly: m.fly, ranged: m.ranged, aggro: m.aggro, drops: m.drops || [] }])),
   maps: clientMaps(), npcTypes: NPC_TYPES, ground: GROUND,
   quests: MAIN_QUESTS.map((q) => ({ name: q.name, req: q.req })),
+  mail: { max: MAIL.max, keep: MAIL.keepDays }, seasons: seasonClient(), arena: arenaClient(),
   checkin: CHECKIN, wheel: { cost: WHEEL.cost, prizes: WHEEL.prizes.map((x) => ({ label: x.label, c: x.c })) },
   expTable: Array.from({ length: MAX_LEVEL + 1 }, (_, i) => (i ? expNeed(i) : 0)),
-  maxLevel: MAX_LEVEL, hotbar: HOTBAR,
+  maxLevel: MAX_LEVEL, hotbar: HOTBAR, hotbarSets: HOTBAR_SETS,
 });
 
 // ---------- HTTP tĩnh
@@ -154,9 +173,12 @@ function charSummary(c) {
   return { name: c.name, cls: c.cls, gender: c.gender, level: c.level, map: c.map, look: lookOf(c) };
 }
 
+// Ngoại hình ở màn chọn nhân vật: trang bị + thời trang, bỏ thú cưng/thú cưỡi (khung xem trước nhỏ)
 function lookOf(c) {
-  const t = (s) => (c.equip && c.equip[s] && ITEMS[c.equip[s].id] ? ITEMS[c.equip[s].id].tier : -1);
-  return { w: t('weapon'), a: t('armor'), p: t('pants'), h: t('hat') };
+  const look = playerLook(c);
+  delete look.pet;
+  delete look.mount;
+  return look;
 }
 
 function sendChars(conn) {
@@ -193,6 +215,35 @@ function addFail(ip) {
   authFails.set(ip, f);
 }
 
+// Giới hạn tạo tài khoản mỗi IP: không có nó thì giới hạn nhập mã theo tài khoản bị lách bằng tài khoản mới
+const regLog = new Map();
+const LOOPBACK_RE = /^(127\.|::1$|localhost$)/;
+function regAllowed(ip) {
+  if (!config.regPerHour || LOOPBACK_RE.test(ip)) return true;
+  const now = Date.now();
+  if (regLog.size > 5000) for (const [k, l] of regLog) if (!l.some((t) => now - t < 3600000)) regLog.delete(k);
+  const list = (regLog.get(ip) || []).filter((t) => now - t < 3600000);
+  regLog.set(ip, list);
+  return list.length < config.regPerHour;
+}
+function regAdd(ip) {
+  const list = regLog.get(ip) || [];
+  list.push(Date.now());
+  regLog.set(ip, list);
+}
+
+// IP mạng nội bộ/loopback: kết nối từ proxy chạy cùng máy hoặc cùng mạng docker
+const PRIVATE_RE = /^(127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|::1$|f[cd][0-9a-f]{2}:)/i;
+// IP người chơi. Chỉ tin X-Forwarded-For khi đứng sau proxy, và đếm từ cuối danh sách:
+// phần đầu do máy khách tự ghi được (giả IP để lách giới hạn hoặc khóa nhập mã của người khác)
+function clientIp(req) {
+  const sock = String(req.socket.remoteAddress || '').replace(/^::ffff:/i, '');
+  const hops = config.trustProxy === 'auto' ? (PRIVATE_RE.test(sock) ? 1 : 0) : config.trustProxy;
+  const xff = String(req.headers['x-forwarded-for'] || '').split(',').map((s) => s.trim()).filter(Boolean);
+  if (!hops || !xff.length) return sock;
+  return xff[Math.max(0, xff.length - hops)].replace(/^::ffff:/i, '').slice(0, 64);
+}
+
 function handleLobby(conn, m) {
   const err = (msg) => conn.send('err', { msg });
   switch (m.t) {
@@ -201,8 +252,10 @@ function handleLobby(conn, m) {
       const pw = String(m.p || '');
       if (!USER_RE.test(u)) return err('Tên tài khoản 4-16 ký tự (chữ, số, _).');
       if (pw.length < 6 || pw.length > 64) return err('Mật khẩu 6-64 ký tự.');
+      if (!regAllowed(conn.ip)) return err('Đã tạo quá nhiều tài khoản từ mạng này. Hãy thử lại sau.');
       const acc = db.createAccount(u, pw);
       if (!acc) return err('Tài khoản đã tồn tại.');
+      regAdd(conn.ip);
       return loginOk(conn, acc);
     }
     case 'login': {
@@ -265,8 +318,7 @@ function handleLobby(conn, m) {
 }
 
 wss.on('connection', (ws, req) => {
-  const ip = (req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim();
-  const conn = new Conn(ws, ip);
+  const conn = new Conn(ws, clientIp(req));
   conn.sendRaw(GAME_DATA);
   ws.isAlive = true;
   ws.on('pong', () => { ws.isAlive = true; });
@@ -285,7 +337,8 @@ wss.on('connection', (ws, req) => {
     }
     if (!m || typeof m.t !== 'string') return;
     try {
-      if (conn.player && world.players.has(conn.player.id)) world.handle(conn.player, m);
+      // 'Đổi nhân vật' gửi logoutChar khi đang trong game: phải về sảnh, thế giới không xử lý gói này
+      if (conn.player && world.players.has(conn.player.id) && m.t !== 'logoutChar') world.handle(conn.player, m);
       else handleLobby(conn, m);
     } catch (e) {
       console.error('[ws] Lỗi xử lý', m.t, e);

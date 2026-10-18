@@ -33,7 +33,15 @@ class GameMap {
 
   remove(p) {
     this.players.delete(p.id);
-    for (const m of this.monsters.values()) if (m.target === p.id) m.target = 0;
+    const empty = this.players.size === 0;
+    for (const m of this.monsters.values()) {
+      if (m.target === p.id) m.target = 0;
+      // bản đồ trống thì quái không chạy update: bỏ chiêu đang niệm, kẻo người vào sau trúng chiêu cũ không báo trước
+      if (empty && m.cast) {
+        m.cast = null;
+        m.st = 0;
+      }
+    }
     this.broadcast('pLeave', { id: p.id }, p);
     if (p.map === this) p.map = null;
   }

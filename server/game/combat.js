@@ -1,9 +1,9 @@
 'use strict';
 
-const { SKILLS, skillVal } = require('../data/skills');
+const { skillVal, skillOf } = require('../data/skills');
 const { ELEMENTS, CLASSES } = require('../data/classes');
 const { MONSTERS } = require('../data/monsters');
-const { makeItem, GEAR_SLOTS, TIERS } = require('../data/items');
+const { makeItem, GEAR_SLOTS, TIERS, GEM, randomGem } = require('../data/items');
 const { expNeed } = require('./player');
 
 const rand = (a, b) => a + Math.random() * (b - a);
@@ -35,6 +35,24 @@ function randomEquipId(tier) {
   return `${slot}_${tier}`;
 }
 
+// Người chơi p (tọa độ chân) có nằm trong vùng chiêu boss c không. Vùng chốt lúc bắt đầu niệm,
+// p là vị trí lúc tung chiêu, nên chạy ra khỏi vùng trong lúc niệm là né được. Nửa bề rộng người chơi = 6.
+function inBossZone(c, p) {
+  const sk = c.sk;
+  const dx = p.x - c.x;
+  const dy = p.y - c.y;
+  if (sk.shape === 'line') {
+    // khớp dải cảnh báo client vẽ: từ boss dài r theo hướng, dày w (lệch dọc ≤ w/2 + 2 viền)
+    const along = dx * c.dir;
+    return along >= -6 && along <= sk.r + 6 && Math.abs(dy) <= (sk.w || 16) / 2 + 2;
+  }
+  // cột sáng giáng từ trời: trúng cả cột, chỉ né được bằng cách chạy ngang
+  if (sk.shape === 'pillar') return (c.pts || [[c.x, c.y]]).some(([x]) => Math.abs(p.x - x) <= sk.r + 6);
+  if (Math.abs(dx) > sk.r + 6) return false;
+  // chấn động mặt đất: nhảy lên hoặc đứng trên bục là né được
+  return Math.abs(dy) <= (sk.ground ? 20 : Math.max(40, sk.r * 0.6));
+}
+
 class Combat {
   constructor(world) {
     this.world = world;
@@ -47,13 +65,15 @@ class Combat {
     dmg -= tgt.def * 0.6;
     dmg = Math.max(dmg, att.atk * mul * 0.12, 1);
     dmg *= rand(0.9, 1.1) * elementMul(att.el, tgt.el);
+    // kháng hệ khắc: chỉ giảm đòn đến từ hệ khắc hệ của mục tiêu
+    if (tgt.resist && ELEMENTS[att.el] && ELEMENTS[att.el].beats === tgt.el) dmg *= 1 - Math.min(50, tgt.resist) / 100;
     const crit = Math.random() * 100 < (att.crit || 0);
-    if (crit) dmg *= 1.6;
+    if (crit) dmg *= (att.critDmg || 160) / 100;
     return { dmg: Math.max(1, Math.round(dmg)), crit };
   }
 
   playerAtt(p) {
-    return { atk: p.s.atk, crit: p.s.crit, hit: p.s.hit, skillDmg: p.s.skillDmg, el: p.el };
+    return { atk: p.s.atk, crit: p.s.crit, critDmg: p.s.critDmg, hit: p.s.hit, skillDmg: p.s.skillDmg, el: p.el };
   }
 
   // ---------- Mục tiêu
@@ -74,6 +94,8 @@ class Combat {
   canPvp(a, b) {
     if (a === b || a.dead || b.dead || a.map !== b.map) return false;
     const map = a.map.def;
+    // lôi đài: chỉ đánh được đối thủ cùng trận, sau hiệu lệnh bắt đầu
+    if (map.arena) return !!a.match && a.match === b.match && a.match.state === 'fight';
     if (map.town) return false;
     if (a.duel === b.id && b.duel === a.id) return true;
     if (map.pvp) return !(a.party && a.party === b.party);
@@ -111,11 +133,13 @@ class Combat {
   // ---------- Dùng kỹ năng
   useSkill(p, msg) {
     const sid = String(msg.sid || '');
-    const sk = SKILLS[sid];
-    if (!sk || sk.cls !== p.c.cls || p.dead || !p.map) return;
+    const sk = skillOf(sid);
+    if (!sk || sk.cls !== p.c.cls || sk.type === 'passive' || p.dead || !p.map) return;
     const lv = p.c.skills[sid];
     if (!lv) return;
     const now = Date.now();
+    // lôi đài: chưa tới hiệu lệnh (hoặc trận đã xong) thì không ra chiêu, kể cả buff
+    if (p.map.def.arena && (!p.match || p.match.state !== 'fight')) return;
     if ((p.cool[sid] || 0) > now + 60) return;
     if (now - p.lastSkillAt < 180) return;
     const mpCost = Math.round(skillVal(sk.mp, lv));
@@ -232,6 +256,7 @@ class Combat {
       const list = [];
       const att = this.playerAtt(p);
       const isSkill = !sk.basic;
+      let dealt = 0;
       for (const v of victims) {
         for (let h = 0; h < hits; h++) {
           if (v.kind === 'm') {
@@ -239,28 +264,115 @@ class Combat {
             const r = this.calc(att, { def: v.e.def.def, dodge: 0, el: v.e.def.el }, mul, isSkill);
             list.push([`m${v.e.id}`, r.dmg, r.crit ? 1 : 0, 0]);
             if (sk.slow) v.e.slowUntil = now + sk.slow;
+            dealt += Math.min(r.dmg, Math.max(0, v.e.hp));
             this.damageMonster(v.e, p, r.dmg);
           } else {
-            if (v.e.dead) break;
+            // đòn trước đã kết thúc trận (lôi đài hạ gục, thách đấu phân thắng bại): các đòn sau không đánh tiếp
+            if (v.e.dead || !this.canPvp(p, v.e)) break;
             const o = v.e;
-            const r = this.calc(att, { def: o.s.def, dodge: o.s.dodge, el: o.el }, mul * PVP_SCALE, isSkill);
+            const r = this.calc(att, this.playerTgt(o), mul * PVP_SCALE, isSkill);
             list.push([`p${o.id}`, r.dmg, r.crit ? 1 : 0, r.miss ? 1 : 0]);
-            if (!r.miss) this.damagePlayer(o, r.dmg, { player: p });
+            if (!r.miss) {
+              dealt += Math.min(r.dmg, Math.max(0, o.c.hp));
+              this.damagePlayer(o, r.dmg, { player: p });
+            }
           }
         }
       }
       if (list.length) map.broadcast('hit', { a: `p${p.id}`, list, sid });
+      this.lifeSteal(p, dealt);
     }
+  }
+
+  // Ngọc Huyết Hồn: hồi % sát thương thực gây ra (không tính phần dư của đòn kết liễu)
+  lifeSteal(p, dealt) {
+    const ls = p.s.lifesteal || 0;
+    if (ls <= 0 || dealt <= 0 || p.dead || p.c.hp >= p.s.maxHp) return 0;
+    const amt = Math.min(Math.round((dealt * ls) / 100), p.s.maxHp - p.c.hp);
+    if (amt <= 0) return 0;
+    p.heal(amt, 0);
+    // Gộp lượng hút máu, hiện số mỗi ~0.6s để không rối chữ giữa các con số sát thương
+    p.lsAcc = (p.lsAcc || 0) + amt;
+    const now = Date.now();
+    if (p.map && now - (p.lsShownAt || 0) >= 600) {
+      p.map.broadcast('heal', { list: [[`p${p.id}`, p.lsAcc]], ls: 1 });
+      p.lsAcc = 0;
+      p.lsShownAt = now;
+    }
+    return amt;
   }
 
   // ---------- Quái
   damageMonster(m, p, dmg) {
     if (m.dead) return;
+    // ghi nhận sát thương thực (không tính phần dư của đòn kết liễu) để chia thưởng theo % máu
+    const real = Math.min(dmg, Math.max(0, m.hp));
     m.hp -= dmg;
-    m.dmgBy.set(p.name, (m.dmgBy.get(p.name) || 0) + dmg);
+    m.dmgBy.set(p.name, (m.dmgBy.get(p.name) || 0) + real);
     m.aggroOn(p);
     if (m.target !== p.id && Math.random() < 0.15) m.target = p.id;
     if (m.hp <= 0) this.killMonster(m, p);
+    else if (m.boss && m.checkRage) m.checkRage();
+  }
+
+  // ---------- Chiêu boss: hết thời gian niệm thì tính sát thương theo vùng đã báo trước
+  bossSkillHit(m, c) {
+    const map = m.map;
+    const d = m.def;
+    const sk = c.sk;
+    const now = Date.now();
+    const hit = m.castPub(c);
+    if (sk.k === 'summon') hit.pts = this.summonMinions(m, sk);
+    map.broadcast('bossHit', hit);
+    if (!sk.mul || map.def.town) return;
+    const att = { atk: d.atk, crit: 10, hit: d.lv * 2, el: d.el };
+    const ex = sk.extra || {};
+    const list = [];
+    for (const p of map.players.values()) {
+      if (p.dead || !inBossZone(c, p)) continue;
+      const r = this.calc(att, this.playerTgt(p), sk.mul, false);
+      list.push([`p${p.id}`, r.dmg, r.crit ? 1 : 0, r.miss ? 1 : 0]);
+      p.lastCombat = now;
+      if (r.miss) continue;
+      this.damagePlayer(p, r.dmg, { monster: m });
+      if (ex.slow && !p.dead) {
+        p.addBuff('bs_slow', sk.name, 'spd', -ex.slow, ex.dur);
+        p.notice(`Bị ${sk.name} làm chậm!`, 'warn');
+      }
+    }
+    if (list.length) map.broadcast('hit', { a: `m${m.id}`, list, bs: 1 });
+  }
+
+  // Gọi quái con quanh boss; trả về vị trí từng con (để client vẽ vòng triệu hồi)
+  summonMinions(m, sk) {
+    const map = m.map;
+    const { m: key, n } = sk.extra;
+    const pts = [];
+    if (!MONSTERS[key]) return pts;
+    const room = Math.max(0, n * 2 - m.minions());
+    for (let i = 0; i < Math.min(n, room); i++) {
+      const cx = Math.max(60, Math.min(map.def.w - 60, m.x + (i - (n - 1) / 2) * 46 + m.dir * 30));
+      const o = map.addMonster(key, { m: key, x1: cx - 6, x2: cx + 6, y: m.y }, false);
+      o.noRespawn = true;
+      o.master = m.id;
+      o.target = m.target;
+      map.broadcast('mSpawn', o.pub());
+      pts.push([Math.round(o.x), Math.round(o.y)]);
+    }
+    return pts;
+  }
+
+  // Xóa hẳn quái khỏi bản đồ (quái con khi boss chết, boss sự kiện hết giờ)
+  removeMonster(o) {
+    o.dead = true;
+    o.cast = null;
+    o.map.monsters.delete(o.id);
+    o.map.broadcast('mGone', { id: o.id });
+  }
+
+  // Chỉ số phòng thủ của người chơi khi bị đánh (dùng chung cho PvP và quái đánh người)
+  playerTgt(o) {
+    return { def: o.s.def, dodge: o.s.dodge, el: o.el, resist: o.s.resist };
   }
 
   monsterAttack(m, p) {
@@ -274,7 +386,7 @@ class Combat {
     }
     const list = [];
     for (const t of targets) {
-      const r = this.calc({ atk: d.atk, crit: m.boss ? 10 : 3, hit: d.lv, el: d.el }, { def: t.s.def, dodge: t.s.dodge, el: t.el }, 1, false);
+      const r = this.calc({ atk: d.atk, crit: m.boss ? 10 : 3, hit: d.lv, el: d.el }, this.playerTgt(t), 1, false);
       list.push([`p${t.id}`, r.dmg, r.crit ? 1 : 0, r.miss ? 1 : 0]);
       t.lastCombat = now;
       if (!r.miss) this.damagePlayer(t, r.dmg, { monster: m });
@@ -292,6 +404,11 @@ class Combat {
     m.respawnAt = now + d.respawn * (m.boss ? 1 : 0.8 + Math.random() * 0.4);
     map.broadcast('mDie', { id: m.id });
 
+    if (m.boss) {
+      m.cast = null;
+      for (const o of [...map.monsters.values()]) if (o.master === m.id && !o.dead) this.removeMonster(o);
+    }
+
     let owner = killer;
     if (m.boss) {
       let best = null;
@@ -306,7 +423,10 @@ class Combat {
       if (best) owner = best;
     }
 
-    if (m.boss) {
+    if (m.event && this.world.event) {
+      // boss sự kiện: thưởng theo bảng xếp hạng sát thương (world/event.js)
+      this.world.event.onKill(m, owner);
+    } else if (m.boss) {
       // Chia EXP theo % sát thương, thưởng lượng cho top 3
       const total = [...m.dmgBy.values()].reduce((a, b) => a + b, 0) || 1;
       const ranking = [...m.dmgBy.entries()].sort((a, b) => b[1] - a[1]);
@@ -314,7 +434,9 @@ class Combat {
         const pl = this.world.byName.get(name.toLowerCase());
         if (!pl || pl.map !== map) return;
         const share = dmg / total;
-        const got = pl.gainExp(Math.round(d.exp * (0.15 + share)));
+        const raw = Math.round(d.exp * (0.15 + share));
+        const got = pl.gainExp(raw);
+        pl.petKillExp(raw);
         let luong = idx === 0 ? 20 : idx === 1 ? 10 : idx === 2 ? 5 : share > 0.02 ? 1 : 0;
         if (m.noRespawn) luong = idx === 0 ? 3 : 1;
         if (luong) {
@@ -330,6 +452,10 @@ class Combat {
     }
     owner.c.kills++;
 
+    // quái con chỉ cho EXP (không rơi đồ, tránh gọi ra để cày); quái không hồi sinh ngoài phó bản thì xóa luôn
+    if (m.master || m.event) map.monsters.delete(m.id);
+    if (m.master) return;
+
     // Rơi đồ
     const drops = this.rollDrops(m);
     const n = drops.length;
@@ -337,6 +463,8 @@ class Combat {
       const x = m.x + (i - (n - 1) / 2) * 12;
       map.dropItem(dr.it || null, dr.xu || 0, x, m.onPlatform ? m.y : m.spawn.y, owner.name);
     });
+    // vật phẩm sự kiện theo mùa (boss Tà Thú thưởng riêng theo hạng trong event.js)
+    if (!m.event && this.world.season) this.world.season.onKill(owner, m);
   }
 
   shareExp(owner, m) {
@@ -357,7 +485,9 @@ class Combat {
     const bonus = (1 + 0.12 * (members.length - 1)) * this.world.expEvent();
     const each = (d.exp * bonus) / members.length;
     for (const o of members) {
-      const got = o.gainExp(each * mods(o.lv) * (o === owner ? 1.1 : 1));
+      const raw = each * mods(o.lv) * (o === owner ? 1.1 : 1);
+      const got = o.gainExp(raw);
+      o.petKillExp(raw);
       o.send('expGain', { n: got, x: Math.round(m.x), y: Math.round(m.y - d.h) });
       o.onKill(m.k);
     }
@@ -383,6 +513,9 @@ class Combat {
       const pt = lv < 10 ? 1 : lv < 30 ? 2 : lv < 60 ? 3 : 4;
       out.push({ it: makeItem(Math.random() < 0.6 ? `hp${pt}` : `mp${pt}`, randInt(1, 3)) });
     }
+    // ngọc khảm: quái thường hiếm khi rơi (cấp 1, quái từ cấp 40 có thể ra cấp 2); boss luôn rơi 1 viên cấp 2-5 theo cấp boss
+    if (boss) out.push({ it: makeItem(randomGem(Math.min(5, 2 + Math.floor(lv / 35))), 1) });
+    else if (Math.random() < GEM.dropRate) out.push({ it: makeItem(randomGem(lv >= 40 && Math.random() < 0.25 ? 2 : 1), 1) });
     if (boss) out.push({ it: makeItem('chest', 2) });
     else if (Math.random() < 0.004) out.push({ it: makeItem('chest', 1) });
     return out;
@@ -391,11 +524,22 @@ class Combat {
   // ---------- Người chơi bị đánh
   damagePlayer(p, dmg, src) {
     if (p.dead) return;
+    const m = p.match;
+    if (m) {
+      // lôi đài: ngoài lúc đấu không mất máu; đánh trúng đánh dấu trận đã giao đấu (trận bỏ ngang khi chưa ai ra đòn thì không tính)
+      if (m.state !== 'fight') return;
+      if (src.player && src.player.match === m) m.hit = true;
+    }
     p.c.hp -= dmg;
     p.lastCombat = Date.now();
     p.markMe();
     if (p.c.hp > 0) return;
     const a = src.player;
+    // lôi đài: bị hạ là thua trận, không trọng thương / mất EXP
+    if (a && p.match && a.match === p.match && this.world.arena) {
+      this.world.arena.ko(p);
+      return;
+    }
     if (a && a.duel === p.id && p.duel === a.id) {
       p.c.hp = 1;
       this.world.social.endDuel(a, p);
@@ -434,4 +578,4 @@ class Combat {
   }
 }
 
-module.exports = { Combat, MIN_PK_LEVEL };
+module.exports = { Combat, MIN_PK_LEVEL, inBossZone };

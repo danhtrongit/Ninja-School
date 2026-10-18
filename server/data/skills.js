@@ -7,6 +7,7 @@
 //   dash   - lướt về phía trước và gây sát thương trên đường đi
 //   buff   - tăng chỉ số cho bản thân (party:true => cả nhóm ở gần)
 //   heal   - hồi máu cho bản thân và đồng đội ở gần
+//   passive - nội tại: luôn có hiệu lực (pas.stat + pas.v), học cấp 1 bằng sách (book), không gán vào thanh kỹ năng
 // mp / mul / buff.v : [giá trị cơ bản, cộng thêm mỗi cấp kỹ năng]
 // fx: hiệu ứng hiển thị phía client
 const SKILLS = {
@@ -69,6 +70,38 @@ Object.assign(SKILLS, {
   q6: { cls: 'quat', name: 'Thiên Phong Lốc', req: 60, type: 'aoe', center: 'target', range: 190, radius: 170, cd: 25000, mp: [90, 8], mul: [4.8, 0.35], fx: { k: 'whirl', c: '#00e676', big: true }, desc: 'Tuyệt kỹ: lốc xoáy trời đất nghiền nát diện rộng.' },
 });
 
+// Kỹ năng nội tại: mỗi phái 3 cái (cấp 15, 35, 50). Cấp 1 học bằng cách đọc sách, cấp sau dùng điểm kỹ năng.
+Object.assign(SKILLS, {
+  k7: { cls: 'kiem', name: 'Luyện Thể Quyết', req: 15, type: 'passive', pas: { stat: 'hpPct', v: [4, 0.8] }, desc: 'Rèn thân như thép, tăng % sinh lực tối đa.' },
+  k8: { cls: 'kiem', name: 'Liệt Hỏa Tâm Pháp', req: 35, type: 'passive', pas: { stat: 'skillDmg', v: [4, 0.8] }, desc: 'Hỏa khí nhập kiếm, tăng % sát thương kỹ năng.' },
+  k9: { cls: 'kiem', name: 'Bạo Viêm Kiếm Ý', req: 50, type: 'passive', pas: { stat: 'critDmg', v: [10, 2] }, desc: 'Đòn chí mạng bùng nổ dữ dội hơn.' },
+  t7: { cls: 'tieu', name: 'Phiêu Ảnh Bộ', req: 15, type: 'passive', pas: { stat: 'dodge', v: [2, 0.3] }, desc: 'Thân pháp như bóng, tăng % né tránh.' },
+  t8: { cls: 'tieu', name: 'Ngưng Thần Quyết', req: 35, type: 'passive', pas: { stat: 'crit', v: [2, 0.4] }, desc: 'Tĩnh tâm nhắm điểm yếu, tăng % chí mạng.' },
+  t9: { cls: 'tieu', name: 'Hỏa Linh Hộ Thân', req: 50, type: 'passive', pas: { stat: 'resist', v: [8, 1.5] }, desc: 'Linh hỏa bảo vệ, giảm sát thương từ hệ khắc mình.' },
+  n7: { cls: 'kunai', name: 'Thủy Nguyên Quyết', req: 15, type: 'passive', pas: { stat: 'mpRegen', v: [2, 0.6] }, desc: 'Chakra tuôn như suối, tự hồi chakra mỗi giây.' },
+  n8: { cls: 'kunai', name: 'Băng Tâm Hộ Thể', req: 35, type: 'passive', pas: { stat: 'defPct', v: [5, 1] }, desc: 'Lớp băng hộ thân, tăng % phòng thủ.' },
+  n9: { cls: 'kunai', name: 'Thủy Kính Hóa Giải', req: 50, type: 'passive', pas: { stat: 'resist', v: [8, 1.5] }, desc: 'Gương nước hóa giải, giảm sát thương từ hệ khắc mình.' },
+  c7: { cls: 'cung', name: 'Ưng Mục Tâm Pháp', req: 15, type: 'passive', pas: { stat: 'crit', v: [2, 0.4] }, desc: 'Mắt ưng nhìn thấu, tăng % chí mạng.' },
+  c8: { cls: 'cung', name: 'Xuyên Giáp Tiễn Ý', req: 35, type: 'passive', pas: { stat: 'critDmg', v: [10, 2] }, desc: 'Mũi tên chí mạng xuyên sâu hơn.' },
+  c9: { cls: 'cung', name: 'Thủy Ảnh Thân Pháp', req: 50, type: 'passive', pas: { stat: 'dodge', v: [2, 0.3] }, desc: 'Lướt như bóng nước, tăng % né tránh.' },
+  d7: { cls: 'dao', name: 'Kim Cương Thể', req: 15, type: 'passive', pas: { stat: 'hpPct', v: [4, 0.8] }, desc: 'Thân thể kim cương, tăng % sinh lực tối đa.' },
+  d8: { cls: 'dao', name: 'Phong Thuẫn Quyết', req: 35, type: 'passive', pas: { stat: 'resist', v: [8, 1.5] }, desc: 'Khiên gió quanh thân, giảm sát thương từ hệ khắc mình.' },
+  d9: { cls: 'dao', name: 'Cuồng Đao Ý', req: 50, type: 'passive', pas: { stat: 'atkPct', v: [3, 0.6] }, desc: 'Đao ý cuồng bạo, tăng % tấn công.' },
+  q7: { cls: 'quat', name: 'Thanh Phong Tâm Pháp', req: 15, type: 'passive', pas: { stat: 'mpRegen', v: [2, 0.6] }, desc: 'Gió mát dưỡng khí, tự hồi chakra mỗi giây.' },
+  q8: { cls: 'quat', name: 'Phong Linh Quyết', req: 35, type: 'passive', pas: { stat: 'skillDmg', v: [4, 0.8] }, desc: 'Phong linh trợ lực, tăng % sát thương kỹ năng.' },
+  q9: { cls: 'quat', name: 'Tật Phong Bộ', req: 50, type: 'passive', pas: { stat: 'spd', v: [4, 0.8] }, desc: 'Bước chân nhanh như gió, tăng % tốc chạy.' },
+});
+
+// Sách học cấp 1 (vật phẩm tạo trong items.js theo khóa này)
+for (const id of Object.keys(SKILLS)) if (SKILLS[id].type === 'passive') SKILLS[id].book = `book_${id}`;
+
+// Chỉ số nội tại: khóa → [tên hiển thị, hậu tố]
+const PASSIVE_STATS = {
+  hpPct: ['sinh lực', '%'], atkPct: ['tấn công', '%'], defPct: ['phòng thủ', '%'], crit: ['chí mạng', '%'], dodge: ['né tránh', '%'],
+  skillDmg: ['sát thương kỹ năng', '%'], critDmg: ['sát thương chí mạng', '%'], resist: ['kháng hệ khắc', '%'], mpRegen: ['chakra mỗi giây', ''],
+  spd: ['tốc chạy', '%'],
+};
+
 const SKILL_MAX_LV = 15;
 
 function classSkills(cls) {
@@ -84,4 +117,28 @@ function skillVal(arr, lv) {
   return arr[0] + arr[1] * Math.max(0, lv - 1);
 }
 
-module.exports = { SKILLS, SKILL_MAX_LV, classSkills, basicSkill, skillVal };
+// Tra kỹ năng theo id do client gửi: chỉ nhận khóa riêng của SKILLS ('__proto__', 'constructor' trả null)
+function skillOf(sid) {
+  return typeof sid === 'string' && Object.prototype.hasOwnProperty.call(SKILLS, sid) ? SKILLS[sid] : null;
+}
+
+// Giá trị nội tại ở cấp lv (làm tròn 1 chữ số thập phân, giống hiển thị phía client)
+function passiveVal(sk, lv) {
+  return Math.round(skillVal(sk.pas.v, lv) * 10) / 10;
+}
+
+// Tổng chỉ số nội tại theo các kỹ năng đã học; chỉ duyệt kỹ năng của phái (bỏ qua khóa rác trong dữ liệu lưu)
+function passiveBonus(cls, skills) {
+  const out = {};
+  for (const k of Object.keys(PASSIVE_STATS)) out[k] = 0;
+  if (!skills) return out;
+  for (const id of classSkills(cls)) {
+    const sk = SKILLS[id];
+    const lv = Object.prototype.hasOwnProperty.call(skills, id) ? Math.min(SKILL_MAX_LV, skills[id] | 0) : 0;
+    if (sk.type === 'passive' && lv > 0) out[sk.pas.stat] += passiveVal(sk, lv);
+  }
+  for (const k in out) out[k] = Math.round(out[k] * 10) / 10;
+  return out;
+}
+
+module.exports = { SKILLS, SKILL_MAX_LV, PASSIVE_STATS, classSkills, basicSkill, skillVal, skillOf, passiveVal, passiveBonus };

@@ -38,6 +38,7 @@ function show(name) {
   if (name !== 'chars') hideDelete();
   if (name !== 'game') {
     game.active = false;
+    game.leaveSession();
     ui.reset();
     hudReady = false;
   }

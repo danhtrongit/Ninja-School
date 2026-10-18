@@ -515,7 +515,12 @@ const LEAF_SHAPES = [
 
 // ================= TIỆN ÍCH VẼ =================
 function ringPx(ctx, cx, cy, rx, ry, w, h, a0 = 0, a1 = TAU, step = 1.6) {
-  const n = Math.max(10, Math.min(320, R0(((rx + ry) * Math.PI * ((a1 - a0) / TAU)) / step)));
+  // vòng kín: tô theo hàng giữa elip ngoài và elip trong -> liền nét, không chồng alpha ở bán kính lớn
+  if (a1 - a0 >= TAU - 1e-3 && rx >= 3) {
+    ringRows(ctx, R0(cx), R0(cy), rx, ry, w, h);
+    return;
+  }
+  const n = Math.max(10, Math.min(2000, R0(((rx + ry) * Math.PI * ((a1 - a0) / TAU)) / step)));
   for (let i = 0; i <= n; i++) {
     const a = a0 + ((a1 - a0) * i) / n;
     ctx.fillRect(R0(cx + Math.cos(a) * rx - w / 2), R0(cy + Math.sin(a) * ry - h / 2), w, h);
@@ -529,6 +534,194 @@ function linePx(ctx, x0, y0, x1, y1, w = 1) {
   for (let i = 0; i <= n; i++) ctx.fillRect(R0(x0 + (dx * i) / n), R0(y0 + (dy * i) / n), w, w);
 }
 
+// Cột sáng cao H (sprite cùng chiều cao, không co giãn dọc); đoạn 40px cuối (vùng thân nhân vật) mờ hơn
+// để vẫn đọc được nhân vật bên trong cột
+function bodyBeam(ctx, img, x, yFoot, bw, a, bodyA) {
+  const H = img.height;
+  const top = yFoot + 2 - H;
+  const cut = H - 42;
+  const dx = x - (bw >> 1);
+  ctx.globalAlpha = a;
+  ctx.drawImage(img, 0, 0, img.width, cut, dx, top, bw, cut);
+  ctx.globalAlpha = a * bodyA;
+  ctx.drawImage(img, 0, cut, img.width, 42, dx, top + cut, bw, 42);
+}
+
+// Viền elip dày w (ngang) x h (dọc), mỗi hàng tối đa 2 fillRect
+function ringRows(ctx, cx, cy, rx, ry, w, h) {
+  const ox = rx + w / 2;
+  const oy = Math.max(0.5, ry + h / 2);
+  const ix = rx - w / 2;
+  const iy = ry - h / 2;
+  const n = Math.ceil(oy);
+  for (let dy = -n; dy <= n; dy++) {
+    const v = dy / oy;
+    if (v * v >= 1) continue;
+    const ho = R0(ox * Math.sqrt(1 - v * v));
+    const u = iy > 0.5 ? dy / iy : 2;
+    const hi = u * u < 1 ? R0(ix * Math.sqrt(1 - u * u)) : -1;
+    if (hi < 0 || ho - hi < 1) ctx.fillRect(cx - ho, cy + dy, ho * 2 + 1, 1);
+    else {
+      ctx.fillRect(cx - ho, cy + dy, ho - hi, 1);
+      ctx.fillRect(cx + hi + 1, cy + dy, ho - hi, 1);
+    }
+  }
+}
+
+// Elip đặc tô theo từng hàng (1 fillRect/hàng, không chồng alpha)
+function fillEllipse(ctx, cx, cy, rx, ry) {
+  if (rx < 0.5 || ry < 0.5) return;
+  const n = Math.ceil(ry);
+  for (let dy = -n; dy <= n; dy++) {
+    const v = dy / (ry + 0.5);
+    if (v * v >= 1) continue;
+    const hw = R0(rx * Math.sqrt(1 - v * v));
+    ctx.fillRect(cx - hw, cy + dy, hw * 2 + 1, 1);
+  }
+}
+
+const SPRITE_OUTLINE = '#1d1424';
+
+// Chữ phù văn 5x5 tự thiết kế (lên cấp, cường hóa, triệu hồi)
+const RUNES = [
+  ['#####', '..#..', '.###.', '..#..', '.#.#.'],
+  ['#####', '....#', '.##.#', '.#..#', '.####'],
+  ['.###.', '#...#', '#.#.#', '#...#', '.###.'],
+  ['#.#.#', '#.#.#', '#####', '..#..', '..#..'],
+  ['..#..', '.#.#.', '#...#', '.#.#.', '..#..'],
+  ['###..', '..#..', '..###', '..#..', '###..'],
+  ['#...#', '##.##', '#.#.#', '#...#', '#...#'],
+  ['..#..', '.###.', '#.#.#', '..#..', '#####'],
+];
+const runeCache = new Map();
+function runeSprite(c, i) {
+  const key = `${c}|${i}`;
+  let cv = runeCache.get(key);
+  if (cv) return cv;
+  const m = RUNES[i % RUNES.length];
+  cv = mkCanvas(7, 7);
+  const g = cv.getContext('2d');
+  const img = g.createImageData(7, 7);
+  const lit = rgb(shade(c, 0.55));
+  const mid = rgb(c);
+  for (let y = 0; y < 5; y++) {
+    for (let x = 0; x < 5; x++) {
+      if (m[y][x] !== '#') continue;
+      // ánh sáng trên-trái: điểm có ô trống phía trên hoặc bên trái sáng hơn
+      const edge = y === 0 || x === 0 || m[y - 1][x] !== '#' || m[y][x - 1] !== '#';
+      const col = edge ? lit : mid;
+      const k = ((y + 1) * 7 + x + 1) * 4;
+      img.data[k] = col[0];
+      img.data[k + 1] = col[1];
+      img.data[k + 2] = col[2];
+      img.data[k + 3] = 255;
+    }
+  }
+  outlineImg(img, 7, 7, SPRITE_OUTLINE);
+  g.putImageData(img, 0, 0);
+  runeCache.set(key, cv);
+  return cv;
+}
+
+// Dấu "!" cảnh báo chiêu boss
+const bangCache = new Map();
+function bangSprite(c) {
+  let cv = bangCache.get(c);
+  if (cv) return cv;
+  const m = ['LMM', 'LMM', 'LMD', 'LMD', 'MMD', '...', 'LMD', 'MDD'];
+  const pal = { L: shade(c, 0.6), M: c, D: shade(c, -0.3) };
+  cv = mkCanvas(5, 10);
+  const g = cv.getContext('2d');
+  const img = g.createImageData(5, 10);
+  m.forEach((row, y) => {
+    for (let x = 0; x < 3; x++) {
+      const ch = row[x];
+      if (ch === '.') continue;
+      const col = rgb(pal[ch]);
+      const k = ((y + 1) * 5 + x + 1) * 4;
+      img.data[k] = col[0];
+      img.data[k + 1] = col[1];
+      img.data[k + 2] = col[2];
+      img.data[k + 3] = 255;
+    }
+  });
+  outlineImg(img, 5, 10, SPRITE_OUTLINE);
+  g.putImageData(img, 0, 0);
+  bangCache.set(c, cv);
+  return cv;
+}
+
+// Mảnh đá vỡ (viền tối, sáng trên-trái), 2 cỡ
+const ROCK_SHAPES = {
+  3: ['.ooo.', 'oLLMo', 'oLMDo', 'oMDDo', '.ooo.'],
+  4: ['.oooo.', 'oLLLMo', 'oLMMDo', 'oMMDDo', '.oDDDo', '..ooo.'],
+};
+const rockCache = new Map();
+function rockSprite(c, s) {
+  const key = `${c}|${s}`;
+  let cv = rockCache.get(key);
+  if (cv) return cv;
+  const m = ROCK_SHAPES[s] || ROCK_SHAPES[3];
+  const pal = { o: SPRITE_OUTLINE, L: shade(c, 0.35), M: c, D: shade(c, -0.3) };
+  cv = mkCanvas(m[0].length, m.length);
+  const g = cv.getContext('2d');
+  m.forEach((row, y) => {
+    for (let x = 0; x < row.length; x++) {
+      if (row[x] === '.') continue;
+      g.fillStyle = pal[row[x]];
+      g.fillRect(x, y, 1, 1);
+    }
+  });
+  rockCache.set(key, cv);
+  return cv;
+}
+
+// Sao lấp lánh 4 cánh có viền tối (thời trang), n = độ dài cánh 1..3
+const twkCache = new Map();
+function twinkleSprite(c, n) {
+  const key = `${c}|${n}`;
+  let cv = twkCache.get(key);
+  if (cv) return cv;
+  const S = n * 2 + 3;
+  const m = n + 1;
+  cv = mkCanvas(S, S);
+  const g = cv.getContext('2d');
+  const img = g.createImageData(S, S);
+  const put = (x, y, col) => {
+    const k = (y * S + x) * 4;
+    img.data[k] = col[0];
+    img.data[k + 1] = col[1];
+    img.data[k + 2] = col[2];
+    img.data[k + 3] = 255;
+  };
+  const mid = rgb(c);
+  const lit = rgb(shade(c, 0.5));
+  for (let i = 1; i <= n; i++) {
+    // cánh trên và trái sáng hơn (ánh sáng trên-trái)
+    put(m, m - i, i === 1 ? lit : mid);
+    put(m - i, m, i === 1 ? lit : mid);
+    put(m, m + i, mid);
+    put(m + i, m, mid);
+  }
+  if (n >= 3) {
+    put(m - 1, m - 1, lit);
+    put(m + 1, m + 1, mid);
+  }
+  put(m, m, [255, 255, 255]);
+  outlineImg(img, S, S, SPRITE_OUTLINE);
+  g.putImageData(img, 0, 0);
+  twkCache.set(key, cv);
+  return cv;
+}
+
+// Màu cường hóa theo mốc +, khớp bảng độ hiếm
+function plusColor(plus) {
+  if (plus >= 13) return '#ff8a3c';
+  if (plus >= 9) return '#c77dff';
+  if (plus >= 5) return '#ffd23c';
+  return '#5ab4ff';
+}
+
 // ================= LỚP FX =================
 export class FX {
   constructor() {
@@ -538,6 +731,47 @@ export class FX {
     this.time = 0;
     this.mctx = mkCanvas(4, 4).getContext('2d');
     this.fontOK = false;
+    // Rung màn hình: cường độ (pixel nghệ thuật), giảm dần trong update
+    this.shake = 0;
+    // hệ số rung do game đặt (0 = tắt rung theo tùy chọn người chơi)
+    this.shakeScale = 1;
+    this.shakeOff = { x: 0, y: 0 };
+    this.frame = 0;
+    this.groundFrame = -1;
+    // khung nhìn của lần vẽ trước, để giảm rung theo khoảng cách
+    this.viewX = 0;
+    this.viewY = 0;
+    this.viewW = 0;
+    this.viewH = 0;
+  }
+
+  addShake(v) {
+    const s = (+v || 0) * (this.shakeScale >= 0 ? this.shakeScale : 1);
+    if (s > 0) this.shake = Math.min(12, Math.max(this.shake, s));
+  }
+
+  // Rung tại vị trí thế giới: đủ mạnh khi trong khung nhìn, nhỏ dần ra ngoài, tắt khi xa hơn nửa màn hình
+  shakeAt(x, y, v) {
+    const W = this.viewW;
+    if (!W) return this.addShake(v);
+    const dx = Math.max(0, Math.abs(x - (this.viewX + W / 2)) - W / 2);
+    const dy = Math.max(0, Math.abs(y - (this.viewY + this.viewH / 2)) - this.viewH / 2);
+    const k = 1 - Math.max(dx / (W * 0.5), dy / Math.max(1, this.viewH * 0.5));
+    if (k > 0) this.addShake(v * k);
+  }
+
+  // Độ lệch camera nguyên pixel cho khung hiện tại (đối tượng dùng lại, không cấp phát)
+  shakeXY() {
+    const o = this.shakeOff;
+    const s = this.shake;
+    if (s < 0.3) {
+      o.x = 0;
+      o.y = 0;
+    } else {
+      o.x = R0(Math.sin(this.time * 91) * s);
+      o.y = R0(Math.cos(this.time * 73) * s * 0.6);
+    }
+    return o;
   }
 
   add(e) {
@@ -705,10 +939,213 @@ export class FX {
     this.add({ k: 'level', get, life: 1.5, acc: 0, burst: false });
   }
 
+  // ---- Cảnh báo chiêu boss trên mặt đất. kind: 'circle' | 'line' (radius = chiều dài, dấu = hướng) | 'pillar'
+  // width (tùy chọn, chỉ cho 'line'): bề dày dải trên mặt đất theo pixel, mặc định 14
+  telegraph(x, y, radius, dur, color, kind, width) {
+    const d = Math.max(0.2, Math.min(6, +dur || 1));
+    const k = kind === 'line' || kind === 'pillar' ? kind : 'circle';
+    const r = +radius || 60;
+    const e = { k: 'tele', ground: true, x, y, kind: k, dur: d, life: d + 0.16, c: color || '#ff5252', acc: 0 };
+    if (k === 'line') {
+      e.dir = r < 0 ? -1 : 1;
+      e.len = Math.max(16, Math.abs(r));
+      e.h = Math.max(3, Math.min(40, R0((+width || 14) / 2)));
+    } else e.r = Math.max(12, Math.abs(r));
+    return this.add(e);
+  }
+
+  // ---- Chiêu boss tung ra. kind: 'quake' | 'roar' | 'summon' | 'beam' | 'nova'
+  bossSkill(x, y, kind, color, scale) {
+    const sc = Math.max(0.5, Math.min(3, +scale || 1));
+    switch (kind) {
+      case 'quake': return this.bsQuake(x, y, color || '#ff7043', sc);
+      case 'roar': return this.bsRoar(x, y, color || '#ffe0b2', sc);
+      case 'summon': return this.bsSummon(x, y, color || '#c77dff', sc);
+      case 'beam': return this.bsBeam(x, y, color || '#80d8ff', sc);
+      default: return this.bsNova(x, y, color || '#ff8a3c', sc);
+    }
+  }
+
+  // Rung của chiêu boss: tăng chậm theo cỡ boss, giảm theo khoảng cách tới khung nhìn
+  bossShake(x, y, base, sc) {
+    this.shakeAt(x, y, base * Math.min(1.4, 0.7 + 0.3 * sc));
+  }
+
+  rock(x, y, vx, vy, c, floor, s) {
+    return this.spawn('rock', x, y, vx, vy, rnd(0.7, 1.1), c, { g: 420, floor, s: s || (Math.random() < 0.5 ? 3 : 4) });
+  }
+
+  bsQuake(x, y, c, sc) {
+    const R = 90 * sc;
+    const g = Math.min(sc, 2);
+    const cracks = [];
+    for (const side of [-1, 1]) {
+      for (let m = 0; m < 3; m++) {
+        const reach = R * (m === 2 ? rnd(0.35, 0.55) : rnd(0.75, 1));
+        const tilt = (m - 1) * rnd(0.12, 0.22);
+        const pts = [0, 0];
+        let px = 0;
+        let py = 0;
+        while (Math.abs(px) < reach) {
+          px += side * rnd(5, 10);
+          py = Math.max(-R * 0.22, Math.min(R * 0.22, py + tilt * 7 + rnd(-1.6, 1.6)));
+          pts.push(px, py);
+        }
+        cracks.push(pts);
+      }
+    }
+    this.add({ k: 'quake', ground: true, x, y, c, sc, R, cracks, life: 0.95, acc: 0 });
+    // vòng bụi đất (màu đất, không cộng sáng) để khác hẳn vòng trắng của nova
+    const RR = Math.min(150, R);
+    this.spawn('dring', x, y, 0, 0, 0.55, '#a1887f', { s: 6, s1: RR * 0.95, ry: 0.3, w: 3 });
+    this.spawn('dring', x, y, 0, 0, 0.7, '#8d6e63', { s: 4, s1: RR * 0.68, ry: 0.3, w: 2 });
+    this.spawn('glow', x, y - 4, 0, 0, 0.25, c, { s: 10 * g, s1: 20 * g, a: 0.4, add: true });
+    const rocks = ['#8d6e63', '#6d4c41', '#a1887f', '#795548'];
+    for (let i = 0; i < R0(16 * g); i++) {
+      const a = rnd(-1, 1);
+      this.rock(x + a * R * 0.6, y - rnd(0, 3), a * rnd(40, 120), -rnd(90, 210), pick(rocks), y + rnd(-3, 4));
+    }
+    for (let i = 0; i < R0(10 * g); i++) {
+      const sm = this.smoke(x + rnd(-R, R) * 0.7, y - rnd(0, 4), pick(['#bcaaa4', '#a1887f', '#d7ccc8']), 3, 8, 0.9, 0.6);
+      if (sm) sm.vx = (sm.x - x) * 0.9;
+    }
+    this.bossShake(x, y, 6, sc);
+  }
+
+  bsRoar(x, y, c, sc) {
+    const hy = y - 26 * sc;
+    const g = Math.min(sc, 2);
+    this.add({ k: 'roar', x, y, hy, c, sc, R: 95 * sc, life: 0.8, acc: 0 });
+    this.spawn('glow', x, hy, 0, 0, 0.2, '#ffffff', { s: 8 * g, s1: 16 * g, a: 0.45, add: true });
+    for (let i = 0; i < R0(8 * g); i++) {
+      const sm = this.smoke(x + rnd(-10, 10) * sc, y - 1, pick(['#d7ccc8', '#bcaaa4']), 2, 6, 0.6, 0.5);
+      if (sm) sm.vx = (i % 2 ? 1 : -1) * rnd(50, 110);
+    }
+    this.bossShake(x, y, 3, sc);
+  }
+
+  bsSummon(x, y, c, sc) {
+    const g = Math.min(sc, 2);
+    this.add({ k: 'summon', ground: true, x, y, c, sc, R: 34 * sc, life: 1.25, acc: 0, popped: false, dark: shade(c, -0.6), lite: shade(c, 0.5) });
+    this.spawn('glow', x, y - 2, 0, 0, 0.3, c, { s: 10 * g, s1: 30 * g, a: 0.35, add: true });
+  }
+
+  bsBeam(x, y, c, sc) {
+    const g = Math.min(sc, 2);
+    this.add({ k: 'beam', x, y, c, sc, life: 0.85, acc: 0 });
+    const gc = glowCol(c, elemOf(c));
+    const brp = ramp(gc);
+    this.spawn('glow', x, y - 8, 0, 0, 0.25, '#ffffff', { s: 12 * g, s1: 22 * g, a: 0.6, add: true });
+    // vòng sóng theo màu nguyên tố của tia (không phải vòng trắng)
+    this.spawn('dring', x, y, 0, 0, 0.45, brp[2], { s: 6, s1: 46 * g, ry: 0.32, w: 2 });
+    this.spawn('dring', x, y, 0, 0, 0.6, brp[3], { s: 4, s1: 32 * g, ry: 0.32, w: 2 });
+    const sp = EP[elemOf(c)].spark;
+    for (let i = 0; i < R0(22 * g); i++) {
+      const a = rnd(-Math.PI, 0);
+      const v = rnd(50, 150);
+      this.spawn('spark', x + rnd(-4, 4), y - 2, Math.cos(a) * v, Math.sin(a) * v, rnd(0.25, 0.5), i % 2 ? '#ffffff' : pick(sp), { g: 160, drag: 2, s: 3, add: true, floor: y });
+    }
+    this.bossShake(x, y, 4, sc);
+  }
+
+  bsNova(x, y, c, sc) {
+    const el = elemOf(c);
+    // cỡ hình ảnh tối đa 2: sc lớn chỉ mở rộng vòng mặt đất, không phủ trắng màn hình
+    const g = Math.min(sc, 2);
+    const cy = y - 12 * g;
+    // vòng mặt đất tối đa 160px: lớn hơn thì elip cao quá khung nhìn 150px
+    const R = Math.min(160, 100 * sc);
+    this.add({ k: 'nova', x, y, cy, c, el, sc, g, R, life: 0.8, acc: 0 });
+    this.spawn('glow', x, cy, 0, 0, 0.22, '#ffffff', { s: 16 * g, s1: Math.min(60, 36 * g), a: 0.75 - 0.15 * (g - 1), add: true });
+    this.spawn('ring', x, y, 0, 0, 0.55, '#ffffff', { s: 10, s1: R, ry: 0.34, add: true, w: 3 });
+    this.spawn('ring', x, y, 0, 0, 0.75, glowCol(c, el), { s: 6, s1: R * 0.85, ry: 0.34, add: true, w: 2 });
+    const sp = EP[el].spark;
+    for (let i = 0; i < R0(30 * g); i++) {
+      const a = Math.random() * TAU;
+      const v = rnd(80, 200) * Math.min(1.6, sc);
+      this.spawn('spark', x, cy, Math.cos(a) * v, Math.sin(a) * v * 0.7 - 20, rnd(0.3, 0.6), i % 3 ? pick(sp) : '#ffffff', { g: 110, drag: 2.2, s: 3, add: true });
+    }
+    // khói sáng ấm, mỏng, bay ra ngoài và lên trên thay cho khói đen của nổ thường
+    if (el === 'fire' || el === 'water' || el === 'ice') this.explode(x, cy, 40 * g, c, el === 'fire' ? 'fire' : 'water', true, ['#ffccbc', '#ffe0b2', '#d7ccc8']);
+    else for (let i = 0; i < 12; i++) {
+      const st = this.star(x, cy, i % 2 ? '#ffffff' : c, 5, 0.5);
+      if (st) {
+        st.vx = Math.cos((i / 12) * TAU) * 120;
+        st.vy = Math.sin((i / 12) * TAU) * 70;
+        st.drag = 2.5;
+      }
+    }
+    this.bossShake(x, y, 7, sc);
+  }
+
+  // ---- Cường hóa: ok = thành công/thất bại, plus = cấp + sau khi cường hóa (đổi màu theo mốc)
+  enhance(x, y, ok, plus) {
+    const p = Math.max(0, +plus || 0);
+    const c = plusColor(p);
+    if (ok) {
+      this.add({ k: 'enh', x, y, ok: true, c, plus: p, life: 1.1, acc: 0 });
+      this.spawn('glow', x, y - 14, 0, 0, 0.2, '#ffffff', { s: 8, s1: 18, a: 0.35, add: true });
+      const n = p >= 9 ? 16 : 12;
+      for (let i = 0; i < n; i++) {
+        const st = this.star(x, y - 14, i % 2 ? c : '#ffffff', 4, 0.6);
+        if (st) {
+          st.vx = Math.cos((i / n) * TAU) * 70;
+          st.vy = Math.sin((i / n) * TAU) * 45 - 15;
+          st.drag = 2.6;
+        }
+      }
+      if (p >= 13) this.addShake(2);
+    } else {
+      this.add({ k: 'enh', x, y, ok: false, c: '#90a4ae', plus: p, life: 0.85, acc: 0 });
+      this.spawn('glow', x, y - 12, 0, 0, 0.18, '#ff5252', { s: 8, s1: 14, a: 0.4, add: true });
+      // khói thấp sát đất và dạt hai bên để dấu X ở giữa vẫn rõ
+      for (let i = 0; i < 8; i++) {
+        const d = i % 2 ? 1 : -1;
+        const sm = this.smoke(x + d * rnd(6, 14), y - rnd(0, 5), pick(['#78909c', '#607d8b', '#546e7a']), 2, 6, 0.8, 0.5);
+        if (sm) {
+          sm.vx = d * rnd(15, 35);
+          sm.vy = -rnd(4, 12);
+        }
+      }
+      for (let i = 0; i < 6; i++) {
+        const d = i % 2 ? 1 : -1;
+        this.rock(x + d * rnd(4, 9), y - rnd(4, 10), d * rnd(30, 70), -rnd(40, 100), pick(['#90a4ae', '#78909c', '#b0bec5']), y + rnd(-2, 3), 3);
+      }
+      this.addShake(1.5);
+    }
+  }
+
+  // ---- Bụi chân thú cưỡi: gọi khoảng 8 lần/giây khi thú đang chạy (dir = hướng chạy)
+  mountDust(x, y, dir) {
+    const d = dir < 0 ? -1 : 1;
+    const n = Math.random() < 0.5 ? 2 : 3;
+    for (let i = 0; i < n; i++) {
+      const sm = this.smoke(x - d * rnd(2, 8), y - rnd(0, 2), pick(['#d7ccc8', '#bcaaa4', '#a1887f']), 2, rnd(4, 6) | 0, 0.5, 0.7);
+      if (sm) {
+        sm.vx = -d * rnd(15, 40);
+        sm.vy = -rnd(6, 16);
+      }
+    }
+    if (Math.random() < 0.4) this.spawn('px', x - d * 4, y - 1, -d * rnd(20, 50), -rnd(30, 60), 0.4, pick(['#8d6e63', '#6d4c41']), { g: 260, floor: y, a: 1 });
+  }
+
+  // ---- Lấp lánh khi khảm ngọc vào trang bị
+  gemSocket(x, y, color) {
+    const c = color || '#5ab4ff';
+    this.add({ k: 'gem', x, y, c, lite: shade(c, 0.5), dark: shade(c, -0.55), life: 0.75, acc: 0, popped: false });
+  }
+
+  // ---- Lấp lánh thời trang (ngoại trang mới): xoắn ánh sáng quanh thân + sao lấp lánh
+  costumeSparkle(x, y, color) {
+    const c = color || '#f48fb1';
+    this.add({ k: 'cost', x, y, c, lite: shade(c, 0.5), mid: shade(c, -0.15), dark: shade(c, -0.5), life: 1.1, acc: 0, popped: false });
+  }
+
   // ================= CẬP NHẬT =================
   update(dt) {
     if (dt > 0.1) dt = 0.1;
     this.time += dt;
+    if (this.shake > 0) this.shake = Math.max(0, this.shake - dt * (4 + this.shake * 5));
     for (const e of this.list) {
       if (e.delay > 0) {
         e.delay -= dt;
@@ -859,7 +1296,8 @@ export class FX {
     if (e.boom) this.explode(x, y, 26, c, el === 'neutral' ? 'fire' : el, false);
   }
 
-  explode(x, y, r, c, el, big) {
+  // smoke (tùy chọn): bảng màu khói sáng, bay ra ngoài và lên cao để không che người ở tâm nổ
+  explode(x, y, r, c, el, big, smoke) {
     this.add({ k: 'boom', x, y, r, c, el, life: big ? 0.6 : 0.45 });
     this.spawn('glow', x, y, 0, 0, 0.2, '#ffffff', { s: r * 0.4, s1: r * 0.6, a: 0.6, add: true });
     if (el === 'water' || el === 'ice') {
@@ -874,7 +1312,18 @@ export class FX {
       this.flame(x + Math.cos(a) * 3, y + Math.sin(a) * 3, Math.cos(a) * v, Math.sin(a) * v * 0.6 - 30, rp, big ? 5 : 4, 0.5);
     }
     for (let i = 0; i < (big ? 20 : 8); i++) this.ember(x + rnd(-8, 8), y - rnd(0, 8), pick(EP.fire.spark), big ? 110 : 70);
-    for (let i = 0; i < (big ? 10 : 4); i++) this.smoke(x + rnd(-r, r) * 0.4, y - rnd(0, 14), pick(EP.fire.smoke), 3, big ? 9 : 6, big ? 1.2 : 0.9, 0.6);
+    if (!smoke) {
+      for (let i = 0; i < (big ? 10 : 4); i++) this.smoke(x + rnd(-r, r) * 0.4, y - rnd(0, 14), pick(EP.fire.smoke), 3, big ? 9 : 6, big ? 1.2 : 0.9, 0.6);
+      return;
+    }
+    for (let i = 0; i < (big ? 8 : 4); i++) {
+      const d = i % 2 ? 1 : -1;
+      const sm = this.smoke(x + d * rnd(0.7, 1.1) * r, y - rnd(10, 24), pick(smoke), 3, big ? 8 : 6, 0.9, 0.32);
+      if (sm) {
+        sm.vx = d * rnd(25, 50);
+        sm.vy = -rnd(25, 45);
+      }
+    }
   }
 
   u_burst(e, dt) {
@@ -1072,8 +1521,153 @@ export class FX {
     if (e.t > e.life * 0.75) return;
     const k = this.tick(e, dt, 60);
     for (let i = 0; i < k; i++) {
-      if (i % 2) this.spawn('ember', o.x + rnd(-14, 14), o.y - rnd(0, 6), rnd(-6, 6), -rnd(50, 110), rnd(0.6, 1.1), pick(['#fff59d', '#ffd54f', '#ffffff']), { add: true, drag: 0.6 });
-      else this.star(o.x + rnd(-18, 18), o.y - rnd(0, 50), pick(['#fff59d', '#ffffff', '#ffe082']), rnd(2, 4) | 0, 0.5, -20);
+      // hạt bay hai bên thân, không phủ lên mặt nhân vật
+      const sd = Math.random() < 0.5 ? -1 : 1;
+      if (i % 2) this.spawn('ember', o.x + sd * rnd(6, 15), o.y - rnd(0, 6), rnd(-6, 6), -rnd(50, 110), rnd(0.6, 1.1), pick(['#fff59d', '#ffd54f', '#ffffff']), { add: true, drag: 0.6 });
+      else this.star(o.x + sd * rnd(11, 20), o.y - rnd(0, 50), pick(['#fff59d', '#ffffff', '#ffe082']), rnd(2, 4) | 0, 0.5, -20);
+      // hạt vàng vuông bay lên theo mép cột sáng
+      if (i % 3 === 0) this.spawn('px', o.x + sd * rnd(7, 12), o.y - rnd(0, 10), rnd(-4, 4), -rnd(60, 120), rnd(0.6, 1), pick(['#ffd54f', '#ffca28', '#fff59d']), { s: 2, s1: 1, add: true });
+    }
+  }
+
+  u_tele(e, dt) {
+    if (e.t > e.dur) return;
+    const f = e.t / e.dur;
+    const k = this.tick(e, dt, e.kind === 'line' ? 10 + e.len * 0.08 : 8 + e.r * 0.12);
+    const lit = ramp(e.c)[1];
+    for (let i = 0; i < k; i++) {
+      if (e.kind === 'line') {
+        const px = e.x + e.dir * Math.random() * e.len * f;
+        this.spawn('px', px, e.y + rnd(-e.h, e.h), 0, -rnd(15, 35), rnd(0.3, 0.55), i % 2 ? '#ffffff' : lit, { add: true });
+      } else if (e.kind === 'pillar' && i % 2) {
+        this.spawn('px', e.x + rnd(-e.r, e.r) * 0.6, e.y - rnd(60, 150), 0, rnd(120, 220), rnd(0.3, 0.5), i % 4 === 1 ? '#ffffff' : lit, { add: true, s: 1, s1: 1 });
+      } else {
+        const a = Math.random() * TAU;
+        this.spawn('px', e.x + Math.cos(a) * e.r, e.y + Math.sin(a) * e.r * 0.34, 0, -rnd(15, 35), rnd(0.3, 0.55), i % 2 ? '#ffffff' : lit, { add: true });
+      }
+    }
+  }
+
+  u_quake(e, dt) {
+    const f = e.t / e.life;
+    if (f > 0.45) return;
+    const k = this.tick(e, dt, 26 * e.sc);
+    for (let i = 0; i < k; i++) {
+      const pts = pick(e.cracks);
+      const j = (Math.random() * (pts.length >> 1)) << 1;
+      const px = e.x + pts[j];
+      const py = e.y + pts[j + 1];
+      if (i % 2) this.spawn('ember', px, py, rnd(-10, 10), -rnd(30, 70), rnd(0.4, 0.8), pick(EP.fire.spark), { add: true, drag: 1 });
+      else this.smoke(px, py - 1, pick(['#bcaaa4', '#a1887f']), 1, 4, 0.6, 0.45);
+    }
+  }
+
+  u_roar(e, dt) {
+    const f = e.t / e.life;
+    if (f > 0.6) return;
+    const k = this.tick(e, dt, 50 * e.sc);
+    for (let i = 0; i < k; i++) {
+      const d = i % 2 ? 1 : -1;
+      this.wline(e.x + d * rnd(8, 20) * e.sc, e.hy + rnd(-20, 20) * e.sc, d * rnd(160, 260), rnd(6, 14), i % 3 ? '#ffffff' : e.c, 0.3);
+    }
+  }
+
+  u_summon(e, dt) {
+    const f = e.t / e.life;
+    const R = e.R;
+    if (f < 0.75) {
+      const k = this.tick(e, dt, 50 * e.sc);
+      for (let i = 0; i < k; i++) {
+        const a = Math.random() * TAU;
+        const rr = R * rnd(0.3, 1);
+        this.spawn('px', e.x + Math.cos(a) * rr, e.y + Math.sin(a) * rr * 0.34, 0, -rnd(30, 80), rnd(0.5, 0.9), i % 3 ? e.lite : '#ffffff', { add: true, s: 2, s1: 1 });
+      }
+    }
+    if (!e.popped && e.t >= 0.5) {
+      e.popped = true;
+      const g = Math.min(2, e.sc);
+      this.spawn('glow', e.x, e.y - 18 * e.sc, 0, 0, 0.3, '#ffffff', { s: 10 * g, s1: 22 * g, a: 0.6, add: true });
+      this.spawn('vring', e.x, e.y - 18 * e.sc, 0, 0, 0.4, e.c, { s: 6, s1: 30 * e.sc });
+      for (let i = 0; i < 14; i++) {
+        const st = this.star(e.x, e.y - 18 * e.sc, i % 2 ? e.lite : '#ffffff', 4, 0.6);
+        if (st) {
+          st.vx = Math.cos((i / 14) * TAU) * 80;
+          st.vy = Math.sin((i / 14) * TAU) * 60 - 20;
+          st.drag = 2.4;
+        }
+      }
+      for (let i = 0; i < 8; i++) this.smoke(e.x + rnd(-R, R) * 0.6, e.y - rnd(0, 6), pick([e.dark, '#3a2a48', '#4a3858']), 3, 8, 1, 0.42);
+      this.bossShake(e.x, e.y, 2.5, e.sc);
+    }
+  }
+
+  u_beam(e, dt) {
+    const f = e.t / e.life;
+    if (f > 0.6) return;
+    const w = 10 * e.sc;
+    const k = this.tick(e, dt, 60 * e.sc);
+    const lit = ramp(e.c)[1];
+    for (let i = 0; i < k; i++) {
+      if (i % 3 === 2) this.spawn('spark', e.x + rnd(-w, w), e.y - 2, rnd(-60, 60), -rnd(40, 110), rnd(0.25, 0.45), i % 2 ? '#ffffff' : lit, { g: 160, drag: 2, s: 2, add: true, floor: e.y });
+      else this.spawn('px', e.x + rnd(-w, w), e.y - rnd(80, 200), 0, rnd(260, 380), rnd(0.25, 0.4), i % 2 ? '#ffffff' : lit, { add: true, s: 1, s1: 1 });
+    }
+  }
+
+  u_nova(e, dt) {
+    const f = e.t / e.life;
+    if (f > 0.5) return;
+    const k = this.tick(e, dt, 40 * e.sc);
+    const rx = e.R * easeOut3(clamp01(f / 0.6));
+    for (let i = 0; i < k; i++) {
+      const a = Math.random() * TAU;
+      const px = e.x + Math.cos(a) * rx;
+      const py = e.y + Math.sin(a) * rx * 0.34;
+      if (e.el === 'fire') this.flame(px, py - 2, Math.cos(a) * 20, -rnd(30, 60), flameRamp(e.c, 'fire'), 3, 0.45);
+      else if (e.el === 'water' || e.el === 'ice') this.drop(px, py - 2, Math.cos(a) * 40, -rnd(50, 120), pick(EP[e.el].drop), py + 2);
+      else if (e.el === 'wind') this.leaf(px, py - 4, Math.cos(a) * 80, -rnd(20, 60));
+      else this.spawn('spark', px, py - 3, Math.cos(a) * 40, -rnd(20, 60), 0.3, i % 2 ? '#ffffff' : e.c, { g: 100, s: 2, add: true });
+    }
+  }
+
+  u_enh(e, dt) {
+    const f = e.t / e.life;
+    if (!e.ok || f > 0.6) return;
+    const k = this.tick(e, dt, e.plus >= 9 ? 55 : 38);
+    const lite = ramp(e.c)[1];
+    for (let i = 0; i < k; i++) {
+      const sd = Math.random() < 0.5 ? -1 : 1;
+      if (i % 2) this.spawn('px', e.x + sd * rnd(6, 12), e.y - rnd(0, 8), rnd(-4, 4), -rnd(50, 100), rnd(0.5, 0.8), pick([e.c, lite, '#ffffff']), { s: 2, s1: 1, add: true });
+      else this.star(e.x + sd * rnd(10, 17), e.y - rnd(2, 34), pick([lite, '#ffffff']), 3, 0.45, -15);
+      if (e.plus >= 13 && i % 3 === 0) this.ember(e.x + sd * rnd(5, 10), e.y - rnd(0, 6), pick(EP.fire.spark), 80);
+    }
+  }
+
+  u_gem(e) {
+    if (e.popped || e.t < 0.28) return;
+    e.popped = true;
+    const cy = e.y;
+    this.spawn('glow', e.x, cy, 0, 0, 0.22, e.c, { s: 6, s1: 14, a: 0.7, add: true });
+    this.star(e.x, cy, '#ffffff', 7, 0.35);
+    for (let i = 0; i < 10; i++) {
+      const a = (i / 10) * TAU;
+      this.spawn('spark', e.x, cy, Math.cos(a) * 60, Math.sin(a) * 60 - 10, rnd(0.25, 0.4), i % 2 ? '#ffffff' : e.lite, { g: 60, drag: 3, s: 2, add: true });
+    }
+  }
+
+  u_cost(e, dt) {
+    if (!e.popped && e.t > e.life * 0.62) {
+      // dải xoắn chạm đỉnh đầu: tung sao ra xung quanh
+      e.popped = true;
+      for (let i = 0; i < 8; i++) {
+        const a = (i / 8) * TAU + 0.2;
+        this.spawn('twk', e.x, e.y - 36, Math.cos(a) * 55, Math.sin(a) * 40 - 10, rnd(0.45, 0.6), i % 2 ? e.c : e.lite, { drag: 3 });
+      }
+    }
+    if (e.t > e.life * 0.8) return;
+    const k = this.tick(e, dt, 26);
+    for (let i = 0; i < k; i++) {
+      const sd = Math.random() < 0.5 ? -1 : 1;
+      this.spawn('twk', e.x + sd * rnd(8, 18), e.y - rnd(2, 36), 0, -rnd(4, 12), rnd(0.4, 0.6), pick([e.c, e.lite, e.mid]));
     }
   }
 
@@ -1081,9 +1675,16 @@ export class FX {
   draw(ctx, camX, camY) {
     this.cw = ctx.canvas.width;
     this.ch = ctx.canvas.height;
+    this.viewX = camX;
+    this.viewY = camY;
+    this.viewW = this.cw;
+    this.viewH = this.ch;
+    // nếu game đã gọi drawGround trong khung này thì không vẽ lại hiệu ứng mặt đất
+    const skipGround = this.groundFrame === this.frame;
+    this.frame++;
     ctx.save();
     for (const e of this.list) {
-      if (e.delay > 0) continue;
+      if (e.delay > 0 || (skipGround && e.ground)) continue;
       const fn = this[`d_${e.k}`];
       if (fn) {
         ctx.globalCompositeOperation = 'source-over';
@@ -1096,6 +1697,34 @@ export class FX {
     this.drawParts(ctx, camX, camY, false);
     ctx.globalCompositeOperation = 'lighter';
     this.drawParts(ctx, camX, camY, true);
+    // lượt trên cùng: ký hiệu cần đọc được (dấu "!", dấu X thất bại) không bị khói/hạt che
+    for (const e of this.list) {
+      if (e.delay > 0) continue;
+      const fn = this[`o_${e.k}`];
+      if (fn) {
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.globalAlpha = 1;
+        fn.call(this, ctx, e, camX, camY);
+      }
+    }
+    ctx.restore();
+  }
+
+  // Tùy chọn: vẽ hiệu ứng nằm trên mặt đất (cảnh báo boss, vết nứt, vòng triệu hồi) TRƯỚC khi vẽ quái/người.
+  // Gọi cùng tham số với draw(); nếu không gọi thì draw() tự vẽ chúng.
+  drawGround(ctx, camX, camY) {
+    this.cw = ctx.canvas.width;
+    this.ch = ctx.canvas.height;
+    this.groundFrame = this.frame;
+    ctx.save();
+    for (const e of this.list) {
+      if (e.delay > 0 || !e.ground) continue;
+      const fn = this[`d_${e.k}`];
+      if (!fn) continue;
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.globalAlpha = 1;
+      fn.call(this, ctx, e, camX, camY);
+    }
     ctx.restore();
   }
 
@@ -1230,6 +1859,20 @@ export class FX {
           ctx.drawImage(cv, x - (cv.width >> 1), y - (cv.height >> 1));
           break;
         }
+        case 'twk': {
+          // nhỏ -> to -> nhỏ theo 3 cỡ sprite
+          const tw = Math.sin(f * Math.PI);
+          const cv = twinkleSprite(p.c, tw > 0.75 ? 3 : tw > 0.35 ? 2 : 1);
+          ctx.globalAlpha = 1;
+          ctx.drawImage(cv, x - (cv.width >> 1), y - (cv.height >> 1));
+          break;
+        }
+        case 'rock': {
+          const cv = rockSprite(p.c, p.s);
+          ctx.globalAlpha = fade;
+          ctx.drawImage(cv, x - (cv.width >> 1), y - (cv.height >> 1));
+          break;
+        }
         case 'debris': {
           ctx.globalAlpha = fade;
           ctx.fillStyle = p.c;
@@ -1256,6 +1899,22 @@ export class FX {
           ctx.globalAlpha = 1 - f;
           ctx.fillStyle = p.c;
           ringPx(ctx, x, y, r * 0.32, r, 1, 1);
+          break;
+        }
+        case 'dring': {
+          // vòng sóng mặt đất vẽ thường (bụi đất, màu nguyên tố): mép dưới tối, thân màu, mép trên sáng
+          const r = p.s + (p.s1 - p.s) * easeOut3(f);
+          const ry = r * (p.ry || 0.3);
+          const w = p.w || 2;
+          const a = (1 - f) * (p.a || 1);
+          ctx.globalAlpha = 0.7 * a;
+          ctx.fillStyle = shade(p.c, -0.35);
+          ringPx(ctx, x, y + 1, r, ry, w, 1);
+          ctx.globalAlpha = 0.9 * a;
+          ctx.fillStyle = p.c;
+          ringPx(ctx, x, y, r, ry, w, w > 2 ? 2 : 1);
+          ctx.fillStyle = shade(p.c, 0.35);
+          ringPx(ctx, x, y - 1, r - 1, ry - 0.5, 1, 1, Math.PI + 0.3, TAU - 0.3);
           break;
         }
         default:
@@ -2020,32 +2679,547 @@ export class FX {
     const env = f < 0.08 ? f / 0.08 : f > 0.55 ? (1 - f) / 0.45 : 1;
     const x = R0(o.x - camX);
     const y = R0(o.y - camY);
-    ctx.globalCompositeOperation = 'lighter';
-    ctx.globalAlpha = 0.24 * env;
-    ctx.fillStyle = '#fff59d';
     const cy = y - 14;
-    for (let k = 0; k < 9; k++) {
-      const a = Math.PI + 0.2 + ((Math.PI - 0.4) * k) / 8 + Math.sin(e.t * 2 + k) * 0.08;
-      const L = (k % 2 ? 36 : 54) * (0.6 + 0.4 * env);
-      ctx.beginPath();
-      ctx.moveTo(x, cy);
-      ctx.lineTo(x + Math.cos(a - 0.07) * L, cy + Math.sin(a - 0.07) * L);
-      ctx.lineTo(x + Math.cos(a + 0.07) * L, cy + Math.sin(a + 0.07) * L);
-      ctx.closePath();
-      ctx.fill();
-    }
+    // cột sáng vàng + lõi trắng
+    ctx.globalCompositeOperation = 'lighter';
     const bw = R0(28 * (0.7 + 0.3 * env) + Math.sin(e.t * 18) * 2);
-    ctx.globalAlpha = 0.65 * env;
-    ctx.drawImage(beamSprite('#ffd54f', 32, 130), x - (bw >> 1), y - 128, bw, 130);
-    ctx.globalAlpha = 0.55 * env;
-    ctx.drawImage(beamSprite('#ffffff', 10, 130), x - 4, y - 128, 8, 130);
-    drawGlow(ctx, x, cy, '#ffe082', 20, 0.4 * env);
-    for (let k = 0; k < 3; k++) {
-      const p = (e.t * 1.1 + k / 3) % 1;
-      const r = 6 + p * 34;
+    bodyBeam(ctx, beamSprite('#ffd54f', 32, 130), x, y, bw, 0.65 * env, 0.4);
+    bodyBeam(ctx, beamSprite('#ffffff', 10, 130), x, y, 8, 0.55 * env, 0.15);
+    drawGlow(ctx, x, cy, '#ffe082', 20, 0.16 * env);
+    drawGlow(ctx, x, y, '#ffd54f', 30, 0.3 * env, 0.32);
+    for (let k = 0; k < 2; k++) {
+      const p = (e.t * 1.1 + k / 2) % 1;
+      const r = 8 + p * 34;
       ctx.globalAlpha = env * (1 - p);
       ctx.fillStyle = k === 0 ? '#ffffff' : '#ffd54f';
       ringPx(ctx, x, y, r, r * 0.3, 2, 1);
+    }
+    // vòng phù văn dưới chân + vòng phù văn bay lên quanh thân
+    const grow = easeOut3(clamp01(e.t / 0.3));
+    this.runeRing(ctx, x, y, 24 * grow, 8 * grow, e.t * 2.2, 8, '#ffd54f', env, true);
+    const up = easeOut(clamp01(e.t / 1.1));
+    this.runeRing(ctx, x, R0(y - 4 - up * 34), 15, 5, -e.t * 3.4, 6, '#fff59d', env * (1 - up * 0.5), false);
+  }
+
+  // Vòng phù văn (elip dẹt), chữ phía sau mờ hơn để tạo chiều sâu
+  runeRing(ctx, x, y, rx, ry, rot, n, c, a, line) {
+    if (a <= 0.01 || rx < 2) return;
+    const rp = ramp(c);
+    ctx.globalCompositeOperation = 'source-over';
+    if (line) {
+      ctx.globalAlpha = 0.7 * a;
+      ctx.fillStyle = rp[4];
+      ringPx(ctx, x, y + 1, rx, ry, 2, 1);
+      ctx.globalAlpha = 0.9 * a;
+      ctx.fillStyle = rp[2];
+      ringPx(ctx, x, y, rx, ry, 2, 1);
+      ctx.fillStyle = rp[1];
+      ringPx(ctx, x, y, rx * 0.72, ry * 0.72, 1, 1);
+    }
+    for (let k = 0; k < n; k++) {
+      const ang = rot + (k * TAU) / n;
+      const sn = Math.sin(ang);
+      const gx = R0(x + Math.cos(ang) * rx);
+      const gy = R0(y + sn * ry);
+      if (sn > 0) {
+        ctx.globalCompositeOperation = 'lighter';
+        drawGlow(ctx, gx, gy, c, 6, 0.35 * a);
+        ctx.globalCompositeOperation = 'source-over';
+      }
+      ctx.globalAlpha = a * (sn > 0 ? 1 : 0.45);
+      ctx.drawImage(runeSprite(c, k), gx - 3, gy - 3);
+    }
+  }
+
+  // ================= CẢNH BÁO & CHIÊU BOSS =================
+  d_tele(ctx, e, camX, camY) {
+    const x = R0(e.x - camX);
+    const y = R0(e.y - camY);
+    const rp = ramp(e.c);
+    // sau thời gian cảnh báo: chớp trắng rồi tắt
+    if (e.t > e.dur) {
+      const q = 1 - (e.t - e.dur) / (e.life - e.dur);
+      ctx.globalAlpha = 0.55 * q;
+      ctx.fillStyle = '#ffffff';
+      if (e.kind === 'line') {
+        const x0 = e.dir > 0 ? x : x - e.len;
+        ctx.fillRect(x0, y - e.h, R0(e.len), e.h * 2 + 1);
+      } else fillEllipse(ctx, x, y, e.r, Math.max(4, e.r * 0.34));
+      return;
+    }
+    const f = e.t / e.dur;
+    const env = clamp01(e.t / 0.12);
+    // nhịp đập 3Hz -> 9Hz (pha = tích phân tần số), đổi độ sáng mượt chứ không bật/tắt
+    const pulse = 0.5 + 0.5 * Math.sin(TAU * (3 * e.t + (3 * e.t * e.t) / e.dur));
+    const hot = env * pulse * (0.35 + 0.55 * f);
+    if (e.kind === 'line') {
+      const L = R0(e.len);
+      const H = e.h;
+      const x0 = e.dir > 0 ? x : x - L;
+      ctx.globalCompositeOperation = 'lighter';
+      if (H <= 15) drawGlow(ctx, x0 + (L >> 1), y, e.c, H * 2, 0.2 * env * (0.6 + 0.4 * f), 1, L / (H * 4));
+      ctx.globalCompositeOperation = 'source-over';
+      // viền tối ngoài cùng để đọc được trên mọi nền
+      ctx.globalAlpha = 0.8 * env;
+      ctx.fillStyle = SPRITE_OUTLINE;
+      ctx.fillRect(x0 - 1, y - H - 1, L + 2, 1);
+      ctx.fillRect(x0 - 1, y + H + 1, L + 2, 1);
+      ctx.fillRect(x0 - 1, y - H, 1, H * 2 + 1);
+      ctx.fillRect(x0 + L, y - H, 1, H * 2 + 1);
+      ctx.globalAlpha = 0.34 * env;
+      ctx.fillStyle = rp[4];
+      ctx.fillRect(x0, y - H, L, H * 2 + 1);
+      const fl = R0(L * f);
+      ctx.globalAlpha = 0.58 * env;
+      ctx.fillStyle = rp[3];
+      ctx.fillRect(e.dir > 0 ? x : x - fl, y - H, fl, H * 2 + 1);
+      ctx.globalAlpha = 0.95 * env;
+      ctx.fillStyle = rp[1];
+      ctx.fillRect(x + e.dir * fl - (e.dir > 0 ? 1 : 0), y - H, 1, H * 2 + 1);
+      // viền màu + lớp trắng đập theo nhịp
+      ctx.globalAlpha = env;
+      ctx.fillStyle = rp[2];
+      ctx.fillRect(x0, y - H, L, 1);
+      ctx.fillRect(x0, y + H, L, 1);
+      ctx.fillRect(x0, y - H, 1, H * 2 + 1);
+      ctx.fillRect(x0 + L - 1, y - H, 1, H * 2 + 1);
+      ctx.globalAlpha = hot;
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(x0, y - H, L, 1);
+      ctx.fillRect(x0, y + H, L, 1);
+      // mũi tên ">" chạy theo hướng đánh, cao theo bề dày dải
+      ctx.fillStyle = '#ffffff';
+      ctx.globalAlpha = 0.75 * env;
+      const ah = Math.max(2, Math.min(H - 2, 6));
+      const gap = 10 + ah * 2;
+      const off = (e.t * 46) % gap;
+      for (let s = off; s < L - ah - 1; s += gap) {
+        const cx = R0(e.dir > 0 ? x0 + s : x0 + L - s);
+        for (let j = -ah; j <= ah; j++) ctx.fillRect(cx - e.dir * Math.abs(j), y + j, 2, 1);
+      }
+      return;
+    }
+    const rx = e.r;
+    const ry = Math.max(4, rx * 0.34);
+    if (e.kind === 'pillar') {
+      // cột báo trước chỗ trụ giáng xuống: lớp màu thường + lớp sáng, hai mép tối
+      const bw = Math.max(6, R0(rx * 1.4));
+      const top = y - 170;
+      ctx.globalAlpha = (0.3 + 0.35 * f) * env;
+      ctx.drawImage(beamSprite(rp[3], 24, 120, false), x - (bw >> 1), top, bw, 172);
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.globalAlpha = (0.1 + 0.22 * f) * env * (0.75 + 0.25 * pulse);
+      ctx.drawImage(beamSprite(e.c, 24, 120, false), x - (bw >> 1), top, bw, 172);
+      ctx.globalCompositeOperation = 'source-over';
+      const ex = [x - (bw >> 1) - 1, x + (bw >> 1)];
+      for (let s = 0; s < 5; s++) {
+        const a = (1 - s / 5) * env;
+        ctx.globalAlpha = 0.55 * a;
+        ctx.fillStyle = SPRITE_OUTLINE;
+        ctx.fillRect(ex[0], y - 20 * (s + 1), 1, 20);
+        ctx.fillRect(ex[1], y - 20 * (s + 1), 1, 20);
+        ctx.globalAlpha = 0.8 * a;
+        ctx.fillStyle = rp[2];
+        ctx.fillRect(ex[0] + 1, y - 20 * (s + 1), 1, 20);
+        ctx.fillRect(ex[1] - 1, y - 20 * (s + 1), 1, 20);
+      }
+    }
+    if (rx <= 60) {
+      ctx.globalCompositeOperation = 'lighter';
+      drawGlow(ctx, x, y, e.c, rx, 0.18 * env * (0.6 + 0.4 * f), 0.34);
+      ctx.globalCompositeOperation = 'source-over';
+    }
+    ctx.globalAlpha = 0.34 * env;
+    ctx.fillStyle = rp[4];
+    fillEllipse(ctx, x, y, rx, ry);
+    const fr = rx * f;
+    if (fr > 1) {
+      ctx.globalAlpha = 0.55 * env;
+      ctx.fillStyle = rp[3];
+      fillEllipse(ctx, x, y, fr, fr * (ry / rx));
+      ctx.globalAlpha = 0.95 * env;
+      ctx.fillStyle = rp[1];
+      ringPx(ctx, x, y, fr, fr * (ry / rx), 1, 1);
+    }
+    // viền tối ngoài cùng + bóng dưới
+    ctx.globalAlpha = 0.8 * env;
+    ctx.fillStyle = SPRITE_OUTLINE;
+    ringPx(ctx, x, y, rx + 2, ry + 1, 1, 1);
+    ctx.fillStyle = rp[5];
+    ringPx(ctx, x, y + 1, rx, ry, 2, 1);
+    ctx.globalAlpha = env;
+    ctx.fillStyle = rp[2];
+    ringPx(ctx, x, y, rx, ry, 2, 1);
+    ctx.globalAlpha = hot;
+    ctx.fillStyle = '#ffffff';
+    ringPx(ctx, x, y, rx, ry, 2, 1);
+    // vạch đứt quay chậm bên ngoài
+    ctx.globalAlpha = 0.85 * env;
+    ctx.fillStyle = rp[3];
+    const rot = e.t * 1.5;
+    const seg = Math.min(0.28, 14 / rx);
+    for (let k = 0; k < 10; k++) {
+      const a0 = rot + (k * TAU) / 10;
+      ringPx(ctx, x, y, rx + 5, ry + 2.5, 2, 1, a0, a0 + seg);
+    }
+  }
+
+  // Lượt vẽ trên cùng (sau hạt): dấu "!" luôn hiện, chỉ nảy nhanh dần
+  o_tele(ctx, e, camX, camY) {
+    if (e.t > e.dur) return;
+    const f = e.t / e.dur;
+    const bx = e.kind === 'line' ? e.x + e.dir * 8 : e.x;
+    const x = R0(bx - camX);
+    const y = R0(e.y - camY);
+    const hop = R0(Math.abs(Math.sin(e.t * (6 + 8 * f))) * (2 + 2 * f));
+    // cam đỏ để không nhầm với dấu "!" vàng nhiệm vụ trên đầu NPC
+    const bg = bangSprite('#ff6d3a');
+    ctx.globalAlpha = clamp01(e.t / 0.12);
+    ctx.drawImage(bg, x - 2, y - 13 - hop);
+  }
+
+  d_quake(ctx, e, camX, camY) {
+    const f = e.t / e.life;
+    const x = e.x - camX;
+    const y = e.y - camY;
+    const rv = easeOut3(clamp01(e.t / 0.22));
+    const fade = f > 0.6 ? (1 - f) / 0.4 : 1;
+    const glowA = (f < 0.5 ? 1 : (1 - f) / 0.5) * (0.75 + 0.25 * Math.sin(e.t * 40));
+    const rp = flameRamp(e.c, 'fire');
+    // hố lún tối ở tâm
+    ctx.globalAlpha = 0.35 * fade;
+    ctx.fillStyle = SPRITE_OUTLINE;
+    fillEllipse(ctx, R0(x), R0(y), 14 * e.sc, 3 * e.sc);
+    for (const pts of e.cracks) {
+      const n = pts.length >> 1;
+      const lim = (n - 1) * rv;
+      for (let i = 0; i < n - 1 && i < lim; i++) {
+        const u = Math.min(1, lim - i);
+        const ax = x + pts[i * 2];
+        const ay = y + pts[i * 2 + 1];
+        const bx = ax + (pts[i * 2 + 2] - pts[i * 2]) * u;
+        const by = ay + (pts[i * 2 + 3] - pts[i * 2 + 1]) * u;
+        const thick = i < n * 0.5 ? 2 : 1;
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.globalAlpha = 0.95 * fade;
+        ctx.fillStyle = SPRITE_OUTLINE;
+        linePx(ctx, ax, ay, bx, by, thick + 1);
+        if (i < n * 0.7) {
+          // lõi dung nham trong khe nứt
+          ctx.globalAlpha = glowA;
+          ctx.fillStyle = i < n * 0.3 ? rp[1] : rp[2];
+          linePx(ctx, ax, ay, bx, by, 1);
+        }
+      }
+    }
+    ctx.globalCompositeOperation = 'lighter';
+    drawGlow(ctx, R0(x), R0(y), e.c, Math.min(44, e.R * 0.6), 0.3 * glowA, 0.3);
+  }
+
+  d_roar(ctx, e, camX, camY) {
+    const x = R0(e.x - camX);
+    const hy = R0(e.hy - camY);
+    const rp = ramp(e.c);
+    ctx.globalCompositeOperation = 'lighter';
+    drawGlow(ctx, x, hy, e.c, 14 * Math.min(2, e.sc), 0.4 * (1 - e.t / e.life));
+    // cung sóng không cắm xuống đất: chiều cao cung (0.64*ry) < khoảng đầu-chân
+    const ryMax = (e.y - e.hy) / 0.66;
+    // sóng âm hai bên dạng "((( )))"
+    for (let k = 0; k < 4; k++) {
+      const lt = (e.t - k * 0.09) / 0.5;
+      if (lt <= 0 || lt >= 1) continue;
+      const r = 8 + easeOut(lt) * e.R;
+      const ry = Math.min(r * 0.75, ryMax);
+      const a = 1 - lt;
+      for (const side of [0, Math.PI]) {
+        ctx.globalCompositeOperation = 'source-over';
+        const th = lt < 0.5 ? 3 : 2;
+        ctx.globalAlpha = 0.75 * a;
+        ctx.fillStyle = rp[4];
+        ringPx(ctx, x + 1, hy + 1, r, ry, th, th, side - 0.7, side + 0.7);
+        ctx.globalAlpha = a;
+        ctx.fillStyle = k % 2 ? rp[3] : '#ffffff';
+        ringPx(ctx, x, hy, r, ry, th, th, side - 0.7, side + 0.7);
+        ctx.fillStyle = k % 2 ? '#ffffff' : rp[2];
+        ringPx(ctx, x, hy, r - th, ry - th, 1, 1, side - 0.45, side + 0.45);
+      }
+    }
+  }
+
+  d_summon(ctx, e, camX, camY) {
+    const f = e.t / e.life;
+    const env = f > 0.72 ? (1 - f) / 0.28 : 1;
+    const grow = easeOut3(clamp01(e.t / 0.25));
+    const x = R0(e.x - camX);
+    const y = R0(e.y - camY);
+    const R = e.R * (0.3 + 0.7 * grow);
+    const ry = R * 0.34;
+    const rp = ramp(e.c);
+    // cột triệu hồi: lớp màu thường để giữ sắc tím trên nền sáng, thêm lớp sáng cộng
+    const bw = R0(R * 1.3);
+    const pul = 0.7 + 0.3 * Math.sin(e.t * 16);
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.globalAlpha = 0.42 * env;
+    ctx.drawImage(beamSprite(rp[4], 24, 100, false), x - (bw >> 1), y - 96, bw, 98);
+    ctx.globalCompositeOperation = 'lighter';
+    drawGlow(ctx, x, y, e.c, Math.min(60, R * 1.1), 0.3 * env, 0.34);
+    ctx.globalAlpha = 0.22 * env * pul;
+    ctx.drawImage(beamSprite(e.c, 24, 100, false), x - (bw >> 1), y - 96, bw, 98);
+    ctx.globalCompositeOperation = 'source-over';
+    // nền vòng tối + viền ngoài #1d1424
+    ctx.globalAlpha = 0.35 * env;
+    ctx.fillStyle = e.dark;
+    fillEllipse(ctx, x, y, R, ry);
+    ctx.globalAlpha = 0.75 * env;
+    ctx.fillStyle = SPRITE_OUTLINE;
+    ringPx(ctx, x, y, R + 2, ry + 1, 1, 1);
+    ctx.globalAlpha = 0.85 * env;
+    ctx.fillStyle = rp[5];
+    ringPx(ctx, x, y + 1, R, ry, 2, 1);
+    ctx.globalAlpha = env;
+    ctx.fillStyle = rp[2];
+    ringPx(ctx, x, y, R, ry, 2, 1);
+    ctx.fillStyle = rp[1];
+    ringPx(ctx, x, y, R * 0.74, ry * 0.74, 1, 1);
+    ctx.fillStyle = rp[2];
+    ringPx(ctx, x, y, R * 0.4, ry * 0.4, 1, 1);
+    // vạch tỏa tròn quay giữa hai vòng trong (đọc rõ ở góc nhìn dẹt, khác ngôi sao)
+    const rot = e.t * 1.8;
+    for (let k = 0; k < 12; k++) {
+      const a = rot + (k * TAU) / 12;
+      const c = Math.cos(a);
+      const s = Math.sin(a);
+      const long = k % 3 === 0;
+      const r0 = long ? 0.42 : 0.5;
+      const r1 = long ? 0.98 : 0.72;
+      ctx.globalAlpha = env * (s > 0 ? 1 : 0.55);
+      ctx.fillStyle = long ? '#ffffff' : rp[1];
+      linePx(ctx, x + c * R * r0, y + s * ry * r0, x + c * R * r1, y + s * ry * r1);
+    }
+    // tâm: hình thoi sáng nhấp nháy nhẹ
+    ctx.globalAlpha = env;
+    ctx.fillStyle = rp[4];
+    ctx.fillRect(x - 3, y, 7, 1);
+    ctx.fillRect(x - 1, y - 1, 3, 3);
+    ctx.fillStyle = pul > 0.85 ? '#ffffff' : rp[1];
+    ctx.fillRect(x - 2, y - 1, 5, 1);
+    ctx.fillRect(x, y - 2, 1, 3);
+    this.runeRing(ctx, x, y, R + 7, ry + 2.5, -e.t * 1.2, 8, e.c, env * grow, false);
+  }
+
+  d_beam(ctx, e, camX, camY) {
+    const f = e.t / e.life;
+    const x = R0(e.x - camX);
+    const y = R0(e.y - camY);
+    const gc = glowCol(e.c, elemOf(e.c));
+    const top = -20;
+    const H = Math.max(10, y - top);
+    // nở nhanh rồi thu nhỏ dần
+    const wk = f < 0.08 ? f / 0.08 : 1 - (f - 0.08) * 0.95;
+    const bw = Math.max(2, R0(26 * e.sc * wk + Math.sin(e.t * 50) * 2));
+    const a = f > 0.5 ? (1 - f) / 0.5 : 1;
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.globalAlpha = 0.35 * a;
+    ctx.fillStyle = SPRITE_OUTLINE;
+    fillEllipse(ctx, x, y, 16 * e.sc, 4 * e.sc);
+    const brp = ramp(gc);
+    // lớp màu phủ thường để tia không bị trắng xóa trên nền sáng
+    ctx.globalAlpha = 0.55 * a;
+    ctx.drawImage(beamSprite(brp[3], 34, 120, false), x - (bw >> 1), top, bw, H);
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.globalAlpha = 0.7 * a;
+    ctx.drawImage(beamSprite(gc, 34, 120), x - (bw >> 1), top, bw, H);
+    const cw = Math.max(2, R0(bw * 0.38));
+    ctx.globalAlpha = 0.9 * a;
+    ctx.drawImage(beamSprite('#ffffff', 10, 120), x - (cw >> 1), top, cw, H);
+    // mép tia nhấp nháy
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.globalAlpha = 0.8 * a * (Math.sin(e.t * 60) > 0 ? 1 : 0.6);
+    ctx.fillStyle = brp[4];
+    ctx.fillRect(x - (bw >> 1) - 1, top, 1, H);
+    ctx.fillRect(x + (bw >> 1), top, 1, H);
+    ctx.fillStyle = brp[2];
+    ctx.fillRect(x - (bw >> 1), top, 1, H);
+    ctx.fillRect(x + (bw >> 1) - 1, top, 1, H);
+    ctx.globalCompositeOperation = 'lighter';
+    drawGlow(ctx, x, y - 4, gc, Math.min(44, 22 * e.sc), 0.55 * a, 0.5);
+    drawGlow(ctx, x, y - 2, '#ffffff', Math.min(16, 8 * e.sc), 0.6 * a, 0.6);
+  }
+
+  d_nova(ctx, e, camX, camY) {
+    const f = e.t / e.life;
+    const x = R0(e.x - camX);
+    const y = R0(e.y - camY);
+    const cy = R0(e.cy - camY);
+    const fade = f > 0.55 ? (1 - f) / 0.45 : 1;
+    const rp = ramp(glowCol(e.c, e.el));
+    const rx = e.R * easeOut3(clamp01(f / 0.6));
+    ctx.globalCompositeOperation = 'lighter';
+    // quầng sáng giới hạn ở cỡ sprite lớn nhất, không kéo giãn thành bậc thang
+    drawGlow(ctx, x, y, rp[2], Math.min(60, rx), 0.3 * fade, 0.34);
+    if (f < 0.3) drawGlow(ctx, x, cy, '#ffffff', 22 * e.g * (1 - f / 0.3) + 6, (0.7 - 0.15 * (e.g - 1)) * (1 - f / 0.3));
+    this.shockRing(ctx, x, y, rx, rx * 0.34, rp, fade, true);
+    // vòng cầu nổ trên không (giới hạn để không tràn khỏi màn hình)
+    const rs = Math.min(62 * e.g, 50 + 15 * e.g) * easeOut3(clamp01(f / 0.45));
+    if (rs > 3 && f < 0.7) {
+      const a = 1 - f / 0.7;
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.globalAlpha = 0.6 * a;
+      ctx.fillStyle = rp[5];
+      ringPx(ctx, x + 1, cy + 1, rs, rs * 0.8, 2, 2);
+      ctx.globalAlpha = a;
+      ctx.fillStyle = rp[1];
+      ringPx(ctx, x, cy, rs, rs * 0.8, 2, 2);
+      // tia tỏa ra
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.fillStyle = '#ffffff';
+      for (let k = 0; k < 12; k++) {
+        const an = (k * TAU) / 12 + 0.13;
+        const c = Math.cos(an);
+        const s = Math.sin(an) * 0.8;
+        linePx(ctx, x + c * rs * 0.55, cy + s * rs * 0.55, x + c * rs * 0.85, cy + s * rs * 0.85);
+      }
+    }
+  }
+
+  // ================= CƯỜNG HÓA / KHẢM NGỌC / THỜI TRANG =================
+  d_enh(ctx, e, camX, camY) {
+    const f = e.t / e.life;
+    const x = R0(e.x - camX);
+    const y = R0(e.y - camY);
+    if (e.ok) {
+      const env = f < 0.1 ? f / 0.1 : f > 0.55 ? (1 - f) / 0.45 : 1;
+      ctx.globalCompositeOperation = 'lighter';
+      const bw = Math.max(2, R0(18 * env + Math.sin(e.t * 20) * 2));
+      bodyBeam(ctx, beamSprite(e.c, 24, 80), x, y, bw, 0.6 * env, 0.4);
+      bodyBeam(ctx, beamSprite('#ffffff', 8, 80), x, y, 6, 0.5 * env, 0.15);
+      drawGlow(ctx, x, y - 14, e.c, 16, 0.16 * env);
+      const p = (e.t * 1.6) % 1;
+      ctx.globalAlpha = env * (1 - p);
+      ctx.fillStyle = '#ffffff';
+      ringPx(ctx, x, y, 6 + p * 24, (6 + p * 24) * 0.3, 2, 1);
+      const grow = easeOut3(clamp01(e.t / 0.25));
+      this.runeRing(ctx, x, y, 17 * grow, 6 * grow, e.t * 3, 6, e.c, env, true);
+      return;
+    }
+    // thất bại: vòng phù văn vỡ thành mảnh rơi xuống
+    const a = 1 - f;
+    ctx.globalCompositeOperation = 'source-over';
+    for (let k = 0; k < 6; k++) {
+      const a0 = (k * TAU) / 6 + 0.2;
+      const out = 1 + f * 0.6;
+      const dy = R0(f * f * 14);
+      ctx.globalAlpha = 0.8 * a;
+      ctx.fillStyle = '#37474f';
+      ringPx(ctx, x, y + 1 + dy, 16 * out, 5.5 * out, 2, 1, a0, a0 + 0.7);
+      ctx.globalAlpha = a;
+      ctx.fillStyle = k % 2 ? '#90a4ae' : '#b0bec5';
+      ringPx(ctx, x, y + dy, 16 * out, 5.5 * out, 2, 1, a0, a0 + 0.7);
+    }
+  }
+
+  // Lượt vẽ trên cùng: dấu X đỏ khi cường hóa thất bại (không bị khói/đá che)
+  o_enh(ctx, e, camX, camY) {
+    if (e.ok) return;
+    const f = e.t / e.life;
+    if (f > 0.5) return;
+    const x = R0(e.x - camX);
+    const cy = R0(e.y - camY) - 16;
+    // bật to rồi thu về, mờ dần ở nửa sau
+    const g = R0(f < 0.08 ? 4 + f * 50 : 7);
+    ctx.globalAlpha = f < 0.3 ? 1 : 1 - (f - 0.3) / 0.2;
+    ctx.fillStyle = SPRITE_OUTLINE;
+    for (let o = -1; o <= 1; o += 2) {
+      linePx(ctx, x - g + o, cy - g, x + g + o, cy + g, 2);
+      linePx(ctx, x - g + o, cy + g, x + g + o, cy - g, 2);
+      linePx(ctx, x - g, cy - g + o, x + g, cy + g + o, 2);
+      linePx(ctx, x - g, cy + g + o, x + g, cy - g + o, 2);
+    }
+    ctx.fillStyle = '#ff5252';
+    linePx(ctx, x - g, cy - g, x + g, cy + g, 2);
+    linePx(ctx, x - g, cy + g, x + g, cy - g, 2);
+    ctx.fillStyle = '#ffab91';
+    linePx(ctx, x - g, cy - g, x - 1, cy - 1, 1);
+    linePx(ctx, x + 1, cy - 1, x + g, cy - g, 1);
+  }
+
+  d_gem(ctx, e, camX, camY) {
+    const x = R0(e.x - camX);
+    const y = R0(e.y - camY);
+    if (e.t < 0.28) {
+      // 4 tia hội tụ vào ô khảm
+      const p = e.t / 0.28;
+      const r = 18 * (1 - easeOut(p)) + 1;
+      ctx.globalCompositeOperation = 'lighter';
+      for (let k = 0; k < 4; k++) {
+        const a = (k * TAU) / 4 + p * 2.2;
+        const px = R0(x + Math.cos(a) * r);
+        const py = R0(y + Math.sin(a) * r);
+        ctx.globalAlpha = 0.5 + p * 0.5;
+        ctx.fillStyle = e.lite;
+        ctx.fillRect(px - 2, py, 5, 1);
+        ctx.fillRect(px, py - 2, 1, 5);
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(px, py, 1, 1);
+      }
+      drawGlow(ctx, x, y, e.c, 4 + p * 6, 0.5 * p);
+      return;
+    }
+    // hình thoi nở ra sau khi khảm
+    const q = (e.t - 0.28) / (e.life - 0.28);
+    const r = 3 + easeOut3(q) * 14;
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.globalAlpha = 0.8 * (1 - q);
+    ctx.fillStyle = e.dark;
+    linePx(ctx, x - r, y + 1, x, y - r + 1);
+    linePx(ctx, x, y - r + 1, x + r, y + 1);
+    linePx(ctx, x + r, y + 1, x, y + r + 1);
+    linePx(ctx, x, y + r + 1, x - r, y + 1);
+    ctx.globalAlpha = 1 - q;
+    ctx.fillStyle = q < 0.3 ? '#ffffff' : e.lite;
+    linePx(ctx, x - r, y, x, y - r);
+    linePx(ctx, x, y - r, x + r, y);
+    linePx(ctx, x + r, y, x, y + r);
+    linePx(ctx, x, y + r, x - r, y);
+    ctx.globalCompositeOperation = 'lighter';
+    drawGlow(ctx, x, y, e.c, 10 * (1 - q) + 2, 0.5 * (1 - q));
+  }
+
+  d_cost(ctx, e, camX, camY) {
+    const f = e.t / e.life;
+    const x = e.x - camX;
+    const y = e.y - camY;
+    const env = f > 0.7 ? (1 - f) / 0.3 : 1;
+    const head = easeOut(clamp01(f / 0.7)) * 1.25;
+    ctx.globalCompositeOperation = 'lighter';
+    drawGlow(ctx, R0(x), R0(y - 16), e.c, 18, 0.3 * env);
+    ctx.globalCompositeOperation = 'source-over';
+    // hai dải xoắn bay lên quanh thân: vẽ viền tối trước rồi tới màu để dải nổi trên mọi nền
+    const N = 18;
+    for (let pass = 0; pass < 2; pass++) {
+      for (let s = 0; s < 2; s++) {
+        for (let j = N - 1; j >= 0; j--) {
+          const h = head - j * 0.03;
+          if (h < 0 || h > 1) continue;
+          const a = e.t * 6 + h * 8 + s * Math.PI;
+          const sn = Math.sin(a);
+          const front = sn > 0;
+          const px = R0(x + Math.cos(a) * 14);
+          const py = R0(y - 2 - h * 34 + sn * 3);
+          const sz = j < 2 ? 3 : j < 9 ? 2 : 1;
+          const fade = env * (1 - j / N);
+          if (pass === 0) {
+            if (!front) continue;
+            ctx.globalAlpha = 0.85 * fade;
+            ctx.fillStyle = SPRITE_OUTLINE;
+            ctx.fillRect(px - 1, py - 1, sz + 2, sz + 2);
+          } else {
+            ctx.globalAlpha = fade * (front ? 1 : 0.5);
+            ctx.fillStyle = j < 2 ? '#ffffff' : j < 6 ? e.lite : j < 12 ? e.c : e.mid;
+            ctx.fillRect(px, py, sz, sz);
+          }
+        }
+      }
     }
   }
 

@@ -21,7 +21,7 @@ function pickPool(level) {
 }
 
 function pickBoss(level) {
-  const bosses = Object.keys(MONSTERS).filter((k) => MONSTERS[k].boss);
+  const bosses = Object.keys(MONSTERS).filter((k) => MONSTERS[k].boss && !MONSTERS[k].event);
   bosses.sort((a, b) => Math.abs(MONSTERS[a].lv - level) - Math.abs(MONSTERS[b].lv - level));
   return bosses[0];
 }

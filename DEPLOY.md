@@ -11,6 +11,8 @@ Game là **một tiến trình Node.js** phục vụ cả trang web lẫn WebSoc
 | `DATA_DIR` | Thư mục dữ liệu (phải là ổ bền vững) | `/data` |
 | `ADMINS` | Tên **tài khoản** được dùng lệnh admin, cách nhau bởi dấu phẩy | `danhtrong,gm01` |
 | `MOTD` | Thông báo hiện khi người chơi vào game | `Chào mừng!` |
+| `TRUST_PROXY` | Số proxy đứng trước server (đọc IP thật từ `X-Forwarded-For`). Mặc định `auto` đúng cho Caddy/Nginx/Render; đặt `2` nếu có thêm một tầng (vd Cloudflare → Caddy) | `auto` |
+| `REG_LIMIT` | Tài khoản tạo mới tối đa mỗi IP mỗi giờ | `10` |
 
 Ba cách bên dưới xếp từ dễ đến linh hoạt. Chọn **một** cách.
 

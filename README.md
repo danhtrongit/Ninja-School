@@ -11,23 +11,27 @@ Toàn bộ đồ họa pixel được **vẽ bằng code**, không dùng hình �
 | Tài khoản | Đăng ký / đăng nhập (mật khẩu băm scrypt), tự đăng nhập lại bằng token, tối đa 3 nhân vật mỗi tài khoản |
 | 6 phái - 3 hệ | Kiếm, Tiêu (Hỏa) · Kunai, Cung (Thủy) · Đao, Quạt (Phong). Hỏa khắc Phong, Phong khắc Thủy, Thủy khắc Hỏa |
 | Kỹ năng | Mỗi phái 1 đòn thường + 5 kỹ năng (đơn mục tiêu, diện rộng, xuyên thẳng, lướt chém, buff, hồi máu) + 1 tuyệt kỹ cấp 60, nâng tới cấp 15, thanh phím 1-6 |
+| Kỹ năng nội tại | Mỗi phái 3 nội tại (cấp 15, 35, 50) luôn có hiệu lực: % sinh lực, % tấn công/phòng thủ, chí mạng, sát thương chí mạng, % né, % sát thương kỹ năng, kháng hệ khắc, hồi chakra mỗi giây, % tốc chạy. Học cấp 1 bằng Sách kỹ năng (bán ở Tiệm Thuốc bằng lượng, rơi từ boss), nâng bằng điểm kỹ năng |
 | Nhân vật | Cấp 1-120, điểm tiềm năng (Sức mạnh, Thân pháp, Chakra, Thể lực), tẩy điểm |
-| Thế giới | 23 bản đồ: 3 làng, 19 bãi luyện công (cấp 1-120, có 3 nhánh phụ vào qua cửa bí mật), Đấu Trường PK tự do; bục nhảy, nhảy đôi, cổng dịch chuyển |
-| Quái & Boss | 51 loại quái với AI tuần tra/đuổi đánh/đánh xa, 11 boss thế giới hồi sinh định kỳ (Vua Slime → Long Vương cấp 125), thông báo toàn server, chia thưởng theo sát thương |
-| Trang bị | 9 ô trang bị + ô thú cưng, 12 bậc (Gỗ → Thần → Tiên → Thánh), 5 độ hiếm với dòng chỉ số ngẫu nhiên, rơi đồ có chủ sở hữu |
+| Thế giới | 23 bản đồ: 3 làng, 19 bãi luyện công (cấp 1-120, có 3 nhánh phụ vào qua cửa bí mật), Đấu Trường PK tự do; thêm 2 phó bản (Hang Động Thử Thách, phòng Lôi Đài); 23 chủ đề cảnh vẽ riêng; bục nhảy, nhảy đôi, cổng dịch chuyển; bản đồ thế giới dạng tranh cuộn, tự tìm đường tới bản đồ, NPC hay mục tiêu nhiệm vụ |
+| Quái & Boss | 51 loại quái với AI tuần tra/đuổi đánh/đánh xa, 11 boss thế giới hồi sinh định kỳ (Vua Slime → Long Vương cấp 125) có 2-3 chiêu báo trước vùng đánh và cuồng nộ dưới 30% máu, 3 Tà Thú sự kiện; thông báo toàn server, chia thưởng theo sát thương |
+| Trang bị | 9 ô trang bị + ô thú cưng + 4 ô thời trang, 12 bậc (Gỗ → Thần → Tiên → Thánh), 5 độ hiếm với dòng chỉ số ngẫu nhiên, rơi đồ có chủ sở hữu |
 | Cường hóa | +1 đến +16 tại Thợ Rèn, đá cường hóa 4 cấp (Sơ, Trung, Cao, Thần), tỉ lệ thành công giảm dần, Bùa Bảo Hộ chống tụt cấp |
-| Thú cưng & đồ ăn | 6 thú cưng đi theo chủ, tăng % EXP và chỉ số (Rồng Con rơi từ Long Vương) · Đồ ăn buff 30 phút (+10% tấn công/phòng thủ/sinh lực) |
-| Sự kiện | Giờ Vàng nhân đôi EXP toàn máy chủ 12h-13h và 20h-22h (giờ Việt Nam) |
-| NPC | Trưởng Làng (nhiệm vụ chính), Bà Thuốc, Thợ Rèn, Tiểu Nhị (nhiệm vụ hằng ngày), Phu Xe (dịch chuyển), Lão Gia Tộc, Thủ Kho, Hộ Pháp (hang động) |
+| Khảm ngọc | 6 loại ngọc × 10 cấp: Hỏa Tâm (+tấn công), Thủy Linh (+sinh lực), Thổ Giáp (+phòng thủ), Phong Ảnh (+% né), Lôi Quang (+% chí mạng), Huyết Hồn (+% hút máu). Trang bị chiến đấu có 1-3 lỗ khảm theo bậc (Gỗ-Sắt 1, Bạc-Huyền 2, Long trở lên 3), mỗi món chỉ khảm 1 viên mỗi loại. Tại Thợ Rèn: khảm (bấm hoặc kéo ngọc vào lỗ tròn), gỡ (tốn xu, ngọc về hành trang), ghép 3 viên cùng cấp thành 1 viên cấp trên (tỉ lệ giảm dần, thất bại mất 1 viên). Ngọc cấp 1 bán ở Lò Rèn, quái thường thỉnh thoảng rơi cấp 1-2, boss luôn rơi 1 viên cấp 2-5. Ngọc đi theo món khi giao dịch, cất kho, bán |
+| Thú cưng & đồ ăn | 6 thú cưng vẽ pixel bay/chạy theo chủ (người khác cũng thấy), cấp 1-50: nhận một phần EXP khi chủ diệt quái, chỉ số tăng theo cấp; độ thân mật (dưới 20 thú dỗi); kỹ năng tự động Tha Đồ (nhặt đồ) và Hồi Xuân (hồi máu). Cho ăn Bánh Gạo / Cá Khô / Linh Thú Đan (Tiệm Thuốc, tab Thú cưng) để tăng EXP và thân mật. Cửa sổ Thú cưng (phím K). Rồng Con rơi từ Long Vương · Đồ ăn buff 30 phút (+10% tấn công/phòng thủ/sinh lực) |
+| Thời trang & thú cưỡi | 4 ô riêng (tab "Thời trang" trong Hành Trang): 3 mặt nạ, 4 áo choàng bay theo bước chạy, 4 bộ trang phục đổi màu và hoa văn áo quần, 5 thú cưỡi (Ngựa Hồng Tông, Sói Ngân Nguyệt, Hạc Tiên Vân Du, Bạch Hổ Sơn Quân, Kỳ Lân Hỏa Vân) cộng 15-35% tốc chạy ngoài giới hạn của trang bị. Chỉ số nhỏ (+% EXP, +% sinh lực, công). Bán bằng lượng ở Tiệm Thuốc (vĩnh viễn); Rương Báu và Vòng Quay có thể ra đồ 7 ngày (món Huyền thoại chỉ có từ đây), hết hạn tự biến mất, không giao dịch được |
+| Sự kiện | Giờ Vàng nhân đôi EXP toàn máy chủ 12h-13h và 20h-22h (giờ Việt Nam) · Sự kiện Tà Thú mỗi 2 giờ · **Lễ hội theo mùa**: Lễ Hội Trăng Rằm (25/09 - 08/11) quái rơi Bánh Trung Thu, boss rơi nhiều hơn; đổi bánh lấy xu, bình thuốc, Bí Kíp, đá, rương, lượng, ngọc, thời trang và thú cưỡi 15 ngày ở Sứ Giả Lễ Hội trong mỗi làng (giới hạn lượt cả mùa). Biểu ngữ lễ hội dưới khối nhiệm vụ |
+| Hộp thư & Giftcode | Hộp thư hệ thống (phím L, chấm đỏ khi có thư mới): tối đa 30 thư, tự xóa sau 30 ngày, đính kèm xu, lượng, vật phẩm; nhận từng thư hoặc nhận tất cả (kiểm tra đủ chỗ trong hành trang). Người offline vẫn nhận được. Quà Ban Quản Trị, quà giftcode và thưởng Tà Thú khi hành trang đầy đều gửi qua thư. Nhập mã quà tặng ở Cài đặt hoặc Hộp thư: mỗi tài khoản dùng mỗi mã 1 lần (xóa nhân vật tạo lại cũng không nhập lại được), nhập sai 5 lần trong 1 phút thì tạm khóa |
+| NPC | Trưởng Làng (nhiệm vụ chính), Bà Thuốc, Thợ Rèn, Tiểu Nhị (nhiệm vụ hằng ngày), Phu Xe (dịch chuyển), Lão Gia Tộc, Thủ Kho, Hộ Pháp (hang động), Sứ Giả Lễ Hội (đổi quà sự kiện) |
 | Nhiệm vụ | 51 nhiệm vụ chính từ cấp 1 đến 120 (diệt quái, thu thập, săn boss, khám phá bản đồ, cường hóa, vượt hang động, đạt cấp) + 20 nhiệm vụ diệt quái mỗi ngày |
 | Xã hội | Chat bản đồ (bong bóng trên đầu), thế giới, nhóm, gia tộc, nhắn riêng · Nhóm 6 người chia EXP · Gia tộc 10 cấp (góp quỹ xu, tới 70 thành viên, +% EXP cho cả tộc), tộc trưởng/trưởng lão · Giao dịch an toàn (khóa + xác nhận 2 bên) |
-| PvP | Thách đấu 1-1, chế độ PK (điểm hiếu chiến, phạt EXP), Đấu Trường |
+| PvP | Thách đấu 1-1, chế độ PK (điểm hiếu chiến, phạt EXP), Đấu Trường. **Lôi đài xếp hạng** (từ cấp 20, đăng ký ở Võ Sư Thiết Quyền trong Đấu Trường hoặc tab Lôi đài của Bảng Xếp Hạng): ghép cặp theo điểm Elo (biên nới dần khi chờ lâu), mỗi trận một phòng đấu riêng, đếm ngược 5 giây, đấu 3 phút, hồi đầy sinh lực/chakra, cấm bình thuốc; hạ gục thì thắng, hết giờ so % sinh lực (theo sinh lực tối đa lúc vào đấu), rời trận hay mất kết nối tính thua; bỏ trận khi chưa ai ra đòn thì trận không tính và người bỏ chờ 60 giây mới đăng ký lại. Thưởng mỗi trận xu + danh vọng, thưởng tuần theo hạng gửi qua hộp thư (0 giờ thứ Hai; cần ≥ 3 trận, thắng ≥ 1 và điểm ≥ 1.000). Auto đánh và tự tìm đường không bao giờ nhắm người chơi khác ngoài trận lôi đài |
 | Hang Động Thử Thách | Phó bản riêng cho từng nhóm: 5 đợt quái + boss trong 10 phút, quái mạnh theo cấp trung bình nhóm, 3 lượt/ngày, thưởng EXP, xu, Rương Báu, đá cường hóa |
 | Thủ Kho | 60 ô cất đồ, dùng chung ở mọi làng |
 | Bạn bè | Kết bạn, xem online/offline, nhắn tin, mời nhóm nhanh, thông báo khi bạn bè online |
 | Điểm danh & Vòng quay | Quà điểm danh 7 ngày liên tục · Vòng quay may mắn bằng xu hoặc lượng |
-| Tiện ích | Tự động đánh (tự tìm quái, dùng kỹ năng, uống thuốc, nhặt đồ), bảng xếp hạng, bản đồ thu nhỏ, điều khiển cảm ứng, âm thanh tổng hợp bằng WebAudio |
-| Tiền tệ | Xu (đánh quái, nhiệm vụ) và Lượng (boss, nhiệm vụ hằng ngày) mua Bí Kíp x2 EXP, Bùa Bảo Hộ, Thẻ Hồi Sinh |
+| Tiện ích | Tự động đánh (tự tìm quái, dùng kỹ năng, uống thuốc, nhặt đồ), bảng xếp hạng, bản đồ thu nhỏ, điều khiển cảm ứng, âm thanh tổng hợp bằng WebAudio · Ngày/đêm theo giờ Việt Nam và rung màn hình (chỉnh trong Cài đặt) |
+| Tiền tệ | Xu (đánh quái, nhiệm vụ) và Lượng (boss, nhiệm vụ hằng ngày) mua Bí Kíp x2 EXP, Bùa Bảo Hộ, Thẻ Hồi Sinh, Sách kỹ năng nội tại, thời trang và thú cưỡi |
 
 ## Chạy trên máy
 
@@ -48,6 +52,10 @@ Biến môi trường:
 | `DATA_DIR` | Thư mục lưu dữ liệu (JSON) | `./data` |
 | `ADMINS` | Danh sách **tên tài khoản** admin, cách nhau bởi dấu phẩy | (trống) |
 | `MOTD` | Thông báo hiện khi người chơi vào game | (trống) |
+| `TATHU` | `0` để tắt lịch tự động của sự kiện Tà Thú (lệnh admin `/event` vẫn dùng được) | bật |
+| `SEASON` | `0` để tắt lịch lễ hội theo mùa (lệnh admin `/sukien` vẫn ép bật được) | bật |
+| `TRUST_PROXY` | Số proxy đứng trước server. Chỉ khi đó mới đọc IP người chơi từ `X-Forwarded-For` (đếm từ cuối, vì phần đầu máy khách tự ghi được). `auto`: tin 1 proxy khi kết nối tới từ loopback/mạng nội bộ (Caddy, Nginx cùng máy, Render); `0`: luôn dùng IP của kết nối | `auto` |
+| `REG_LIMIT` | Số tài khoản tạo mới tối đa mỗi IP mỗi giờ (`0` = không giới hạn; kết nối loopback không tính) | `10` |
 
 Kiểm thử tự động (bật server tạm và cho 2 bot chơi thử qua WebSocket) và kiểm tra chéo dữ liệu game:
 
@@ -115,12 +123,20 @@ location / {
 | Tab | Đổi mục tiêu |
 | F | Bật/tắt tự động đánh |
 | B, C, V, N, P, O, G, R, M | Túi đồ, Nhân vật, Kỹ năng, Nhiệm vụ, Nhóm, Bạn bè, Gia tộc, Xếp hạng, Bản đồ |
+| K, L | Thú cưng, Hộp thư |
 | Enter | Chat |
 
 Bấm vào NPC để nói chuyện, bấm vào quái để chọn mục tiêu, bấm vào người chơi để mời nhóm, giao dịch, thách đấu, nhắn tin, xem thông tin.
 
 Lệnh chat: `/w tên tin` (nhắn riêng), `/p` (nhóm), `/g` (gia tộc), `/a` (thế giới), `/moi tên`, `/gd tên`, `/td tên`, `/xem tên`, `/online`, `/help`.
-Lệnh admin: `/lv n`, `/item id sl [độ hiếm]`, `/plus n` (cường hóa vũ khí), `/xu n`, `/luong n`, `/tp map`, `/boss`, `/all tin`, `/kick tên`.
+Lệnh admin: `/lv n`, `/item id sl [độ hiếm] [số ngày hạn]`, `/hethan [giây]` (mọi đồ có hạn trên người hết hạn sau n giây, để thử), `/plus n` (cường hóa vũ khí), `/thu cấp [thân mật]` (cấp và thân mật thú đang mang), `/xu n`, `/luong n`, `/tp map`, `/boss`, `/bosshp %` (đặt máu boss trên bản đồ đang đứng, để thử cuồng nộ), `/event tathu [boss] [bản đồ]` (gọi Tà Thú ngay), `/event stop`, `/all tin`, `/kick tên`, `/mail <tên|all> <xu> <lượng> [vật phẩm] [sl] [ngày]` (gửi thư quà, người offline nhận khi vào game), `/code <MÃ> <xu> <lượng> [vật phẩm] [sl] [giờ=24] [lượt]` (tạo giftcode tạm), `/code` (danh sách), `/code xoa <MÃ>`, `/sukien <mã mùa|tat|auto>` (ép bật/tắt lễ hội để thử), `/arena` (xem hàng chờ lôi đài), `/arena reward` (trao thưởng lôi đài tuần ngay), `/arena elo n` (đặt điểm lôi đài của mình).
+
+Giftcode cố định, lịch lễ hội và luật/thưởng lôi đài nằm trong `server/data/extras.js` (`GIFTCODES`, `SEASONS`, `ARENA`).
+
+### Chiêu boss và sự kiện Tà Thú
+
+- Mỗi boss có 2-3 chiêu đặc biệt: **Địa Chấn** (vòng hoặc dải đất), **Gầm** (làm chậm), **Triệu Hồi** (gọi quái con), **Tia/Cột** (dải thẳng hoặc nhiều cột từ trời), **Bộc Phát** (vòng lớn). Trước khi tung chiêu, vùng nguy hiểm hiện màu đỏ trên mặt đất kèm tên chiêu và thanh niệm ở khung mục tiêu: chạy ra khỏi vùng là né được. Dưới 30% máu boss **nổi cuồng nộ**: niệm và ra chiêu nhanh hơn, chạy nhanh hơn, có quầng lửa đỏ.
+- **Tà Thú Xuất Thế**: mỗi 2 giờ (0h, 2h, ..., 22h giờ Việt Nam) phút 30, một trong 3 Tà Thú (Hắc Viêm cấp 32, Băng Phách cấp 60, Huyết Nguyệt cấp 95) xuất hiện ở một bãi luyện công hợp cấp, báo trước 5 phút, tồn tại 20 phút. Biểu ngữ dưới màn hình đếm ngược, bấm vào để tự tìm đường tới; bản đồ thế giới đánh dấu nơi Tà Thú đang ở. Khi Tà Thú bị hạ, mọi người nhận bảng sát thương; thưởng theo hạng (top 1: 30 lượng, xu, 3 rương, sách nội tại đúng phái; top 2-3: lượng, xu, rương, đá cường hóa; top 10: lượng, xu, rương; ai gây từ 1% máu: lượng và xu). Hành trang đầy thì đồ thưởng được gửi vào hộp thư (hộp thư đầy quà thì vào thủ kho; kho cũng đầy thì server giữ hộ và tự trả khi hành trang có chỗ).
 
 ## Cấu trúc mã nguồn
 
@@ -128,7 +144,7 @@ Lệnh admin: `/lv n`, `/item id sl [độ hiếm]`, `/plus n` (cường hóa v�
 server/
   index.js          HTTP tĩnh + WebSocket, đăng nhập, tạo nhân vật
   db.js             Lưu trữ JSON (ghi nguyên tử, tự lưu định kỳ)
-  data/             Dữ liệu game: phái, kỹ năng, vật phẩm, quái, bản đồ, nhiệm vụ
+  data/             Dữ liệu game: phái, kỹ năng, vật phẩm, quái, bản đồ, nhiệm vụ, thú cưng
   game/
     world.js        Vòng lặp 20 tick/giây, vào/ra bản đồ, xếp hạng
     map.js          Bản đồ: người chơi, quái, vật phẩm rơi, đồng bộ trạng thái
@@ -136,19 +152,28 @@ server/
     combat.js       Kỹ năng, sát thương, ngũ hành, rơi đồ, chết/hồi sinh
     dungeon.js      Phó bản Hang Động Thử Thách (bản sao riêng theo nhóm)
     player.js       Nhân vật, chỉ số, túi đồ, kinh nghiệm
-    actions.js      NPC, cửa hàng, cường hóa, nhiệm vụ, thủ kho, điểm danh, vòng quay
+    actions.js      NPC, cửa hàng, cường hóa, khảm/ghép ngọc, nhiệm vụ, thủ kho, điểm danh, vòng quay
     social.js       Chat, nhóm, bạn bè, giao dịch, thách đấu, gia tộc, lệnh admin
+    event.js        Sự kiện Tà Thú: lịch, gọi boss, xếp hạng sát thương, trao thưởng
+    mail.js         Hộp thư hệ thống (gửi cả người offline), giftcode, chống dò mã
+    season.js       Sự kiện theo mùa: rơi vật phẩm sự kiện, đổi quà ở Sứ Giả Lễ Hội
+    arena.js        Lôi đài xếp hạng: hàng chờ, ghép cặp Elo, phòng đấu riêng, thưởng trận và thưởng tuần
 public/
-  index.html, css/style.css
+  index.html, css/style.css, css/worldmap.css
   js/
     main.js         Màn hình đăng nhập / chọn nhân vật, vòng lặp
-    game.js         Vật lý, dự đoán phía client, chiến đấu, tự động đánh, vẽ
-    sprites.js      Sprite pixel: ninja, 11 kiểu quái, icon vật phẩm
-    maprender.js    17 chủ đề bản đồ, parallax, trang trí, hạt thời tiết
-    fx.js           Hiệu ứng kỹ năng, số sát thương
+    game.js         Vật lý, dự đoán phía client, chiến đấu, tự động đánh, tìm đường, vẽ
+    sprites.js      Sprite pixel: ninja, NPC, mặt nạ, áo choàng, trang phục, thú cưỡi
+    petart.js       Thú cưng đi theo: 6 loài, hoạt ảnh chạy/bay, cache khung
+    monsterart.js   Quái và boss: 11 kiểu sprite, ngoại hình riêng theo loài
+    maprender.js    23 chủ đề bản đồ, parallax, trang trí, hạt thời tiết, ngày/đêm theo giờ Việt Nam
+    fx.js           Hiệu ứng kỹ năng, chiêu boss, rung màn hình, số sát thương
+    icons.js        Icon vật phẩm, kỹ năng, giao diện
+    pathfind.js     Tìm đường giữa các bản đồ và nhảy bục trong bản đồ
+    worldmap.js     Bản đồ thế giới dạng tranh cuộn
     ui.js           HUD và các cửa sổ
     sound.js        Hiệu ứng âm thanh WebAudio
 test/smoke.js       Kiểm thử tự động end-to-end
 ```
 
-Server quyết định mọi kết quả (sát thương, rơi đồ, giao dịch, tiền tệ). Client chỉ gửi ý định hành động, server kiểm tra tầm đánh, hồi chiêu, chakra, tốc độ di chuyển và khoảng cách NPC.
+Server quyết định mọi kết quả (sát thương, rơi đồ, giao dịch, tiền tệ). Client chỉ gửi ý định hành động, server kiểm tra tầm đánh, hồi chiêu, chakra, tốc độ di chuyển, độ cao nhảy (không lơ lửng được trên không) và khoảng cách NPC.

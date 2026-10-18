@@ -107,7 +107,11 @@ class DB {
     return acc;
   }
 
-  getChar(name) { return this.chars[String(name).toLowerCase()] || null; }
+  // tên do người chơi/admin gõ: chỉ lấy khóa riêng của bảng ('__proto__', 'constructor' không trỏ vào Object.prototype)
+  getChar(name) {
+    const k = String(name).toLowerCase();
+    return Object.prototype.hasOwnProperty.call(this.chars, k) ? this.chars[k] : null;
+  }
 
   putChar(c) {
     this.chars[c.name.toLowerCase()] = c;
