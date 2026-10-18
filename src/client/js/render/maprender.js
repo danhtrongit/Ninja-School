@@ -24,6 +24,8 @@ export class MapRenderer {
       this.th = { ...this.th, part: v.part || this.th.part, decor: (this.th.decor || []).map(sw) };
       this.sc = { ...this.sc, layers: this.sc.layers.map((l) => (l.kinds ? { ...l, kinds: l.kinds.map(sw) } : l)) };
     }
+    // trạm dùng theme bãi nhưng vẽ nhà theo hệ (townStyle) như làng
+    if (map.town && !this.th.town && map.townStyle) this.th = { ...this.th, town: map.townStyle };
     this.seed = seedOf(map.id);
     this.lights = [];
     this.anims = [];

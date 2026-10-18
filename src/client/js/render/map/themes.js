@@ -29,6 +29,10 @@ export const THEMES = {
   ruins: { sky: ['#3a78c8', '#fbe0b0'], far: '#d89a68', mid: '#e8c08a', top: '#e8bf78', dirt: '#a87a44', plat: 'stone', platPal: ['#f0d098', '#c89a5e', '#94683a', '#5e3e22'], platEdge: '#2a1810', part: 'sand', decor: ['pillar', 'statue', 'rubble', 'fallen', 'obelisk', 'pillar', 'urn', 'cactus'] },
   crystal: { sky: ['#0a0818', '#2a2060'], far: '#1e1840', mid: '#2a2250', top: '#6e5c96', dirt: '#3a3058', plat: 'stone', platPal: ['#8a7cbc', '#5c5092', '#40366e', '#28224a'], platCrys: ['#d08aff', '#6ae0ff', '#ff8ad8'], ceiling: true, dark: 0.42, part: 'mote', crys: ['#c07aff', '#5ad8ff', '#ff7ad0'], crysDecor: ['#9a64d0', '#3e9ec0', '#c060a8'], decor: ['crystal', 'geode', 'crystal', 'mushroomglow', 'rock', 'crystal', 'stalag', 'geode'], dayK: 0.2 },
   abyss: { sky: ['#05010a', '#4a1048'], far: '#24102e', mid: '#1a0a22', top: '#4a4252', dirt: '#1c1820', plat: 'stone', platPal: ['#7a7084', '#544c5e', '#3a3444', '#221e2a'], platGlow: '#d040ff', dark: 0.22, part: 'void', crys: ['#d040ff', '#ff3a8a'], decor: ['deadtree', 'thorn', 'spikes', 'eyestalk', 'skull', 'voidcrystal', 'bones', 'thorn'], dayK: 0.45 },
+  // Thượng Giới: đầm lầy, tinh hà, núi đá vôi ngọc bích
+  swamp: { sky: ['#6e7a5a', '#b4bc98'], far: '#56604a', mid: '#4a5640', top: '#5a6a3a', dirt: '#3a3424', plat: 'wood', water: '#3a4a34', mist: true, dark: 0.12, part: 'firefly', decor: ['willow', 'reed', 'deadtree', 'reed', 'mushroomglow', 'rock', 'lotus', 'reed'], dayK: 0.85 },
+  starfield: { sky: ['#0a0a2a', '#3a2a6a'], far: '#2a2458', mid: '#22204a', top: '#d8d4ff', dirt: '#5a5490', plat: 'cloud', platPal: ['#e8e4ff', '#b0a8ec', '#7a70c0', '#4a4290'], platGlow: '#9ab4ff', dark: 0.18, part: 'sparkle', crys: ['#9ab4ff', '#ffd76a'], decor: ['cloudpillar', 'crystal', 'cloudpuff', 'jadepillar', 'crystal', 'lotus'], dayK: 0.3 },
+  jade_peak: { sky: ['#8ad0d8', '#eefaf4'], far: '#7ab8aa', mid: '#5e9e8a', top: '#7cc08a', dirt: '#5a6a4a', plat: 'stone', platPal: ['#cfe8d8', '#9ac8b0', '#6a9a84', '#40685a'], water: '#4ab8b0', part: 'mist', decor: ['pine', 'rock', 'bamboo', 'stonelantern', 'pine', 'tallgrass', 'rock', 'flower'], dayK: 1 },
 };
 
 // ======================= Cấu hình cảnh cho từng chủ đề =======================
@@ -290,6 +294,43 @@ export const SCENES = {
     ground: 'basalt', zig: true, bpal: ['#4e4858', '#36303e', '#25212c', '#16131c'], crack: ['#d040ff', '#7a20b0', '#ffb0ff'], cliff: ['#4e4858', '#36303e', '#25212c', '#16131c'],
     light: { top: ['#a020ff', 0.08], bot: ['#ff2a8a', 0.1], dark: 0.2, darkCol: '#0c0214', vig: 0.42 }, portal: '#e070ff',
   },
+  swamp: {
+    sky: ['#4a5642', '#6a7656', '#8e9a74', '#b8bf9a'],
+    sun: { k: 'sun', x: 0.32, y: 44, r: 9, col: '#eef0d8', glow: '#cfd6a8' },
+    clouds: { pal: ['#c8ccb0', '#a8b090', '#8a9474', '#6e785c'], n: 5, y: [12, 70] }, birds: 'bird',
+    layers: [
+      { t: 'hills', h: 90, fx: 0.06, fy: 0.1, off: 46, base: 22, amp: 12, col: '#4a5a40', lit: '#5c6c4c', dark: '#8e9a74', trees: ['#6a7e5a', '#4e6244', '#3a4c34', '#2a3826'], treeKind: 'pine', treeN: 36, treeR: 4 },
+      { t: 'trees', h: 110, fx: 0.2, fy: 0.25, off: 40, gh: 8, ground: '#46523a', dark: '#36422e', kinds: ['willow', 'dead', 'willow'], leaf: 'mist', bark: 'grey', hmin: 50, hmax: 80, haze: '#8a9478', amt: 0.45, gap: 52 },
+      { t: 'props', h: 50, fx: 0.42, fy: 0.5, off: 0, gh: 8, ground: '#3a4630', rim: '#56663e', haze: '#6e7a5c', amt: 0.3, gap: 64, items: [(R) => sprTree('dead', 26 + ((R() * 14) | 0), (R() * 3) | 0, { bark: 'grey' }), (R) => sprProp('reed', 0, 'swamp'), (R) => sprRock(22, 11, (R() * 3) | 0, ['#5a6a4a', '#46543a', '#33402a', '#222c1c'])] },
+    ],
+    water: { hz: 40, top: '#5a6a50', col: '#3a4a34', deep: '#26321f', refl: [0, 1], fy: 0.12 },
+    fog: true, fogA: 0.18, ground: 'grass', light: { top: ['#c8d8a0', 0.05], dark: 0.12, darkCol: '#141a10', vig: 0.3 }, portal: '#b6ff7a',
+  },
+  starfield: {
+    sky: ['#05051a', '#0e0c30', '#22185a', '#3a2a74', '#5a3a86'], stars: 220, aurora: true,
+    sun: { k: 'moon', x: 0.78, y: 34, r: 10, glow: '#c8d0ff' },
+    clouds: { pal: ['#6a5aa8', '#4a3a88', '#33286a', '#22184c'], n: 4, y: [30, 90] },
+    layers: [
+      { t: 'mount', h: 160, fx: 0.06, fy: 0.1, off: 20, n: 11, hmin: 40, hmax: 124, steep: 2.2, lit: '#3a3478', shd: '#24205a', rim: '#a0a8ff', base: '#5a3a86', fade: 40 },
+      { t: 'clouds', h: 140, fx: 0.22, fy: 0.28, off: 12, base: 42, amp: 16, n: 22, rmin: 10, rmax: 22, pal: ['#8a80d8', '#6a60b8', '#4e4898', '#363278'], haze: '#3a2e78', feat: ['skytemple'], featCol: '#ffd76a', featHaze: 0.4 },
+      { t: 'colonnade', h: 116, fx: 0.42, fy: 0.5, off: 0, gh: 10, pal: ['#e8e4ff', '#b0a8ec', '#7a70c0', '#4a4290'], trim: '#ffd76a', hmin: 46, hmax: 70, haze: '#3a2e78', amt: 0.34, space: 110, cloud: ['#8a80d8', '#6a60b8', '#4e4898', '#363278'], cloudHaze: '#3a2e78' },
+    ],
+    ground: 'cloud', cliff: ['#d8d4ff', '#a8a0e0', '#7068b0', '#48407e'], cap: '#ffffff',
+    light: { top: ['#9ab4ff', 0.06], dark: 0.18, darkCol: '#06061a', vig: 0.3 }, portal: '#ffd76a',
+  },
+  jade_peak: {
+    sky: ['#4aa8c8', '#7cc6d8', '#b4e2e0', '#e8f8f0'],
+    sun: { k: 'sun', x: 0.7, y: 36, r: 9, col: '#fffcea', glow: '#e8ffe0' },
+    clouds: { pal: ['#ffffff', '#eef8f4', '#cfe6e0', '#a8ccc6'], n: 7, y: [10, 80] }, birds: 'bird',
+    layers: [
+      { t: 'karst', h: 170, fx: 0.06, fy: 0.1, off: 48, n: 12, hmin: 60, hmax: 140, lit: '#a4d4c4', shd: '#78ae9e', base: '#c4e6dc', rim: '#e0fff4', tree: '#5a8a6a' },
+      { t: 'karst', h: 140, fx: 0.2, fy: 0.25, off: 42, n: 9, hmin: 40, hmax: 110, lit: '#6aaa8a', shd: '#3e7a62', base: '#8ac4a8', rim: '#b4e8cc', tree: '#2e5a40' },
+      { t: 'trees', h: 110, fx: 0.42, fy: 0.5, off: 0, gh: 8, ground: '#6a9a74', dark: '#4e7a5c', kinds: ['pine', 'bamboo'], hmin: 46, hmax: 84, haze: '#b4e2d4', amt: 0.4, gap: 70 },
+    ],
+    water: { hz: 46, top: '#9ae0d4', col: '#4ab8b0', deep: '#2a8a88', refl: [0, 1], fy: 0.12 },
+    fog: true, fogA: 0.12, ground: 'rock', gpal: ['#e4f6ec', '#b0d8c4', '#7eae98', '#56806e', '#3a5a4e'],
+    light: { top: ['#e8fff4', 0.06], vig: 0.16 }, portal: '#7affd8',
+  },
 };
 
 // Bảng màu làng theo hệ (mặt đất lát đá, nhà, cây)
@@ -303,4 +344,45 @@ export const VILLAGE = {
 // (chỉ áp dụng khi bản đồ còn dùng chủ đề gốc `from`)
 export const MAP_VARIANTS = {
   sakura_garden: { from: 'grass_fire', part: 'petal', swap: { maple: 'sakura' } },
+  // Hạ Giới mở rộng
+  ga_ruongbac: { from: 'grass_wind', part: 'leaf', swap: { round: 'willow', rock: 'reed' } },
+  ga_modong: { from: 'cave', part: 'dust', swap: { crystal: 'torch', mushroomglow: 'barrel', bones: 'rubble' } },
+  ga_rungnam: { from: 'mist', part: 'firefly', swap: { deadtree: 'mushroomglow', grave: 'mushroomglow', pine: 'round' } },
+  ga_ocdao: { from: 'desert', part: 'leaf', swap: { cactus: 'palm', skull: 'reed', bones: 'bush' } },
+  gb_tunglam: { from: 'snow', part: 'snow', swap: { snowman: 'pine', icecrystal: 'rock' } },
+  gb_hanphong: { from: 'ice', part: 'mote', swap: { pine: 'icecrystal' } },
+  gb_bangho: { from: 'ice', part: 'sparkle', swap: { pine: 'icespike', rock: 'icecrystal' } },
+  gc_baithama: { from: 'mist', part: 'firefly', swap: { pine: 'deadtree', bush: 'grave', rock: 'urn' } },
+  gc_lorenquy: { from: 'lava', part: 'ember', swap: { bones: 'anvil', pillar: 'barrel' } },
+  gc_concatdo: { from: 'desert', part: 'ember', swap: { cactus: 'rock', pillar: 'deadtree' } },
+  gd_vancot: { from: 'cave', part: 'dust', swap: { crystal: 'bones', mushroomglow: 'skull' } },
+  gd_huyetho: { from: 'hell', part: 'ember', swap: { deadtree: 'thorn' } },
+  ge_kimkhuyet: { from: 'heaven', part: 'sparkle', swap: { lotus: 'goldtree', cloudpuff: 'censer' } },
+  ge_huvo: { from: 'crystal', part: 'void', swap: { mushroomglow: 'voidcrystal', geode: 'voidcrystal' } },
+  ge_longmo: { from: 'dragon_palace', part: 'bubble', swap: { coral: 'bones', clam: 'skull' } },
+  // Thượng Giới
+  bl_thuyphu: { from: 'dragon_palace', part: 'sparkle', swap: { kelp: 'jadepillar' } },
+  bl_thanlau: { from: 'lake', part: 'mist', swap: { flower: 'lotus', reed: 'lotus', round: 'willow' } },
+  xv_xichsa: { from: 'desert', part: 'ember', swap: { cactus: 'rock', pillar: 'torch' } },
+  xv_hoadiem: { from: 'lava', part: 'ember', swap: { bones: 'torch', pillar: 'obelisk' } },
+  xv_hacdieu: { from: 'cave', part: 'ember', swap: { crystal: 'voidcrystal', mushroomglow: 'torch' } },
+  bn_bangho: { from: 'ice', part: 'mote', swap: { pine: 'icecrystal' } },
+  bn_vannien: { from: 'mist', part: 'snow', swap: { deadtree: 'pine', grave: 'icespike', bush: 'rock' } },
+  hl_hoangsa: { from: 'desert', part: 'sand', swap: { cactus: 'statue', skull: 'obelisk' } },
+  hl_quandien: { from: 'ruins', part: 'mote', swap: { cactus: 'urn', fallen: 'statue' } },
+  hl_thachquan: { from: 'jade_peak', part: 'sand', swap: { bamboo: 'statue', flower: 'grave', stonelantern: 'urn' } },
+  um_quylam: { from: 'mist', part: 'firefly', swap: { pine: 'deadtree', stonelantern: 'grave' } },
+  um_saohuyet: { from: 'dark_forest', part: 'void', swap: { pumpkin: 'skull', bush: 'thorn' } },
+  um_vongxuyen: { from: 'bamboo', part: 'firefly', swap: { stonelantern: 'grave', bush: 'deadtree' } },
+  th_tinhlam: { from: 'crystal', part: 'sparkle', swap: { mushroomglow: 'crystal' } },
+  th_vanlo: { from: 'heaven', part: 'sparkle', swap: { goldtree: 'cloudpillar', lotus: 'cloudpuff' } },
+  hd_huyettri: { from: 'hell', part: 'ember', swap: { deadtree: 'thorn', pillar: 'bones' } },
+  hd_madien: { from: 'lava', part: 'ember', swap: { rock: 'obelisk', bones: 'banner' } },
+  hd_tedan: { from: 'hell', part: 'void', swap: { torch: 'obelisk', spikes: 'skull' } },
+  hd_hukhong: { from: 'starfield', part: 'void', swap: { lotus: 'voidcrystal' } },
+  tc_vanmon: { from: 'heaven', part: 'petal', swap: { censer: 'stonelantern' } },
+  tc_thuycanh: { from: 'dragon_palace', part: 'sparkle', swap: { kelp: 'lotus', coral: 'jadepillar' } },
+  tc_thanhdien: { from: 'heaven', part: 'sparkle', swap: { lotus: 'censer', goldtree: 'jadepillar' } },
+  tc_daonguyen: { from: 'sakura', part: 'petal', swap: { parasol: 'censer' } },
+  tc_bandao: { from: 'jade_peak', part: 'petal', swap: { pine: 'sakura', bamboo: 'goldtree' } },
 };

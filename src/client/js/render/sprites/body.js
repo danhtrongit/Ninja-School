@@ -249,6 +249,7 @@ function drawBand(P, sp, hx, hy, pose) {
     px(mid, y0, P.N);
     if (sp.ht >= 6) px(mid - 1, y0, P.N);
     if (sp.ht >= 8) { px(mid, y0 - 1, 0xffffff); px(mid - 1, y0 - 1, P.M); }
+    if (sp.ht >= 12) px(mid + 1, y0 - 1, 0xffffff);
   }
   // đuôi băng trán bay phía sau
   const ph = pose.flap || 0;
@@ -356,6 +357,15 @@ export function drawTorso(P, sp, ux, by, pose) {
     // giáp ngực ánh kim quanh gia huy
     px(X - 3, Y - 12, P.N); px(X - 3, Y - 11, P.M); px(X, Y - 11, P.M); px(X - 2, Y - 11, P.n);
     px(X - 1, Y - 13, 0xffffff);
+  }
+  if (at >= 12) {
+    // giáp vai kim loại hai bên (bậc áo cao)
+    px(X - 5, Y - 14, P.M); px(X - 6, Y - 13, P.N); px(X + 5, Y - 14, P.M); px(X + 6, Y - 13, P.n);
+  }
+  if (at >= 16) {
+    // điểm sáng gia huy + viền vạt áo dài thêm 1 hàng (áo dài không có vạt tách thì bỏ)
+    px(X - 1, Y - 12, 0xffffff);
+    if (!sp.robe) { px(X - 5, Y - 6, P.x); px(X + 5, Y - 6, P.x); }
   }
 }
 

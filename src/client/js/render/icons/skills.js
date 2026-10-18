@@ -354,8 +354,83 @@ function netGrid(P, cx, cy, R, col) {
   }
 }
 
-// nền tròn theo màu hệ
-function skillBg(el, ult, basic) {
+// ---- nét dùng cho thần kỹ hậu kỳ (cấp 100+)
+// lông vũ thon từ gốc (x0,y0) tới ngọn (x1,y1); cols: [sáng, chính, tối]
+function feather(P, x0, y0, x1, y1, w, cols) {
+  const L = Math.hypot(x1 - x0, y1 - y0);
+  const ux = (x1 - x0) / L;
+  const uy = (y1 - y0) / L;
+  for (let t = 0; t <= L; t += 0.4) {
+    const u = t / L;
+    const hw = w * Math.sin(Math.PI * (0.12 + u * 0.88));
+    for (let s = -hw; s <= hw; s += 0.4) {
+      const c = u > 0.8 ? cols[0] : Math.abs(s) < 0.45 ? cols[0] : s < 0 ? cols[1] : cols[2];
+      P.set(x0 + ux * t - uy * s, y0 + uy * t + ux * s, c);
+    }
+  }
+}
+
+// cánh: chùm lông xòe từ gốc, góc a0 -> a1, lông ngắn dần
+function wing(P, x, y, a0, a1, n, L0, L1, cols) {
+  for (let i = n - 1; i >= 0; i--) {
+    const u = i / (n - 1);
+    const a = a0 + (a1 - a0) * u;
+    const L = L0 + (L1 - L0) * u;
+    feather(P, x, y, x + Math.cos(a) * L, y + Math.sin(a) * L, 1.6, cols);
+  }
+}
+
+// mây cuộn đáy phẳng (13x6) đặt theo tâm; cols: [sáng, chính, đáy]
+function cloud(P, cx, cy, cols) {
+  P.map([
+    '....www......',
+    '..wwwwww.ww..',
+    '.wwwwLwwwwww.',
+    'wwLLLLLwwLLww',
+    'LLLLLLLLLLLLL',
+    '.ddddddddddd.',
+  ], { w: cols[0], L: cols[1], d: cols[2] }, cx - 6, cy - 3);
+}
+
+// phi tiêu 4 cánh 7x7 nét rõ ở cỡ nhỏ (shuri() bị rỗ khi bán kính < 5)
+function star7(P, cx, cy, cols) {
+  P.map([
+    '...w...',
+    '..wwS..',
+    '..wSS..',
+    'wwSoSSs',
+    '..SSs..',
+    '..Sss..',
+    '...s...',
+  ], { w: cols[0], S: cols[1], s: cols[2], o: OUT }, cx - 3, cy - 3);
+}
+
+// mảnh băng nhọn hai mặt; cols: [sáng, chính, tối]
+function shard(P, x0, y0, x1, y1, w, cols) {
+  const L = Math.hypot(x1 - x0, y1 - y0);
+  const ux = (x1 - x0) / L;
+  const uy = (y1 - y0) / L;
+  for (let t = 0; t <= L; t += 0.4) {
+    const u = t / L;
+    const hw = w * (u < 0.25 ? 0.6 + u * 1.6 : (1 - u) / 0.75);
+    for (let s = -hw; s <= hw; s += 0.4) P.set(x0 + ux * t - uy * s, y0 + uy * t + ux * s, Math.abs(s) < 0.45 ? '#ffffff' : s < 0 ? cols[0] : cols[1]);
+  }
+  P.set(x0, y0, cols[2]);
+}
+
+// tia sét gấp khúc dày 2px, lõi sáng
+function bolt(P, pts, col, hi) {
+  for (let i = 1; i < pts.length; i++) P.line(pts[i - 1][0], pts[i - 1][1], pts[i][0], pts[i][1], col, 2);
+  for (let i = 1; i < pts.length; i++) P.line(pts[i - 1][0], pts[i - 1][1], pts[i][0], pts[i][1], hi);
+}
+
+// đóa hoa 5 cánh nhỏ
+function blossom(P, x, y, petal, core) {
+  P.map(['.p.p.', 'ppppp', '.pcp.', 'ppppp', '.p.p.'], { p: petal, c: core }, x - 2, y - 2);
+}
+
+// nền tròn theo màu hệ; divine: thêm vòng viền kim cho thần kỹ (req >= 100)
+function skillBg(el, ult, basic, divine) {
   const P = new Pix(SK, SK);
   const c = 11.5;
   const rim = ult ? ['#7a4a00', '#ffd54f', '#fff59d'] : basic ? ['#3a2618', '#b08850', '#e0c48a'] : ['#2a1a10', '#a07040', '#d8b078'];
@@ -367,6 +442,8 @@ function skillBg(el, ult, basic) {
     if (r > c - 0.7) return OUT;
     if (r > c - 1.7) return (dx + dy < 0 ? rim[2] : rim[1]);
     if (r > c - 2.5) return rim[0];
+    // thần kỹ: vòng kim thứ hai tách khỏi viền vàng bằng một nét tối, đọc ra viền kép ở 24px
+    if (divine && r > c - 3.5) return '#ffd54a';
     const lit = (-dx - dy) / 16;
     const t = r / (c - 2.5);
     const base = t < 0.45 ? shade(el, -0.05 + lit * 0.4) : t < 0.8 ? shade(el, -0.3 + lit * 0.3) : shade(el, -0.55);
@@ -513,6 +590,172 @@ const SKILL_ART = {
     tornado(P, 12, 21, 19, 9, ['#ffffff', '#69f0ae', '#00695c']);
     P.line(16, 2, 13, 8, '#fff59d'); P.line(13, 8, 17, 9, '#fff59d'); P.line(17, 9, 14, 15, '#fff59d');
   },
+  // ======== Thần kỹ hậu kỳ (cấp 100 / 130 / 160)
+  // ---- Kiếm: thành lửa, cánh phượng, phượng hoàng giáng thế
+  k11: (P, F, e) => {
+    flame(F, 12, 15, 9, 12, e); flame(F, 6, 15, 3, 8, e); flame(F, 18, 15, 3, 8, e);
+    P.map([
+      'b.b.b.....b.b.b',
+      'bbbbb.....bbbbb',
+      'bBbBbbbbbbbBbBb',
+      'bbbbbbbdbbbbbbb',
+      'bBbbbbdddbbbbBb',
+      'bbbbbbdddbbbbbb',
+      'bbBbbbdddbbbBbb',
+    ], { b: '#6d2a14', B: '#a1452a', d: '#ffb300' }, 5, 13);
+    sword(P, 12, 3, 12, 15, ['#fff59d', '#ffb74d', '#e64a19'], { w: 2, guard: 3 });
+  },
+  k12: (P, F, e) => {
+    flame(F, 15, 21, 3, 6, e); flame(F, 19, 18, 2, 5, e);
+    wing(P, 9, 15, -3.05, -1.25, 5, 9, 11, ['#fff59d', '#ff6d00', '#b71c1c']);
+    sword(P, 5, 20, 20, 5, STEEL, { w: 2 });
+  },
+  k13: (P, F, e) => {
+    flame(F, 12, 22, 6, 8, e); flame(F, 7, 22, 2.5, 5, e); flame(F, 17, 22, 2.5, 5, e);
+    P.map([
+      'R...............R',
+      'RO.............OR',
+      'ROO.....rr....OOR',
+      '.ROO...wYr...OOR.',
+      '.RYOO.oYkY..OOYR.',
+      '..RYOO.YYY.OOYR..',
+      '..RRYOOYYYOOYRR..',
+      '...RRYYYYYYYRR...',
+      '....RRYYYYYRR....',
+      '.......YYY.......',
+      '......OYYYO......',
+      '.....ROYYYOR.....',
+      '....R.OY.YO.R....',
+      '...R..O...O..R...',
+      '......R...R......',
+    ], { Y: '#ffd54f', O: '#ff8f00', R: '#c62828', o: '#ff6d00', w: '#fff8e1', k: OUT, r: '#ff3d00' }, 4, 4);
+  },
+  // ---- Tiêu: mây tiêu lửa, tam muội chân hỏa, mưa sao băng
+  t11: (P, F, e) => {
+    flame(F, 8, 15, 2.6, 7, e); flame(F, 16, 17, 2.6, 7, e);
+    star7(P, 8, 16, STEEL); star7(P, 16, 18, STEEL);
+    cloud(P, 12, 7, ['#d7ccc8', '#8d6e63', '#ff7043']);
+  },
+  t12: (P, F, e) => {
+    ringE(F, 12, 12, 7, 7, '#fff59d'); ringE(F, 12, 12, 6, 6, '#ff6e40');
+    const T = ['#ffffff', '#fff176', '#ff3d00', '#b71c1c'];
+    for (let k = 0; k < 3; k++) { const a = -Math.PI / 2 + (k * TAU) / 3; flame(P, 12 + Math.cos(a) * 5.5, 12 + Math.sin(a) * 5.5 + 3, 2.6, 7, T); }
+    shuri(P, 12, 12, 3, STEEL, 0.3);
+  },
+  t13: (P, F, e) => {
+    meteorShape(P, 7, 8, 1.8, '#ffffff', '#ffe082', '#ff7043', '#ffab91', 1, -1);
+    meteorShape(P, 17, 19, 1.8, '#ffffff', '#ffe082', '#ff7043', '#ffab91', 1, -1);
+    meteorShape(P, 10, 15, 4.8, '#fffde7', '#ffb300', '#e64a19', '#ff7043', 1, -1);
+    shuri(P, 10, 15, 3.4, ['#ffffff', '#fff59d', '#bf360c'], 0.4);
+  },
+  // ---- Kunai: địa ngục băng, băng phách song trảm, nộ đào
+  n11: (P, F, e) => {
+    F.disc(12, 14, 8, '#e1f5fe');
+    const I = ['#e1f5fe', '#4fc3f7', '#01579b'];
+    shard(P, 12, 20, 12, 4, 3, I);
+    shard(P, 9, 20, 4, 9, 2.2, I); shard(P, 15, 20, 20, 9, 2.2, I);
+    shard(P, 7, 21, 3, 16, 1.6, I); shard(P, 17, 21, 21, 16, 1.6, I);
+    star4(P, 12, 9, 2, '#ffffff', '#ffffff');
+  },
+  n12: (P, F, e) => {
+    band(F, 12, 12, 10, 3, -2.6, -0.6, ['#ffffff', '#e1f5fe', '#80d8ff', '#4fc3f7']);
+    band(F, 12, 12, 10, 3, 0.55, 2.55, ['#ffffff', '#e1f5fe', '#80d8ff', '#4fc3f7']);
+    const B = ['#ffffff', '#b3e5fc', '#0288d1'];
+    kunaiShape(P, 4, 20, 17, 7, B); kunaiShape(P, 20, 20, 7, 7, B);
+    star4(P, 12, 12, 3, '#e1f5fe');
+  },
+  n13: (P, F, e) => {
+    F.disc(12, 12, 4, '#01579b');
+    const W = ['#ffffff', '#b3e5fc', '#29b6f6', '#0277bd'];
+    for (let k = 0; k < 3; k++) { const a = (k * TAU) / 3; band(P, 12 + Math.cos(a) * 3, 12 + Math.sin(a) * 3, 7, 3, a - 0.3, a + 2.2, W, 0.6); }
+    P.disc(12, 12, 1.5, '#e1f5fe');
+  },
+  // ---- Cung: mưa tên nước, truy hồn tiễn, tên rồng nước kình thiên
+  c11: (P, F, e) => {
+    drop(F, 9, 19, 1.3, e); drop(F, 16, 20, 1.3, e); drop(F, 6, 13, 1, e);
+    for (const [x, y] of [[13, 7], [19, 8]]) arrow(P, x, y, x - 8, y + 8, '#e1f5fe', '#a1887f', '#ffffff');
+    cloud(P, 12, 7, ['#ffffff', '#90caf9', '#3f6fae']);
+  },
+  c12: (P, F, e) => {
+    ringE(F, 16, 8, 4, 4, '#ffffff');
+    for (const [dx, dy] of [[0, -1], [1, 0], [0, 1], [-1, 0]]) F.line(16 + dx * 5, 8 + dy * 5, 16 + dx * 6, 8 + dy * 6, '#ffffff');
+    for (let k = 0; k <= 20; k++) {
+      const u = k / 20;
+      const x = 3 + u * 6 + Math.sin(u * 8) * 1.5;
+      const y = 21 - u * 6 + Math.sin(u * 8) * 1.5;
+      F.rect(Math.round(x), Math.round(y), 2, 2, u > 0.6 ? '#e0f7fa' : '#4dd0e1');
+    }
+    arrow(P, 8, 16, 16, 8, '#00e5ff', '#e0f7fa', '#80deea');
+  },
+  c13: (P, F, e) => {
+    for (let y = 4; y <= 18; y += 0.25) {
+      const ph = y * 0.9;
+      F.set(12 + Math.sin(ph) * 3.5, y, Math.cos(ph) > 0 ? '#ffffff' : '#18ffff');
+      F.set(12 - Math.sin(ph) * 3.5, y, Math.cos(ph) > 0 ? '#80deea' : '#0097a7');
+    }
+    P.fill(3, 16, 21, 21, (x, y) => {
+      const top = 18 + Math.sin(x * 0.9) * 0.8;
+      if (y < top) return null;
+      return y < top + 1 ? '#e0f7fa' : '#0277bd';
+    });
+    arrow(P, 12, 19, 12, 3, '#18ffff', '#e0f7fa', '#ffffff');
+  },
+  // ---- Đao: liệt địa, phong lôi, bão vạn đao
+  d11: (P, F, e) => {
+    F.line(3, 9, 9, 5, '#f1f8e9'); F.line(15, 4, 20, 8, '#f1f8e9');
+    P.map([
+      'EEEEEEcwwwcEEEEEE',
+      'eeeeeecwkwceeeeee',
+      'eEeeeccwkwcceeeEe',
+      'eeeeecwkekwceeeee',
+      'eeeecwkeeekwceeee',
+      'eeeeeeeeeeeeeeeee',
+    ], { E: '#a1887f', e: '#5d4037', c: '#76ff03', w: '#ccff90', k: '#1b2a10' }, 4, 15);
+    band(P, 4, 5, 11, 4, -0.5, 1.25, ['#ffffff', '#ffffff', '#ccff90', '#76ff03'], 0.7);
+    P.rect(5, 12, 2, 2, '#d7ccc8'); P.rect(18, 11, 2, 2, '#d7ccc8'); P.rect(16, 7, 1, 1, '#d7ccc8');
+  },
+  d12: (P, F, e) => {
+    speedLines(F, 2, 10, [6, 10, 14, 18], '#ccff90');
+    bolt(P, [[15, 2], [9, 11], [14, 11], [8, 21]], '#ffee58', '#ffffff');
+    daoShape(P, 5, 19, 20, 9, ['#ffffff', '#c5e1a5', '#33691e']);
+  },
+  d13: (P, F, e) => {
+    F.disc(12, 12, 9, '#c5e1a5'); spiral(F, 12, 12, 8, 1.6, '#ffffff', '#9ccc65', 1, 0);
+    for (let k = 0; k < 6; k++) {
+      const a = (k * TAU) / 6;
+      shard(P, 12 + Math.cos(a) * 2.5, 12 + Math.sin(a) * 2.5, 12 + Math.cos(a + 0.6) * 9.5, 12 + Math.sin(a + 0.6) * 9.5, 1.8, ['#ffffff', '#b0bec5', '#37474f']);
+    }
+    P.disc(12, 12, 2, '#76ff03');
+  },
+  // ---- Quạt: bách diệp phi hoa, vạn mộc trường xuân, phong vân
+  q11: (P, F, e) => {
+    band(F, 3, 24, 18, 3, -1.45, -0.1, ['#ffffff', '#ffffff', '#f1f8e9', '#ccff90']);
+    const L = ['#f1f8e9', '#9ccc65', '#33691e'];
+    leafShape(P, 7, 15, 7, -0.6, L); leafShape(P, 12, 9, 7, -0.2, L); leafShape(P, 17, 14, 6, 0.5, L);
+    blossom(P, 9, 7, '#ff80ab', '#fff59d'); blossom(P, 15, 18, '#ff80ab', '#fff59d'); blossom(P, 18, 8, '#ff80ab', '#fff59d');
+  },
+  q12: (P, F, e) => {
+    for (let k = 0; k < 8; k++) { const a = (k / 8) * TAU; F.line(12, 9, 12 + Math.cos(a) * 10, 9 + Math.sin(a) * 10, '#ccff90'); }
+    P.rect(11, 13, 3, 8, '#6d4c41'); P.rect(11, 13, 1, 8, '#a1887f'); P.set(10, 20, '#6d4c41'); P.set(14, 20, '#6d4c41');
+    P.disc(12, 9, 6, '#2e7d32'); P.disc(10, 8, 4, '#43a047'); P.disc(15, 10, 3.5, '#388e3c'); P.disc(9, 7, 2, '#69f0ae');
+    plus(P, 16, 15, 3, '#ffffff', '#69f0ae');
+  },
+  q13: (P, F, e) => {
+    band(F, 12, 12, 8.6, 2, -2.4, 0.0, ['#ffffff', '#ffffff', '#ccff90', '#ccff90']);
+    band(F, 12, 12, 8.6, 2, 0.74, 3.14, ['#ffffff', '#ffffff', '#ccff90', '#ccff90']);
+    // thái cực: trời (sáng) và đất (tối) cuộn vào nhau
+    P.fill(4, 4, 20, 20, (x, y) => {
+      const dx = x - 12;
+      const dy = y - 12;
+      if (dx * dx + dy * dy > 6.5 * 6.5) return null;
+      const top = Math.hypot(dx, dy + 3.25);
+      const bot = Math.hypot(dx, dy - 3.25);
+      if (top < 1.2) return '#1b5e20';
+      if (bot < 1.2) return '#f1f8e9';
+      const light = top < 3.25 ? true : bot < 3.25 ? false : dx < 0;
+      return light ? '#f1f8e9' : '#2e7d32';
+    });
+  },
 };
 
 // Hình chung theo loại hiệu ứng (khi không có minh họa riêng)
@@ -622,7 +865,8 @@ export function skillIconURL(sk, sid, elColor) {
   const e = elPal(elN);
   const s = sk || {};
   const passive = s.type === 'passive';
-  const bg = passive ? passiveBg(el) : skillBg(el, (s.req || 0) >= 60, !!s.basic);
+  const divine = !passive && (s.req || 0) >= 100;
+  const bg = passive ? passiveBg(el) : skillBg(el, (s.req || 0) >= 60, !!s.basic, divine);
   const F = new Pix(SK, SK); // lớp hiệu ứng (không viền)
   const P = new Pix(SK, SK); // lớp hình chính (có viền)
   const art = passive ? PASSIVE_ART[s.pas && s.pas.stat] : SKILL_ART[sid];
@@ -630,7 +874,10 @@ export function skillIconURL(sk, sid, elColor) {
   else genericArt(P, F, s, e);
   P.outline(OUT);
   // cắt theo phần trong khung (tròn hoặc lục giác)
-  const inside = passive ? (x, y) => hexD(x, y) <= HEX_R - 2.6 : (x, y) => (x - 12) ** 2 + (y - 12) ** 2 <= 9.3 * 9.3;
+  // thần kỹ cắt theo đúng tâm nền và hẹp hơn để hình không đè vòng kim trong
+  const inside = passive ? (x, y) => hexD(x, y) <= HEX_R - 2.6
+    : divine ? (x, y) => (x - 12.5) ** 2 + (y - 12.5) ** 2 <= 8 * 8
+      : (x, y) => (x - 12) ** 2 + (y - 12) ** 2 <= 9.3 * 9.3;
   const clip = (L) => {
     for (let y = 0; y < SK; y++) {
       for (let x = 0; x < SK; x++) {

@@ -145,26 +145,11 @@ tools/                     check-data.js (npm run check), shot.js (chụp ảnh)
 2. **Client**: cửa sổ mới ở `src/client/js/ui/windows/<tên>.js` (`export default { renderFoo() {...} }`, dựng DOM bằng `h()`), import + thêm vào `Object.assign(UI.prototype, ...)` và bảng `refresh()` trong `ui.js`. Gói server → UI đăng ký bằng `n.on('t', ...)` trong hàm dựng của `UI`; gói ảnh hưởng thế giới (hiệu ứng, vị trí) xử lý trong `game.js` (`onXxx(m)`). CSS riêng của tính năng vào `css/features.css`.
 3. **Kiểm thử**: tạo `tests/features/<tên>.js` export các hàm `xxxUnitTests()` (thế giới giả, không cần server) và/hoặc `async xxxTest(a, ...)` (bot WebSocket thật), dùng `ok/sleep` từ `tests/lib/harness.js`, `Bot` từ `tests/lib/bot.js`; gọi chúng trong `tests/smoke.js` đúng chỗ (các phần chạy nối tiếp, phần sau dùng nhân vật phần trước để lại: xem chú thích trong bộ chạy). Dữ liệu tĩnh mới thì thêm kiểm tra chéo vào `tools/check-data.js`.
 
-## Giao việc code cho worker opencode (agent-hub)
-## Giao việc code cho worker opencode (agent-hub)
+## Giao việc cho agent phụ
 
-Người dùng muốn tận dụng tối đa worker **opencode** qua MCP `agent-hub` (không giới hạn sử dụng) để làm nhanh, chừa Claude/Opus cho việc cần suy nghĩ sâu.
-
-**Giao cho opencode** khi việc có **đặc tả rõ ràng, kiểm chứng được bằng lệnh**, ví dụ:
-- Thêm nội dung theo checklist (vật phẩm, quái, bản đồ, nhiệm vụ, kỹ năng, câu thoại), mở rộng `tools/check-data.js`.
-- Viết/tách kiểm thử trong `tests/**` theo mô tả hành vi có sẵn.
-- Sửa lỗi đã chẩn đoán xong (biết file, nguyên nhân, cách sửa).
-- Dựng cửa sổ UI / hành động server theo một bản thiết kế đã chốt (tên hành động, trường dữ liệu, id DOM).
-- Việc cơ học: đổi tên, dời file, cập nhật đường dẫn, tài liệu.
-
-**Claude tự làm (hoặc giao agent Claude)**: thiết kế kiến trúc, giao thức và hợp đồng giữa các module; logic bảo mật/kinh tế của server (chống nhân bản đồ, prototype pollution); cân bằng game; đánh giá thẩm mỹ đồ họa; chẩn đoán lỗi khó; **rà soát kết quả của worker** trước khi coi là xong.
-
-Cách giao:
-- `hub_spawn` với `backend: "opencode"`, **`model: "opencode/deepseek-v4.1-flash-free"`** (model người dùng chọn, cũng là mặc định trong `~/.agent-hub/config.json`), `mode: "write"`, `cwd` = thư mục repo. **Hết lượt dùng** (job lỗi do quota, rate limit hoặc "Model unavailable") thì giao lại đúng việc đó với `model: "opencode-go/deepseek-v4.1-flash"` (gói OpenCode Go). agent-hub không tự đổi model nên người điều phối phải tự giao lại. Việc song song thì dùng `isolation: "worktree"` rồi `hub_diff` → xem → `hub_apply`; các job ghi cùng thư mục chạy lần lượt (workspace lock).
-- Chuỗi nhiều bước (làm → kiểm thử → rà soát) dùng `hub_batch`. Đợi kết quả qua thông báo của agent-hub, không hỏi vòng `hub_status`.
-- Worker **không thấy hội thoại**: prompt phải tự đủ gồm mục tiêu, file được sửa (và file **không** được sửa), quy tắc liên quan trong file này và `DESIGN_RULES.md`, lệnh kiểm chứng (`npm test`, `npm run check`, `tools/shot.js` với cổng/tài khoản/`DATA_DIR` riêng), và nội dung cần báo lại.
-- Vẫn áp dụng phân vùng file ở mục trên: một file chỉ một worker sửa trong một đợt.
-- Kết quả của worker phải được Claude kiểm lại (đọc diff, chạy kiểm thử, xem ảnh chụp) trước khi gộp. Worker không commit, không push.
+- **Không** dùng opencode hay MCP `agent-hub` (người dùng đã bỏ, 2026-10-18) trừ khi người dùng yêu cầu lại. Việc song song giao agent Claude (Agent/Workflow), mỗi agent một git worktree riêng.
+- Prompt cho agent phải tự đủ: mục tiêu, file được sửa (và file **không** được sửa), quy tắc liên quan trong file này và `DESIGN_RULES.md`, lệnh kiểm chứng (`npm test`, `npm run check`, `tools/shot.js` với cổng/tài khoản/`DATA_DIR` riêng), nội dung cần báo lại. Vẫn áp dụng phân vùng file ở mục trên.
+- Người điều phối rà kết quả (đọc diff, chạy kiểm thử, xem ảnh chụp) trước khi gộp.
 
 ## Quy trình kiểm tra trước khi xong việc
 
