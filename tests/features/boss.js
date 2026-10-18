@@ -216,7 +216,7 @@ async function bossEventTest(a) {
   const gTail = g.msgs.slice(gWait);
   const gBoom = gTail.findIndex((m) => m.t === 'bossHit' && m.id === boss.id);
   const gDead = gTail.findIndex((m) => m.t === 'dead');
-  ok(gHp > 0 && gBoom >= 0 && (gDead < 0 || gDead > gBoom) && fromBoss.length === 0, `người đứng ngoài vùng không mất máu vì boss${fromBoss.length ? ` (G x=${g.x}, boss x=${a.monsters.get(boss.id) && a.monsters.get(boss.id).x}, ${bHits.map((m) => (m.bs ? 'chiêu ' + m.bs : 'đánh thường')).join(', ')})` : ''}`);
+  ok(gHp > 0 && gBoom >= 0 && (gDead < 0 || gDead > gBoom) && fromBoss.length === 0, `người đứng ngoài vùng không mất máu vì boss${gBoom < 0 || (gDead >= 0 && gDead < gBoom) ? ` (G: bossHit ${gBoom}, dead ${gDead} bởi ${gDead >= 0 ? gTail[gDead].by : '-'}, hp ${g.me.hp}, x ${Math.round(g.x)})` : ''}${fromBoss.length ? ` (G x=${g.x}, boss x=${a.monsters.get(boss.id) && a.monsters.get(boss.id).x}, ${bHits.map((m) => (m.bs ? 'chiêu ' + m.bs : 'đánh thường')).join(', ')})` : ''}`);
 
   // Lần niệm 2: chạy ra khỏi vùng trong lúc niệm → né được
   from = a.msgs.length;

@@ -243,9 +243,20 @@ async function petTest(a) {
     // gói inv của bên gửi có thể tới sau bên nhận
     if (petAt(from) >= 0) await from.wait('inv', (m) => !m.inv.some(same)).catch(() => null);
   };
-  await trade(a, b, petAt(a));
+  // hết giờ chờ thì in thông báo hai bên nhận được (lý do server từ chối) để biết vì sao
+  const traced = async (from, to, slot) => {
+    const f0 = from.msgs.length;
+    const t0 = to.msgs.length;
+    try {
+      await trade(from, to, slot);
+    } catch (e) {
+      const notes = (bot, i) => bot.msgs.slice(i).filter((m) => m.t === 'notice' || m.t === 'tradeEnd').map((m) => m.msg || JSON.stringify(m)).join(' | ');
+      throw new Error(`${e.message} (${from.name} x=${Math.round(from.x)}: ${notes(from, f0)}; ${to.name} x=${Math.round(to.x)}: ${notes(to, t0)})`);
+    }
+  };
+  await traced(a, b, petAt(a));
   ok(petAt(b) >= 0 && petAt(a) < 0, 'giao dịch thú sang người khác: bên nhận có thú cấp 12, thân mật 70');
-  await trade(b, a, petAt(b));
+  await traced(b, a, petAt(b));
   b.ws.close();
   a.send('equip', { slot: petAt(a) });
   await a.wait('inv', (m) => same(m.equip.pet)).catch(() => null);

@@ -27,9 +27,28 @@ const KNOWN = new Set([...STATIC_HOOKS, ...WORLD_HOOKS]);
 
 let reg = null;
 
+// Module thử cho kiểm thử chống sập (chỉ khi NS_TEST=1): NS_TEST_THROW=second → móc second luôn ném lỗi;
+// fatal/reject → hành động testFatal ném lỗi ra ngoài vòng xử lý gói (lỗi chưa bắt / promise bị từ chối)
+function testModules() {
+  const mode = process.env.NS_TEST === '1' ? process.env.NS_TEST_THROW || '' : '';
+  if (mode === 'second') return [{ name: 'testthrow', hooks: { second() { throw new Error('NS_TEST_THROW second'); } } }];
+  if (mode === 'fatal' || mode === 'reject') {
+    return [{
+      name: 'testthrow',
+      actions: {
+        testFatal() {
+          if (mode === 'fatal') setImmediate(() => { throw new Error('NS_TEST_THROW fatal'); });
+          else Promise.reject(new Error('NS_TEST_THROW reject'));
+        },
+      },
+    }];
+  }
+  return [];
+}
+
 function load() {
   if (reg) return reg;
-  const list = require('../modules');
+  const list = [...require('../modules'), ...testModules()];
   const hooks = Object.create(null);
   const npcs = Object.create(null);
   const names = new Set();
@@ -77,11 +96,40 @@ function call(name, ...args) {
   if (hs) for (const h of hs) h.fn.apply(h.mod, args);
 }
 
+// Lỗi trong móc thế giới bị cô lập: ghi log có tên module, các móc khác và vòng lặp chạy tiếp.
+// Một móc lỗi quá HOOK_MAX lần/phút thì bị tắt tới khi khởi động lại (tránh tràn log mỗi tick).
+const HOOK_MAX = 100;
+const HOOK_LOG = 3;
+const hookErrors = Object.create(null);
+const hookOff = new Set();
+
+function hookFailed(h, name, e) {
+  const id = `${h.mod.name}.${name}`;
+  const now = Date.now();
+  const st = hookErrors[id] || (hookErrors[id] = { n: 0, total: 0, t: now });
+  if (now - st.t > 60000) { st.n = 0; st.t = now; }
+  st.n++;
+  st.total++;
+  if (st.n <= HOOK_LOG) console.error(`[hook] Lỗi móc "${name}" của module ${h.mod.name}:`, e && e.stack ? e.stack : e);
+  if (st.n > HOOK_MAX) {
+    hookOff.add(h);
+    console.error(`[ALERT] tắt móc "${name}" của module ${h.mod.name}: lỗi ${st.n} lần trong 1 phút`);
+  }
+}
+
 // Móc thế giới
 function emit(world, name, ...args) {
   if (!world || !world.mods) return;
   const hs = load().hooks[name];
-  if (hs) for (const h of hs) h.fn.apply(self(world, h.mod), args);
+  if (!hs) return;
+  for (const h of hs) {
+    if (hookOff.size && hookOff.has(h)) continue;
+    try {
+      h.fn.apply(self(world, h.mod), args);
+    } catch (e) {
+      hookFailed(h, name, e);
+    }
+  }
 }
 
 // Xử lý NPC theo loại: { open, act, self } hoặc null
@@ -92,4 +140,4 @@ function npcHandler(world, type) {
   return { open: h.open, act: h.act, self: self(world, h.mod) };
 }
 
-module.exports = { load, initWorld, call, emit, npcHandler };
+module.exports = { load, initWorld, call, emit, npcHandler, hookErrors };

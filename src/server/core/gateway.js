@@ -13,6 +13,7 @@ class Conn {
     this.player = null;
     this.msgCount = 0;
     this.msgWindow = Date.now();
+    this.busy = false;
   }
 
   sendRaw(s) {
@@ -113,7 +114,31 @@ function attachGateway(server, { db, world, config, gameData }) {
     return xff[Math.max(0, xff.length - hops)].replace(/^::ffff:/i, '').slice(0, 64);
   }
 
-  function handleLobby(conn, m) {
+  // Băm mật khẩu chạy ngoài luồng chính (DB.hashAsync); trong lúc chờ, gói khác của kết nối này bị bỏ
+  // Mỗi IP tối đa HASH_PER_IP lượt băm cùng lúc: không thì nhiều kết nối song song đoán mật khẩu trước khi kịp đếm lần sai
+  const HASH_PER_IP = 4;
+  const hashing = new Map();
+  async function withHash(conn, fn) {
+    const n = hashing.get(conn.ip) || 0;
+    if (n >= HASH_PER_IP && !LOOPBACK_RE.test(conn.ip)) return { busy: true };
+    hashing.set(conn.ip, n + 1);
+    conn.busy = true;
+    try {
+      return await fn();
+    } catch (e) {
+      if (e && e.code === 'EBUSY') return { busy: true };
+      throw e;
+    } finally {
+      conn.busy = false;
+      const left = (hashing.get(conn.ip) || 1) - 1;
+      if (left > 0) hashing.set(conn.ip, left);
+      else hashing.delete(conn.ip);
+    }
+  }
+  const BUSY = 'Máy chủ đang bận, thử lại sau giây lát.';
+  const alive = (conn) => conn.ws.readyState === 1;
+
+  async function handleLobby(conn, m) {
     const err = (msg) => conn.send('err', { msg });
     switch (m.t) {
       case 'register': {
@@ -128,9 +153,11 @@ function attachGateway(server, { db, world, config, gameData }) {
           return err('Tên tài khoản không hợp lệ.');
         }
         if (!regAllowed(conn.ip)) return err('Đã tạo quá nhiều tài khoản từ mạng này. Hãy thử lại sau.');
-        const acc = db.createAccount(u, pw);
+        const acc = await withHash(conn, () => db.createAccountAsync(u, pw));
+        if (acc && acc.busy) return err(BUSY);
         if (!acc) return err('Tài khoản đã tồn tại.');
         regAdd(conn.ip);
+        if (!alive(conn)) return;
         return loginOk(conn, acc);
       }
       case 'login': {
@@ -138,11 +165,13 @@ function attachGateway(server, { db, world, config, gameData }) {
         const u = String(m.u || '');
         let acc = null;
         if (m.token) acc = db.checkToken(u, m.token);
-        else acc = db.checkPassword(u, String(m.p || ''));
+        else acc = await withHash(conn, () => db.checkPasswordAsync(u, String(m.p || '')));
+        if (acc && acc.busy) return err(BUSY);
         if (!acc) {
           addFail(conn.ip);
           return err(m.token ? 'Phiên đăng nhập hết hạn.' : 'Sai tài khoản hoặc mật khẩu.');
         }
+        if (!alive(conn)) return;
         return loginOk(conn, acc, m.token);
       }
       default:
@@ -180,6 +209,8 @@ function attachGateway(server, { db, world, config, gameData }) {
         if (!acc.chars.some((n) => n.toLowerCase() === name.toLowerCase())) return err('Không tìm thấy nhân vật.');
         const c = db.getChar(name);
         if (!c) return err('Không tìm thấy nhân vật.');
+        // đang lỗi lưu: tiến độ mới không ghi được, không cho vào game mới (người đang chơi không bị đá)
+        if (db.saveBlocked && db.saveBlocked()) return err('Máy chủ đang gặp sự cố lưu dữ liệu, vui lòng thử lại sau.');
         if (conn.player) world.leave(conn.player);
         conn.player = world.join(conn, c);
         return;
@@ -217,7 +248,7 @@ function attachGateway(server, { db, world, config, gameData }) {
       try {
         // 'Đổi nhân vật' gửi logoutChar khi đang trong game: phải về sảnh, thế giới không xử lý gói này
         if (conn.player && world.players.has(conn.player.id) && m.t !== 'logoutChar') world.handle(conn.player, m);
-        else handleLobby(conn, m);
+        else if (!conn.busy) handleLobby(conn, m).catch((e) => console.error('[ws] Lỗi xử lý', m.t, e));
       } catch (e) {
         console.error('[ws] Lỗi xử lý', m.t, e);
       }

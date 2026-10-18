@@ -14,7 +14,7 @@ const { gemUnitTests, gemTest } = require('./features/gems');
 const { petUnitTests, petTest } = require('./features/pets');
 const { mailUnitTests, mailTest } = require('./features/mail');
 const { arenaUnitTests, arenaTest } = require('./features/arena');
-const { accountTest } = require('./features/account');
+const { accountTest, loginBurstTest } = require('./features/account');
 const { questTest } = require('./features/quest');
 const { combatTest } = require('./features/combat');
 const { skillsTest, resetStatsTest } = require('./features/skills');
@@ -30,6 +30,8 @@ const { unit: boundUnit, bot: boundBot } = require('./features/bound');
 const { balanceUnitTests, balanceBotTest } = require('./features/balance');
 const { devtoolsTest } = require('./features/devtools');
 const { adminTest } = require('./features/admin');
+const { storageUnitTests, storageProcTests, crashGuardTests } = require('./features/storage');
+const { backupUnitTests, backupRestoreTest, backupRestartTest, backupLagTest } = require('./features/backup');
 
 // Kiểm thử không cần server (thế giới giả hoặc gọi thẳng công thức)
 function unitTests() {
@@ -53,6 +55,8 @@ function unitTests() {
 
 async function main() {
   unitTests();
+  await storageUnitTests();
+  await backupUnitTests();
   const srv = await startServer();
 
   // trạng thái dùng chung giữa các phần: ctx.a = bot admin (KiemSi), ctx.b = bot CungThu, ctx.auth = gói đăng nhập của A
@@ -96,11 +100,25 @@ async function main() {
     console.error('  ✘ Lỗi:', e.message);
     if (process.env.DEBUG) for (const bot of [global.botA].filter(Boolean)) console.log(bot.msgs.filter((m) => !['state'].includes(m.t)).slice(-8).map((m) => JSON.stringify(m).slice(0, 160)).join('\n'));
   }
+  // chờ tiến trình thoát hẳn: lần lưu cuối lúc tắt (có fsync) mà xong sau khi reloadTest sửa file thì ghi đè mất phần sửa
+  const exited = srv.exitCode !== null ? Promise.resolve() : new Promise((r) => srv.once('exit', r));
   srv.kill('SIGTERM');
-  await sleep(400);
+  await Promise.race([exited, sleep(10000)]);
   const files = fs.readdirSync(DATA);
   ok(files.includes('characters.json'), 'ghi file dữ liệu khi tắt server');
   if (files.includes('characters.json')) await reloadTest();
+  // vận hành: máy chủ riêng (cổng 4310-4339, DATA_DIR tạm, log riêng vì các phần này cố ý gây lỗi)
+  try {
+    await storageProcTests();
+    await crashGuardTests();
+    await loginBurstTest();
+    await backupRestoreTest();
+    await backupRestartTest();
+    await backupLagTest();
+  } catch (e) {
+    fail();
+    console.error('  ✘ Lỗi:', e.message);
+  }
   if (/Error|Lỗi xử lý/.test(serverLog())) {
     console.log(serverLog());
     ok(false, 'server không có lỗi trong log');

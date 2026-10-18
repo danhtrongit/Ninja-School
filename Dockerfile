@@ -1,9 +1,10 @@
-FROM node:20-alpine
+FROM node:24-alpine
 WORKDIR /app
 ENV NODE_ENV=production
 COPY package.json package-lock.json* ./
 RUN npm ci --omit=dev || npm install --omit=dev
 COPY src ./src
+COPY scripts ./scripts
 ENV PORT=3000 DATA_DIR=/data
 VOLUME ["/data"]
 EXPOSE 3000

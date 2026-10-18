@@ -48,6 +48,16 @@ Ghi sau mỗi tính năng / mỗi lần đổi mốc ảnh. Mới nhất ở tr�
 
 ## 2026-10-18
 
+### Lưu trữ an toàn, chống sập, sao lưu theo tầng (GĐ0: `ops-db-safe-load`, `ops-crash-guard`, `ops-backup`)
+
+- Nạp an toàn (`services/db.js`): file JSON hỏng/0 byte → đổi tên `<file>.corrupt-<giờ>`, thử `<file>.tmp` hợp lệ (đưa về file chính), không có thì **thoát mã 2** kèm hướng dẫn `scripts/restore.js`; lần khởi động sau vẫn từ chối chừng nào còn file hỏng mà thiếu file chính. `FORCE_EMPTY=1` mới cho chạy rỗng. Không tự nạp bản sao lưu (tránh trộn dữ liệu lệch giờ giữa các file).
+- Ghi bền: `.tmp` + `fsync` + `rename` + `fsync` thư mục. `db.saveErrors` đếm lỗi liên tiếp: `/api/status` có `saveErrors`, `ok: false` khi > 0; in `[ALERT] lưu thất bại`; admin online nhận `notice { kind: 'warn' }`; từ 3 lỗi thì `selectChar` bị từ chối (người đang chơi không bị đá). Ghi được lại → 0.
+- Khóa `DATA_DIR/server.lock` (`pid`, `host`, làm mới mỗi 15 giây): tiến trình thứ hai **thoát mã 3**; khóa của pid đã chết, của chính pid mình (container khởi động lại) hoặc của máy khác quá 90 giây thì lấy lại. Tắt sạch / lỗi chết người thì xóa khóa.
+- Chống sập: `uncaughtException`/`unhandledRejection` → dòng JSON `{ lvl: 'fatal' }` ra stderr, lưu khẩn cấp đồng bộ (cả người đang online), thoát mã 1. `world.emit` bọc lỗi từng móc: log `[hook] Lỗi móc "<móc>" của module <tên>` (tối đa 3 lần/phút), lỗi > 100 lần/phút thì tắt móc đó tới khi khởi động lại.
+- Băm mật khẩu bất đồng bộ (`crypto.scrypt`, cùng tham số nên băm cũ vẫn đúng) qua hàng đợi 2 việc chạy / 64 việc chờ; `register`/`login` trong gateway thành `async`, gói khác của kết nối đang chờ băm bị bỏ. 50 lần đăng nhập đồng thời: tick trễ tối đa ~25 ms.
+- Sao lưu (`services/backup.js`, `scripts/backup.js`, `scripts/restore.js`): `DATA_DIR/backups/{hourly,daily,weekly,pre}/<YYYYMMDD-HHmmss>[-nhãn].tgz` (giờ VN), giữ 48/30/12/10. Lịch theo chu kỳ (giờ: phút 05, ngày: 03:05, tuần: thứ Hai 03:10), không theo lần khởi động, nên khởi động lại nhiều lần không sinh/xoá bản. `tar` chạy ở tiến trình con rồi đọc lại kiểm (5.000 nhân vật 27,5 MB: trễ vòng lặp ≤ 2,4 ms). `BACKUP_PUSH_CMD` đẩy bản ngày ra ngoài máy (`$BACKUP_FILE`), `PRE_DEPLOY=<nhãn>` tạo bản trước triển khai lúc khởi động (một lần mỗi nhãn), `BACKUP=0` tắt lịch, `BACKUP_DELAY_MS` lần kiểm đầu (mặc định 60 giây). `restore.js --list | --check | --apply | --char --from`; `--apply` từ chối khi khóa còn sống (mã 3), dữ liệu cũ dời vào `before-restore-<giờ>/`.
+- Kiểm thử: `tests/features/storage.js`, `tests/features/backup.js`, `loginBurstTest` trong `tests/features/account.js` (máy chủ riêng cổng 4310-4339). Biến chỉ có tác dụng khi `NS_TEST=1`: `NS_TEST_SAVE_FAIL=<n>`, `NS_TEST_THROW=second|fatal|reject`, `SIGUSR2` = lưu ngay. `NS_DEBUG_LAG=1` in trễ tick mỗi giây.
+
 ### Smoke test production (`npm run test:prod`)
 
 - `tests/prod/smoke-prod.js`: bot không cần quyền admin. Kiểm `/api/status` trùng commit main, rồi chạy lần lượt: đăng ký (hoặc đăng nhập tài khoản thử), tạo nhân vật mới, vào game, nhận nhiệm vụ ở Trưởng Làng, mua 5 bình HP, mua đá và cường hóa vũ khí +1, chat, qua cổng ra bãi, đánh quái tới khi lên cấp, cuối cùng xóa nhân vật thử.

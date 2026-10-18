@@ -51,7 +51,8 @@ async function reloadTest() {
   if (k && k.equip.weapon) k.equip.weapon.gems = ['gem_loi_2', '__proto__', 'gem_loi_5', 'gem_hoa_1', 'gem_thuy_1'];
   if (k && k.equip.pet) k.equip.pet.gems = ['gem_hoa_1'];
   if (k && k.inv.some((it) => it && it.id === 'cloak_wind')) {
-    k.inv.find((it) => it && it.id === 'cloak_wind').exp = Date.now() - 1000;
+    // rương mở ở các phần trước có thể cho thêm Áo Choàng Gió: cho mọi chiếc hết hạn
+    for (const it of k.inv) if (it && it.id === 'cloak_wind') it.exp = Date.now() - 1000;
     k.equip.costume = { id: 'costume_sakura', q: 1, p: 0, r: 2, o: [], exp: Date.now() - 1000 };
   }
   // tích hợp: thư nhận lúc offline kèm thú cưng đã nuôi và vũ khí đã khảm ngọc, cùng thú cưỡi đang cưỡi
@@ -85,7 +86,8 @@ async function reloadTest() {
     await e.wait('enterMap');
     await e.wait('inv');
     ok(e.inv.equip.mask && e.inv.equip.mask.id === 'mask_oni' && e.me.look.mask === 'oni', 'mặt nạ vĩnh viễn giữ nguyên sau khởi động lại');
-    ok(!e.inv.equip.costume && !e.inv.inv.some((it) => it && it.id === 'cloak_wind'), 'đồ thời trang quá hạn lúc server tắt: bị xóa khi tải lại');
+    const left = [e.inv.equip.costume, ...e.inv.inv.filter((it) => it && it.id === 'cloak_wind')].filter(Boolean);
+    ok(!left.length, `đồ thời trang quá hạn lúc server tắt: bị xóa khi tải lại${left.length ? ` (còn: ${JSON.stringify(left).slice(0, 200)}, giờ ${Date.now()})` : ''}`);
     ok(!!(await e.wait('notice', (m) => /Hết hạn sử dụng: .*Áo Choàng Phong Vân/.test(m.msg) && /Y Phục Anh Đào/.test(m.msg)).catch(() => null)), 'vào game nhận thông báo các món đã hết hạn');
     ok(e.me.hbi === 1 && e.me.hotbar.join() === kBar && e.me.hotbars[1].join() === kBar, 'bộ kỹ năng giữ nguyên sau khi khởi động lại server');
     ok(JSON.stringify(e.inv.equip.weapon.gems) === '["gem_loi_2",null,null]' && !('gems' in e.inv.equip.pet),
