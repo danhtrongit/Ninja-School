@@ -35,6 +35,10 @@ async function combatTest(ctx) {
     }
   }
   ok(kills >= 3, `tiêu diệt ${kills} Slime`);
+  // AI quái: Slime bị đánh thì phản đòn (gói hit có a = 'm<id>' trúng nhân vật của bot)
+  const me = `p${a.me.id}`;
+  const mHits = a.msgs.filter((m) => m.t === 'hit' && /^m\d+$/.test(m.a) && m.list.some(([id, dmg]) => id === me && dmg >= 0));
+  ok(mHits.length > 0, `bot nhận đòn quái (${mHits.length} gói hit từ quái trúng nhân vật)`);
   ok(a.msgs.some((m) => m.t === 'expGain' && m.n > 0), 'nhận kinh nghiệm khi giết quái');
   ok(a.me.level > lv0 || a.me.exp > 0, `kinh nghiệm tăng (cấp ${a.me.level}, exp ${a.me.exp})`);
   ok(a.msgs.some((m) => m.t === 'loot' && m.k === 'xu'), 'tự nhặt xu rơi ra');

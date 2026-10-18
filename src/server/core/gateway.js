@@ -4,6 +4,7 @@
 const { WebSocketServer } = require('ws');
 const { CLASSES } = require('../../shared/data/classes');
 const { newChar, lookOf: playerLook } = require('./player');
+const { own } = require('./util');
 
 class Conn {
   constructor(ws, ip) {
@@ -182,7 +183,8 @@ function attachGateway(server, { db, world, config, gameData }) {
       case 'createChar': {
         const name = String(m.name || '');
         if (!NAME_RE.test(name)) return err('Tên nhân vật 3-12 ký tự (chữ, số, _), không dấu.');
-        if (!CLASSES[m.cls]) return err('Phái không hợp lệ.');
+        // own: '__proto__'/'constructor' là khóa kế thừa, CLASSES[...] vẫn có giá trị nhưng newChar sẽ hỏng
+        if (typeof m.cls !== 'string' || !own(CLASSES, m.cls)) return err('Phái không hợp lệ.');
         if (acc.chars.length >= config.maxChars) return err(`Tối đa ${config.maxChars} nhân vật.`);
         if (db.getChar(name)) return err('Tên nhân vật đã tồn tại.');
         const c = newChar(name, m.cls, m.gender);
