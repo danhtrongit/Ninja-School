@@ -178,6 +178,9 @@ function attachGateway(server, { db, world, config, gameData }) {
         conn.player = world.join(conn, c);
         return;
       }
+      // trang /dev/gallery: chỉ admin, chỉ khi bật DEV_TOOLS (trang không có hành động ghi nào)
+      case 'devGallery':
+        return conn.send('devGallery', { ok: !!config.devTools && config.admins.includes(conn.account.toLowerCase()) });
       case 'logoutChar': {
         if (conn.player) world.leave(conn.player);
         return sendChars(conn);

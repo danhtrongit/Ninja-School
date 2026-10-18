@@ -23,7 +23,7 @@ let log = '';
 const serverLog = () => log;
 async function startServer() {
   const srv = spawn(process.execPath, [path.join(__dirname, '..', '..', 'src', 'server', 'index.js')], {
-    env: { ...process.env, PORT, DATA_DIR: DATA, ADMINS: 'botadmin,bot_two,lodai_a,lodai_b,khoa_a,khoa_b', TATHU: '0', SEASON: '0' }, stdio: ['ignore', 'pipe', 'pipe'],
+    env: { ...process.env, PORT, DATA_DIR: DATA, ADMINS: 'botadmin,bot_two,lodai_a,lodai_b,khoa_a,khoa_b,devadm', TATHU: '0', SEASON: '0' }, stdio: ['ignore', 'pipe', 'pipe'],
   });
   const start = log.length;
   srv.stdout.on('data', (d) => { log += d; });

@@ -77,20 +77,22 @@ function listFiles(dir, ext, rel = '') {
 // Client không có bước build nên ~85 module ES tải theo thác nhiều tầng. index.html được chèn
 // import map trỏ mỗi module tới bản ?v=<băm nội dung> (lưu đệm lâu, không phải hỏi lại máy chủ)
 // cùng modulepreload cho mọi module để trình duyệt tải song song ngay từ đầu.
-function buildIndex(root, file) {
+// Trang ngoài thư mục gốc (vd /dev/gallery) dùng đường dẫn tuyệt đối "/js/..." (abs = true).
+function buildIndex(root, file, abs = false) {
   const vers = {};
   const imports = {};
+  const pre = abs ? '/' : './';
   let preload = '';
   for (const r of listFiles(path.join(root, 'js'), '.js')) {
     const u = `js/${r}`;
     vers[u] = `${u}?v=${fileVer(path.join(root, u))}`;
-    imports[`./${u}`] = `./${vers[u]}`;
-    preload += `\n  <link rel="modulepreload" href="${vers[u]}">`;
+    imports[`${pre}${u}`] = `${pre}${vers[u]}`;
+    preload += abs ? '' : `\n  <link rel="modulepreload" href="${vers[u]}">`;
   }
   for (const r of listFiles(path.join(root, 'css'), '.css')) vers[`css/${r}`] = `css/${r}?v=${fileVer(path.join(root, 'css', r))}`;
   const map = `<script type="importmap">${JSON.stringify({ imports })}</script>`;
   return fs.readFileSync(file, 'utf8')
-    .replace(/(href|src)="((?:js|css)\/[^"?]+)"/g, (s, a, u) => (vers[u] ? `${a}="${vers[u]}"` : s))
+    .replace(/(href|src)="(\/?)((?:js|css)\/[^"?]+)"/g, (s, a, sl, u) => (vers[u] ? `${a}="${sl}${vers[u]}"` : s))
     // import map phải đứng trước mọi thẻ module/modulepreload
     .replace('</head>', `  ${map}${preload}\n</head>`);
 }
@@ -106,11 +108,21 @@ function versioned(root, file, url) {
   }
 }
 
-// root: thư mục tĩnh; status(): nội dung JSON của /api/status
-function createHttpServer(root, status) {
+// root: thư mục tĩnh; status(): nội dung JSON của /api/status;
+// opts.extra(req, res, url): xử lý đường dẫn riêng (vd /api/metrics), trả true nếu đã trả lời; opts.devTools: mở /dev/...
+function createHttpServer(root, status, opts = {}) {
   const indexFile = path.join(root, 'index.html');
   return http.createServer((req, res) => {
     const url = new URL(req.url, 'http://x');
+    if (opts.extra && opts.extra(req, res, url)) return;
+    // công cụ phát triển (/dev/...): tắt hẳn khi không đặt DEV_TOOLS, kể cả với admin
+    if (url.pathname.startsWith('/dev/') || url.pathname === '/dev') {
+      if (!opts.devTools) {
+        res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
+        return res.end('Không tìm thấy');
+      }
+      if (url.pathname === '/dev/gallery') url.pathname = '/dev/gallery.html';
+    }
     if (url.pathname === '/api/status') {
       res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
       return res.end(JSON.stringify(status()));
@@ -136,10 +148,10 @@ function createHttpServer(root, status) {
       const ext = path.extname(file);
       const gzip = /\bgzip\b/.test(req.headers['accept-encoding'] || '') && GZIP_EXT.has(ext);
       const cache = versioned(root, file, url) ? 'public, max-age=31536000, immutable' : 'no-cache';
-      if (file === indexFile) {
+      if (ext === '.html') {
         let raw;
         try {
-          raw = Buffer.from(buildIndex(root, file));
+          raw = Buffer.from(buildIndex(root, file, file !== indexFile));
         } catch (e) {
           res.writeHead(500, { 'Content-Type': 'text/plain; charset=utf-8' });
           return res.end('Lỗi máy chủ');

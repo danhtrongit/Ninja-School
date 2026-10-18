@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Ninja School - Thư viện hình</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/css/fonts.css">
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/dev.css">
+</head>
+<body class="gal">
+  <form id="gal-login" class="gal-login" autocomplete="on">
+    <div class="gal-title">Thư viện hình (chỉ admin)</div>
+    <input id="gal-user" class="in" name="username" placeholder="Tài khoản admin" autocomplete="username">
+    <input id="gal-pass" class="in" name="password" type="password" placeholder="Mật khẩu" autocomplete="current-password">
+    <button class="btn primary" type="submit">Vào</button>
+    <div id="gal-err" class="gal-err"></div>
+  </form>
+  <header id="gal-nav" class="gal-nav hidden"></header>
+  <main id="gal-grid" class="gal-grid"></main>
+  <script type="module" src="/js/dev/gallery.js"></script>
+</body>
+</html>

@@ -25,6 +25,7 @@ const { fashionTest } = require('./features/fashion');
 const { saveTest, reloadTest } = require('./features/persistence');
 const { unit: boundUnit, bot: boundBot } = require('./features/bound');
 const { balanceUnitTests, balanceBotTest } = require('./features/balance');
+const { devtoolsTest } = require('./features/devtools');
 
 // Kiểm thử không cần server (thế giới giả hoặc gọi thẳng công thức)
 function unitTests() {
@@ -67,6 +68,7 @@ async function main() {
     await arenaTest();
     await bagTest(ctx.a);
     await audioHttpTest();
+    await devtoolsTest();
 
     await boundBot();
     await balanceBotTest(ctx);
