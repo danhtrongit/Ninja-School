@@ -166,5 +166,6 @@ async function clickPlayer(page, name) {
   ok(!errs.length, `không có lỗi console${errs.length ? `: ${errs.join(' | ')}` : ''}`);
   await browser.close();
   console.log(fails ? `\nTHẤT BẠI: ${fails}` : '\nTẤT CẢ KIỂM TRA GIAO DIỆN 2 NGƯỜI CHƠI ĐỀU ĐẠT');
+  console.log(errs.join('\n') || 'OK no console errors');
   process.exit(fails ? 1 : 0);
 })();
