@@ -4,6 +4,31 @@ Ghi sau mỗi tính năng / mỗi lần đổi mốc ảnh. Mới nhất ở tr�
 
 ## 2026-10-19
 
+### Khép GĐ0: tài khoản, nhân vật, khung module, lưu, lệnh admin → done (21/21 mục GĐ0)
+
+- `tests/features/account.js`:
+  - `accountSecurityTest` (máy chủ riêng 4323/4324):
+    - giới hạn đăng ký `REG_LIMIT`/giờ/IP;
+    - IP sau proxy lấy phần tử cuối X-Forwarded-For; `TRUST_PROXY=0` bỏ qua header;
+    - 8 lần sai mật khẩu → khóa IP 1 phút, IP khác vẫn vào được;
+    - tối đa 6 token, mỗi token hạn 30 ngày;
+    - nhân vật thứ 4 bị từ chối, xóa phải gõ đúng tên, móc `charDeleted` chạy khi xóa;
+    - cổng chặn quá 80 gói/giây và gói > 16 KB (đóng mã 1009).
+  - `routerTests` (cổng 4325):
+    - Router ném lỗi khi trùng hành động hoặc handler không phải hàm;
+    - gói `constructor/__proto__/toString` không chạy handler nào;
+    - máy chủ nạp hai module trùng hành động thì dừng ngay lúc khởi động.
+- `tests/features/admin.js`: tài khoản ngoài `ADMINS` gõ `/xu 100` không đổi xu.
+- `tests/lib/bot.js`: `Bot` nhận cổng tùy chọn (mặc định `PORT`).
+- Màn chọn nhân vật:
+  - Thông báo tên bản đồ còn nổi đè lên `#screen-chars` khi đổi nhân vật. Nay `show()` xóa `#toasts` khi rời màn game.
+  - Nút "Vào game" trên màn thấp (≤ 560 px) cao 44 px (trước 36 px), đúng cỡ chạm tối thiểu.
+- `ui-audit.js`:
+  - Cảnh mới `chars` ở 4 cỡ màn: thẻ nằm gọn, không cuộn ngang, nút chạm ≥ 44 px, vào lại game được.
+  - Thêm dòng ✔ "không có lỗi console" để dùng làm bằng chứng.
+- Ảnh: `docs/shots/core-characters/` (desktop, mobile).
+- `npm test` đạt 238,2 s; `ui-audit` đạt. Sổ tính năng: 44 mục done, mọi nhãn bằng chứng của smoke/ui-audit đều khớp.
+
 ### Lưu theo nhân vật (`ops-persist-shard`, ADR-10-1) → done
 
 - `services/db.js`:

@@ -38,6 +38,8 @@ function show(name) {
   if (name === 'login' && prev !== 'login') logo.restart();
   if (name !== 'chars') hideDelete();
   if (name !== 'game') {
+    // thông báo trong game (tên bản đồ vừa vào...) nằm trên mọi màn: rời game thì dọn
+    $('#toasts').replaceChildren();
     music('title');
     game.active = false;
     game.leaveSession();

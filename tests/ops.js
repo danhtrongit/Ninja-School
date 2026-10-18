@@ -4,7 +4,7 @@
 // (cổng 4310-4339, DATA_DIR tạm) nên tests/smoke.js chạy file này song song với bộ bot chính rồi in kết quả ở cuối.
 // Chạy riêng: node tests/ops.js
 const { ok, fail, failCount } = require('./lib/harness');
-const { loginBurstTest } = require('./features/account');
+const { loginBurstTest, accountSecurityTest, routerTests } = require('./features/account');
 const { storageUnitTests, storageShardTests, storageProcTests, crashGuardTests } = require('./features/storage');
 const { crashTradeTest } = require('./load/crash');
 const { backupUnitTests, backupRestoreTest, backupRestartTest, backupLagTest } = require('./features/backup');
@@ -18,6 +18,8 @@ async function main() {
     await crashGuardTests();
     await crashTradeTest();
     await loginBurstTest();
+    await accountSecurityTest();
+    await routerTests();
     await backupRestoreTest();
     await backupRestartTest();
     await backupLagTest();

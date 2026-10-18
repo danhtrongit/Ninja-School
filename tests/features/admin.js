@@ -161,6 +161,10 @@ async function adminTest() {
     const nu = await cmd(u, '/mail ThuongDan 1 0');
     await sleep(150);
     ok(/Lệnh không tồn tại/.test(nu) && !/\[ADMIN\] thuongqa/.test(srv.log), 'tài khoản thường gõ lệnh admin → không tồn tại, không ghi log [ADMIN]');
+    const xu0 = u.me.xu;
+    const nx = await cmd(u, '/xu 100');
+    await sleep(300);
+    ok(/Lệnh không tồn tại/.test(nx) && u.me.xu === xu0, `tài khoản không có trong ADMINS gõ /xu 100 → không đổi số xu (${xu0} → ${u.me.xu})`);
     u.ws.close();
   } finally {
     if (srv) await stopSrv(srv);

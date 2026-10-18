@@ -48,6 +48,26 @@ const openAsk = (page, opts) => page.evaluate((o) => {
 const askResult = (page) => page.waitForFunction(() => window.__ask !== 'chờ', null, { timeout: 2000 }).then(() => page.evaluate(() => window.__ask)).catch(() => 'chưa đóng');
 
 const SCENES = {
+  // màn chọn nhân vật (Đổi nhân vật trong Cài đặt): thẻ nằm gọn trong khung nhìn, nút vào game đủ lớn để chạm, vào lại được
+  async chars(page, vp, shot) {
+    await page.evaluate(() => window.ninja.ui.onChangeChar());
+    await page.waitForSelector('#screen-chars:not(.hidden) .char-card', { timeout: 6000 });
+    await page.waitForTimeout(400);
+    const r = await page.evaluate(() => {
+      const cards = [...document.querySelectorAll('#screen-chars .char-card')].map((c) => c.getBoundingClientRect());
+      // chiều cao bố cục (thẻ còn hoạt ảnh hiện ra phóng nhỏ nên getBoundingClientRect thấp hơn chút)
+      const play = [...document.querySelectorAll('.char-card .btn.primary')].map((b) => b.offsetHeight);
+      return { n: cards.length, fits: cards.every((b) => b.left >= 0 && b.right <= innerWidth + 0.5 && b.top >= 0), play, W: innerWidth,
+        hscroll: document.documentElement.scrollWidth > innerWidth + 1 };
+    });
+    await shot('chars');
+    ok(r.n >= 1 && r.fits && !r.hscroll, `chars ${vp.name}: màn #screen-chars hiện ${r.n} thẻ nhân vật nằm gọn chiều ngang, không cuộn ngang`);
+    if (vp.touch) ok(r.play.length >= 1 && r.play.every((x) => x >= 44), `chars ${vp.name}: nút vào game cao ≥ 44px (${r.play.join(', ')})`);
+    await page.click('.char-card .btn.primary');
+    const back = await page.waitForFunction(() => window.ninja.game.active && window.ninja.S.me && document.querySelector('#screen-chars').classList.contains('hidden'), null, { timeout: 10000 }).then(() => true, () => false);
+    await page.waitForTimeout(600);
+    ok(back, `chars ${vp.name}: chọn nhân vật vào lại game`);
+  },
   // hộp xác nhận vừa khung nhìn, nút đủ lớn để chạm
   async ask(page, vp, shot) {
     await openAsk(page, { title: 'Hủy vật phẩm', danger: true, ok: 'Hủy', text: ['Hủy Kiếm Gỗ +3 ×1? Không thể khôi phục.', 'Ngọc đang khảm cũng mất theo. Dòng chữ dài để thử xuống dòng trong hộp xác nhận trên màn nhỏ.'] });
@@ -167,6 +187,7 @@ const SCENES = {
   }
   await browser.close();
   console.log(`Ảnh: ${OUT}`);
+  ok(!errors.length, `không có lỗi console/pageerror ở ${VIEWPORTS.length} cỡ màn (cảnh: ${scenes.join(', ')})`);
   console.log(fails ? `UI-AUDIT HỎNG: ${fails}` : 'UI-AUDIT ĐẠT');
   console.log(errors.join('\n') || 'OK no console errors');
   process.exit(fails || errors.length ? 1 : 0);

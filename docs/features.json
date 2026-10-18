@@ -68,7 +68,7 @@
     "phase": 0,
     "title": "Tài khoản: đăng ký, đăng nhập, nhớ phiên bằng token, giới hạn thử sai và tạo theo IP",
     "priority": "Must",
-    "status": "todo",
+    "status": "done",
     "acceptance": [
       "npm test đạt phần tài khoản (tests/features/account.js): đăng ký, đăng nhập, token 30 ngày, tối đa 6 token",
       "8 lần sai mật khẩu cùng IP → bị khóa 1 phút; quá REG_LIMIT tài khoản/giờ/IP → từ chối đăng ký",
@@ -91,18 +91,28 @@
     "size": "M",
     "depends": [],
     "proof": [
-      [],
-      [],
-      []
-    ],
-    "notes": "Thiếu bằng chứng (2026-10-19): acceptance #1 \"npm test đạt phần tài khoản (tests/features/account.js): đăng ký, đăng nhập, token 30 ngày, tối đa 6 token\"; acceptance #2 \"8 lần sai mật khẩu cùng IP → bị khóa 1 phút; quá REG_LIMIT tài khoản/giờ/IP → từ chối đăng ký\"; acceptance #3 \"IP lấy phần tử cuối X-Forwarded-For chỉ khi TRUST_PROXY đặt\"."
+      [
+        "tests/features/account.js :: đăng ký thành công, nhận token",
+        "tests/features/account.js :: token 30 ngày: accounts.json giữ 6 token",
+        "tests/features/account.js :: tối đa 6 token: đăng ký + 7 lần đăng nhập"
+      ],
+      [
+        "tests/features/account.js :: 8 lần sai mật khẩu cùng IP → bị khóa 1 phút: sau 60 giây cùng IP đăng nhập lại được",
+        "tests/features/account.js :: 8 lần sai mật khẩu cùng IP → bị khóa: lần 9 đúng mật khẩu vẫn bị từ chối",
+        "tests/features/account.js :: quá REG_LIMIT tài khoản/giờ/IP → từ chối đăng ký"
+      ],
+      [
+        "tests/features/account.js :: IP = phần tử cuối X-Forwarded-For, đổi phần tử đầu không lách được giới hạn",
+        "tests/features/account.js :: TRUST_PROXY=0: bỏ qua X-Forwarded-For"
+      ]
+    ]
   },
   {
     "id": "core-characters",
     "phase": 0,
     "title": "Nhân vật: tạo 6 phái × 2 giới, tối đa 3 mỗi tài khoản, xóa phải gõ lại tên",
     "priority": "Must",
-    "status": "todo",
+    "status": "done",
     "acceptance": [
       "npm test đạt phần tạo/chọn/xóa nhân vật (tests/features/account.js)",
       "nhân vật thứ 4 cùng tài khoản bị từ chối; xóa sai tên bị từ chối; móc charDeleted chạy khi xóa",
@@ -111,7 +121,8 @@
     "tests": [
       "tests/features/account.js",
       "tests/e2e/e2e.js",
-      "tests/features/mail.js"
+      "tests/features/mail.js",
+      "tests/e2e/ui-audit.js"
     ],
     "files": [
       "src/server/core/gateway.js",
@@ -131,17 +142,25 @@
         "tests/features/account.js :: vào Làng Hỏa Vân, cấp 1",
         "tests/features/mail.js :: xóa nhân vật rồi tạo lại cùng tên"
       ],
-      [],
-      []
-    ],
-    "notes": "Thiếu bằng chứng (2026-10-19): acceptance #2 \"nhân vật thứ 4 cùng tài khoản bị từ chối; xóa sai tên bị từ chối; móc charDeleted chạy khi xóa\"; acceptance #3 \"tools/shot.js màn #screen-chars desktop và mobile: true in 'OK no console errors'\"."
+      [
+        "tests/features/account.js :: nhân vật thứ 4 cùng tài khoản bị từ chối",
+        "tests/features/account.js :: xóa sai tên bị từ chối",
+        "tests/features/account.js :: móc charDeleted chạy khi xóa"
+      ],
+      [
+        "tests/e2e/ui-audit.js :: chars 1280x720: màn #screen-chars hiện",
+        "tests/e2e/ui-audit.js :: chars 844x390: màn #screen-chars hiện",
+        "tests/e2e/ui-audit.js :: chars 844x390: nút vào game cao ≥ 44px",
+        "tests/e2e/ui-audit.js :: không có lỗi console/pageerror ở 4 cỡ màn"
+      ]
+    ]
   },
   {
     "id": "core-modules",
     "phase": 0,
     "title": "Khung module server: bảng hành động không prototype, điểm móc, gói data, cổng WebSocket",
     "priority": "Must",
-    "status": "todo",
+    "status": "done",
     "acceptance": [
       "npm test in 'TẤT CẢ KIỂM TRA ĐỀU ĐẠT' (chạy lại 18/10/2026: 376 kiểm tra đạt)",
       "node -e dựng Router với hai module trùng tên hành động → ném lỗi lúc khởi động; gói t='constructor' / '__proto__' / 'toString' không gọi handler nào (đã kiểm 18/10/2026)",
@@ -172,10 +191,14 @@
         "tests/smoke.js :: ghi file dữ liệu khi tắt server",
         "tests/features/skills.js :: bỏ qua sid độc hại/không hợp lệ"
       ],
-      [],
-      []
-    ],
-    "notes": "Thiếu bằng chứng (2026-10-19): acceptance #2 \"node -e dựng Router với hai module trùng tên hành động → ném lỗi lúc khởi động; gói t='constructor' / '__proto__' / 'toString' không gọi handler nào (đã kiểm 18/10/2026)\"; acceptance #3 \"gateway giới hạn gói ≤ 16 KB và ≤ 80 gói/giây/kết nối (src/server/core/gateway.js)\"."
+      [
+        "tests/features/account.js :: Router: trùng tên hành động / handler không phải hàm → ném lỗi",
+        "tests/features/account.js :: máy chủ nạp hai module trùng tên hành động → dừng ngay lúc khởi động"
+      ],
+      [
+        "tests/features/account.js :: gateway: 200 gói trong 1 giây chỉ xử lý 80 (80 pong); gói 15 KB vẫn nhận, gói > 16 KB đóng kết nối"
+      ]
+    ]
   },
   {
     "id": "core-restructure",
@@ -232,13 +255,14 @@
     "phase": 0,
     "title": "Lưu và tải lại tiến trình bằng JSON (4 file, ghi tmp rồi rename, sao lưu 12 mốc)",
     "priority": "Must",
-    "status": "todo",
+    "status": "done",
     "acceptance": [
       "npm test đạt tests/features/persistence.js: đăng nhập lại và khởi động lại server từ file giữ vị trí, máu, túi, thư, điểm lôi đài",
       "ghi file bằng tmp + renameSync (src/server/services/db.js)"
     ],
     "tests": [
-      "tests/features/persistence.js"
+      "tests/features/persistence.js",
+      "tests/features/storage.js"
     ],
     "files": [
       "src/server/services/db.js",
@@ -251,7 +275,6 @@
     "section": "docs/gdd/10-ky-thuat-van-hanh.md",
     "size": "M",
     "depends": [],
-    "notes": "Rủi ro quy mô xử lý ở ops-persist-shard Thiếu bằng chứng (2026-10-19): acceptance #2 \"ghi file bằng tmp + renameSync (src/server/services/db.js)\".",
     "proof": [
       [
         "tests/features/persistence.js :: đăng nhập lại bằng token, dữ liệu được giữ",
@@ -260,8 +283,11 @@
         "tests/features/persistence.js :: điểm lôi đài giữ nguyên",
         "tests/features/persistence.js :: trang bị & thú cưng vẫn còn sau khi đăng nhập lại"
       ],
-      []
-    ]
+      [
+        "tests/features/storage.js :: DB: ghi .tmp + fsync"
+      ]
+    ],
+    "notes": "Rủi ro quy mô xử lý ở ops-persist-shard"
   },
   {
     "id": "dev-test-coverage",
@@ -438,7 +464,7 @@
     "phase": 0,
     "title": "Lệnh quản trị qua chat (/lv, /item, /xu, /tp, /boss, /event, /mail, /code, /sukien, /arena)",
     "priority": "Must",
-    "status": "todo",
+    "status": "done",
     "acceptance": [
       "npm test đạt; các phần kiểm thử dùng /lv, /item, /xu, /tp, /boss, /mail, /code, /sukien, /arena với ADMINS do harness đặt",
       "tài khoản không có trong ADMINS gõ /xu 100 → không đổi số xu"
@@ -449,7 +475,8 @@
       "tests/features/boss.js",
       "tests/features/arena.js",
       "tests/features/skills.js",
-      "tests/features/endgame.js"
+      "tests/features/endgame.js",
+      "tests/features/admin.js"
     ],
     "files": [
       "src/server/modules/admin/index.js",
@@ -471,9 +498,10 @@
         "tests/features/arena.js :: admin /arena: hàng chờ và phòng đấu đã dọn sạch",
         "tests/features/boss.js :: /event tathu: thông báo toàn máy chủ kèm tên bản đồ"
       ],
-      []
-    ],
-    "notes": "Thiếu bằng chứng (2026-10-19): acceptance #2 \"tài khoản không có trong ADMINS gõ /xu 100 → không đổi số xu\"."
+      [
+        "tests/features/admin.js :: tài khoản không có trong ADMINS gõ /xu 100 → không đổi số xu"
+      ]
+    ]
   },
   {
     "id": "ops-admin-guard",

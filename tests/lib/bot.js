@@ -5,8 +5,10 @@ const WebSocket = require('ws');
 const { PORT, sleep } = require('./harness');
 
 class Bot {
-  constructor(name) {
+  // port: máy chủ riêng của phần kiểm thử (mặc định máy chủ chung của harness)
+  constructor(name, port = PORT) {
     this.name = name;
+    this.port = port;
     this.msgs = [];
     this.waiters = [];
     this.used = new Set();
@@ -16,7 +18,7 @@ class Bot {
 
   connect(headers) {
     return new Promise((resolve, reject) => {
-      this.ws = new WebSocket(`ws://localhost:${PORT}/ws`, headers ? { headers } : undefined);
+      this.ws = new WebSocket(`ws://localhost:${this.port}/ws`, headers ? { headers } : undefined);
       this.ws.on('message', (raw) => {
         const m = JSON.parse(raw);
         this.msgs.push(m);
