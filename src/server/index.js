@@ -1,12 +1,15 @@
 'use strict';
 
 // Khởi động máy chủ: cấu hình, dữ liệu, thế giới, HTTP tĩnh + WebSocket, lưu định kỳ, tắt an toàn
+const fs = require('fs');
 const path = require('path');
+const { execFileSync } = require('child_process');
 const { DB } = require('./services/db');
 const { createHttpServer } = require('./services/http');
 const { World } = require('./core/world');
 const { buildGameData } = require('./core/gamedata');
 const { attachGateway } = require('./core/gateway');
+const { Metrics } = require('./services/metrics');
 
 const config = {
   port: +process.env.PORT || 3000,
@@ -22,12 +25,31 @@ const config = {
   // số tài khoản tạo mới tối đa mỗi IP mỗi giờ (0 = không giới hạn; kết nối loopback khi chạy thử không bị tính)
   regPerHour: /^\d+$/.test(process.env.REG_LIMIT || '') ? +process.env.REG_LIMIT : 10,
   maxChars: 3,
+  // DEV_TOOLS=1 mở /dev/gallery (vẫn cần đăng nhập admin); production không đặt
+  devTools: process.env.DEV_TOOLS === '1',
 };
 
-const VERSION = '1.0.0';
+// Mã commit đang chạy: GIT_SHA (image CI) → REVISION (git archive điền sẵn) → git rev-parse (chạy từ repo)
+function revision() {
+  if (/^[0-9a-f]{7,40}$/.test(process.env.GIT_SHA || '')) return process.env.GIT_SHA;
+  try {
+    const r = fs.readFileSync(path.join(__dirname, 'REVISION'), 'utf8').trim();
+    if (/^[0-9a-f]{40}$/.test(r)) return r;
+  } catch (e) { /* không có file */ }
+  try {
+    return execFileSync('git', ['rev-parse', 'HEAD'], { cwd: __dirname, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
+  } catch (e) { return ''; }
+}
+const COMMIT = revision();
+const VERSION = require('../../package.json').version + (COMMIT ? `+${COMMIT.slice(0, 7)}` : '');
 const db = new DB(config.dataDir);
 const world = new World(db, config);
-const server = createHttpServer(path.join(__dirname, '..', 'client'), () => ({ ok: true, version: VERSION, online: world.players.size, accounts: Object.keys(db.accounts).length }));
+const metrics = new Metrics();
+metrics.watch(world, db);
+const server = createHttpServer(path.join(__dirname, '..', 'client'), () => ({ ok: true, version: VERSION, commit: COMMIT, online: world.players.size, accounts: Object.keys(db.accounts).length }), {
+  extra: (req, res, url) => metrics.handle(req, res, url, process.env.METRICS_TOKEN || ''),
+  devTools: config.devTools,
+});
 attachGateway(server, { db, world, config, gameData: buildGameData(VERSION) });
 
 server.listen(config.port, () => {
@@ -50,4 +72,4 @@ setInterval(() => { if (db.dirty) db.save(); }, 15000);
 setInterval(() => db.backup(), 6 * 3600 * 1000);
 setTimeout(() => db.backup(), 60 * 1000);
 
-module.exports = { server, world, db };
+module.exports = { server, world, db, metrics };

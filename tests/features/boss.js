@@ -214,6 +214,9 @@ async function bossEventTest(a) {
   let c2 = null;
   for (let k = 0; k < 4 && !c2; k++) {
     await revive(a);
+    // hồi sinh có thể đưa A ra xa: quay lại cạnh boss để boss còn mục tiêu mà niệm chiêu
+    const bm = a.monsters.get(boss.id);
+    if (bm && Math.abs(a.x - (bm.x + 30)) > 20) await dash(a, Math.round(bm.x + 30));
     c2 = await seek(a, 'bossCast', (m) => m.id === boss.id, from, 6000).catch(() => null);
   }
   if (!c2) throw new Error('A: hết thời gian chờ "bossCast" lần 2');

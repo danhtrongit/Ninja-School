@@ -11,7 +11,12 @@
     "check": "node tools/check-data.js",
     "test:ui": "node tests/e2e/ui-multiplayer.js",
     "test:e2e": "node tests/e2e/e2e.js",
-    "test:perf": "node tests/e2e/perf.js"
+    "test:perf": "node tests/e2e/perf.js",
+    "verify": "node scripts/verify.js",
+    "check:features": "node scripts/check-features.js",
+    "test:visual": "node tests/e2e/gallery.js",
+    "test:sfx": "node tests/e2e/sfx.js",
+    "test:load": "node tests/load/load.js"
   },
   "engines": {
     "node": ">=18"

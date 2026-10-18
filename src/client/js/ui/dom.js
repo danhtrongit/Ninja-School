@@ -17,7 +17,6 @@ export function h(tag, attrs, ...kids) {
         }
       }
       else if (k.startsWith('on')) el.addEventListener(k.slice(2), v);
-      else if (k === 'html') el.innerHTML = v;
       else el.setAttribute(k, v === true ? '' : v);
     }
   }
