@@ -143,10 +143,13 @@ async function adminTest() {
     const sk = await cmd(c, '/sukien auto');
     ok(/giftcode/i.test(code) && !!sk && sk !== 'Lệnh không tồn tại.', `lệnh vận hành /code, /sukien vẫn chạy ("${code.slice(0, 40)}", "${sk.slice(0, 40)}")`);
     const ops = [];
-    for (const k of ['xu 10', 'luong 1', 'item hp1 1', 'tp v_fire']) {
+    for (const k of ['xu 10', 'luong 1', 'item hp1 1']) {
       const a = await cmd(c, `/${k}`);
       if (!a || a === 'Lệnh không tồn tại.') ops.push(`/${k}`);
     }
+    // /tp không trả tin hệ thống: thành công là có gói enterMap
+    c.send('chat', { ch: 'map', msg: '/tp fire_field' });
+    if (!(await c.wait('enterMap', (m) => m.map === 'fire_field').catch(() => null))) ops.push('/tp');
     ok(!ops.length, `không có NS_TEST: lệnh vận hành /xu /luong /item /tp vẫn chạy (GDD 10 mục 9.4)${ops.length ? ` (bị tắt: ${ops.join(' ')})` : ''}`);
     await sleep(200);
     ok(/\[ADMIN\] adminqa \/lv 50\n/.test(srv.log) && /\[ADMIN\] adminqa \/mail QuanTri 100 0\n/.test(srv.log) && /\[ADMIN\] adminqa \/code\n/.test(srv.log),

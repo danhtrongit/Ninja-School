@@ -72,7 +72,9 @@ async function useManyTest(a) {
   const use = async (id, n, re) => {
     const from = a.msgs.length;
     a.send('useItem', { slot: at(id), n });
-    await sleep(250);
+    // chờ thông báo thay vì ngủ cố định: máy tải cao thì 250 ms chưa đủ cho 50 lượt mở rương
+    await a.wait('notice', (m) => !re || re.test(m.msg), 3000).catch(() => null);
+    await sleep(150);
     return a.msgs.slice(from).filter((m) => m.t === 'notice' && (!re || re.test(m.msg)));
   };
   a.send('chat', { ch: 'map', msg: '/item chest 8' });
@@ -86,8 +88,11 @@ async function useManyTest(a) {
   ok(count('chest') === c0 - 6, 'số lượng không phải số thì chỉ dùng 1');
   await use('chest', -4);
   ok(count('chest') === c0 - 7, 'số lượng âm thì chỉ dùng 1');
-  await use('chest', 9999);
-  ok(count('chest') === Math.max(0, c0 - 7 - USE_MANY.max), `số lượng quá lớn bị chặn ở ${USE_MANY.max} và số món đang có`);
+  const c7 = count('chest');
+  const q7 = a.inv.inv[at('chest')].q;
+  const big = await use('chest', 9999, /^Mở /);
+  const k = Math.min(USE_MANY.max, q7);
+  ok(count('chest') === c7 - k && big.length === 1 && (k > 1 ? big[0].msg.startsWith(`Mở ${k} `) : big[0].msg.startsWith('Mở rương nhận')), `số lượng quá lớn bị chặn ở ${USE_MANY.max} và số món đang có (${big[0] && big[0].msg.slice(0, 40)})`);
 
   a.send('chat', { ch: 'map', msg: '/item food_hp 5' });
   await sleep(250);

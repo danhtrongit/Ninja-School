@@ -184,9 +184,13 @@ async function bossEventTest(a) {
   let h1 = null;
   let hit1 = null;
   let waited = 0;
+  let gWait = g.msgs.length;
   for (let k = 0; k < 4; k++) {
     await revive(a);
     a.send('chat', { ch: 'map', msg: '/lv 120' });
+    // G đứng giữa quái thường suốt vòng chờ: gục thì hồi lại tại chỗ, chỉ xét sát thương từ lần niệm cuối
+    if (await revive(g)) await dash(g, Math.round(gx));
+    gWait = g.msgs.length;
     const bm = a.monsters.get(boss.id);
     if (bm && Math.abs(a.x - (bm.x + 30)) > 20) await dash(a, Math.round(bm.x + 30));
     a.send('move', { x: a.x, y: 300, dir: -1, st: 0 });
@@ -208,7 +212,11 @@ async function bossEventTest(a) {
   // quái thường quanh G có thể đánh G, nên chỉ cộng sát thương đến từ boss
   const fromBoss = g.msgs.filter((m) => m.t === 'hit' && m.a === `m${boss.id}`).flatMap((m) => m.list).filter(([tid, , , miss]) => tid === `p${g.me.id}` && !miss);
   const bHits = g.msgs.filter((m) => m.t === 'hit' && m.a === `m${boss.id}` && m.list.some(([tid, , , miss]) => tid === `p${g.me.id}` && !miss));
-  ok(gHp > 0 && !g.me.dead && fromBoss.length === 0, `người đứng ngoài vùng không mất máu vì boss${fromBoss.length ? ` (G x=${g.x}, boss x=${a.monsters.get(boss.id) && a.monsters.get(boss.id).x}, ${bHits.map((m) => (m.bs ? 'chiêu ' + m.bs : 'đánh thường')).join(', ')})` : ''}`);
+  // G phải còn sống lúc chiêu nổ (chết vì quái thường trước đó thì phép thử không có nghĩa)
+  const gTail = g.msgs.slice(gWait);
+  const gBoom = gTail.findIndex((m) => m.t === 'bossHit' && m.id === boss.id);
+  const gDead = gTail.findIndex((m) => m.t === 'dead');
+  ok(gHp > 0 && gBoom >= 0 && (gDead < 0 || gDead > gBoom) && fromBoss.length === 0, `người đứng ngoài vùng không mất máu vì boss${fromBoss.length ? ` (G x=${g.x}, boss x=${a.monsters.get(boss.id) && a.monsters.get(boss.id).x}, ${bHits.map((m) => (m.bs ? 'chiêu ' + m.bs : 'đánh thường')).join(', ')})` : ''}`);
 
   // Lần niệm 2: chạy ra khỏi vùng trong lúc niệm → né được
   from = a.msgs.length;

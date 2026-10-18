@@ -48,4 +48,47 @@ async function airTest(a) {
   await sleep(100);
 }
 
-module.exports = { airTest };
+const tp = async (bot, map) => {
+  if (bot.map === map) return;
+  bot.send('chat', { ch: 'map', msg: `/tp ${map}` });
+  await bot.wait('enterMap', (m) => m.map === map);
+};
+
+// ping/pong và nhặt đồ thủ công (gói pickup): món của người khác trong 15 giây đầu bị từ chối, chủ nhặt được
+async function pickupTest({ a, c }) {
+  console.log('7p. Nhặt đồ thủ công, ping');
+  a.send('ping', { ts: 4242 });
+  ok((await a.wait('pong')).ts === 4242, 'ping: server trả pong kèm ts của máy khách');
+  await tp(a, 'fire_field');
+  await tp(c, 'fire_field');
+  // diệt quái tới khi có món rơi còn nằm trên đất (không bị tự nhặt do đứng sát) trong tầm nhặt tay
+  let g = null;
+  for (let k = 0; k < 8 && !g; k++) {
+    const mobs = [...a.monsters.values()].filter((m) => m.y === 300).sort((p, q) => Math.abs(p.x - a.x) - Math.abs(q.x - a.x));
+    const tg = mobs[0];
+    if (!tg) break;
+    await a.walkTo(Math.max(30, Math.round(tg.x - 45)));
+    const from = a.msgs.length;
+    for (let i = 0; i < 10 && a.monsters.has(tg.id); i++) {
+      a.send('move', { x: a.x, y: 300, dir: 1, st: 0 });
+      a.send('skill', { sid: 'k0', tid: `m${tg.id}`, dir: 1 });
+      await sleep(400);
+    }
+    await sleep(250);
+    const later = a.msgs.slice(from);
+    const gone = new Set(later.filter((m) => m.t === 'gDel').map((m) => m.id));
+    g = later.find((m) => m.t === 'gAdd' && !gone.has(m.id) && Math.abs(m.x - a.x) < 70 && Math.abs(m.y - 300) < 60) || null;
+  }
+  ok(!!g, `diệt quái có món rơi nằm trên đất (${g ? g.k : 'không có'})`);
+  if (!g) return;
+  await c.walkTo(g.x + 30);
+  await sleep(150);
+  c.send('pickup', { id: g.id });
+  ok(!!(await c.wait('notice', (m) => /thuộc về người khác/.test(m.msg)).catch(() => null)), 'pickup món của người khác (chưa hết 15 giây) bị từ chối');
+  const from = a.msgs.length;
+  a.send('pickup', { id: g.id });
+  const del = await a.wait('gDel', (m) => m.id === g.id);
+  ok(del.by === a.me.id && a.msgs.slice(from).some((m) => m.t === 'loot'), 'pickup thủ công: chủ món nhặt được (gDel + loot)');
+}
+
+module.exports = { airTest, pickupTest };

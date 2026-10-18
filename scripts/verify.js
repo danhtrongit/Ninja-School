@@ -297,6 +297,7 @@ async function stepCmd(name, cmd, args, o, pass) {
   const s4 = stepApi(); report('4 API công khai', s4.ok, s4.lines);
   const s5 = stepStatic(); report('5 Quy tắc tĩnh', s5.ok, s5.lines);
   const s6 = stepFloor(); report('6 Sàn nội dung 1.0', s6.ok, s6.lines);
+  const s6b = require('./lib/coverage').stepCoverage(ROOT, flag('--strict-coverage')); report('6b Phủ kiểm thử theo hành động', s6b.ok, s6b.lines);
 
   if (QUICK) {
     for (const nm of ['7 Kiểm thử bot (npm test)', '8 Trình duyệt', '9 Tải (test:load)', '10 Sổ tính năng (check:features)']) report(nm, null, ['bỏ qua (--quick)']);

@@ -7,8 +7,9 @@ const fs = require('fs');
 const { DATA, sleep, ok, fail, failCount, serverLog, startServer } = require('./lib/harness');
 const { passiveUnitTests, passiveBookTest, passiveRulesTest } = require('./features/passive');
 const { bossUnitTests, bossCleanupUnitTests, bossEventTest } = require('./features/boss');
-const { pkUnitTests } = require('./features/pk');
+const { pkUnitTests, pkBotTest } = require('./features/pk');
 const { repoUnitTests } = require('./features/repo');
+const { clanUnitTests, clanTest } = require('./features/clan');
 const { gemUnitTests, gemTest } = require('./features/gems');
 const { petUnitTests, petTest } = require('./features/pets');
 const { mailUnitTests, mailTest } = require('./features/mail');
@@ -16,13 +17,13 @@ const { arenaUnitTests, arenaTest } = require('./features/arena');
 const { accountTest } = require('./features/account');
 const { questTest } = require('./features/quest');
 const { combatTest } = require('./features/combat');
-const { skillsTest } = require('./features/skills');
-const { socialTest, tradeUnitTests } = require('./features/social');
+const { skillsTest, resetStatsTest } = require('./features/skills');
+const { socialTest, socialMoreTest, tradeUnitTests } = require('./features/social');
 const { dailyTest, dailyTaskTest, dailyTaskUnitTests } = require('./features/daily');
 const { endgameTest } = require('./features/endgame');
 const { bagUnitTests, bagTest, useManyTest } = require('./features/inventory');
 const { audioUnitTests, audioHttpTest } = require('./features/audio');
-const { airTest } = require('./features/movement');
+const { airTest, pickupTest } = require('./features/movement');
 const { fashionTest } = require('./features/fashion');
 const { saveTest, reloadTest } = require('./features/persistence');
 const { unit: boundUnit, bot: boundBot } = require('./features/bound');
@@ -47,6 +48,7 @@ function unitTests() {
   repoUnitTests();
   tradeUnitTests();
   dailyTaskUnitTests();
+  clanUnitTests();
 }
 
 async function main() {
@@ -81,6 +83,12 @@ async function main() {
     await adminTest();
 
     await boundBot();
+    // 3 nhân vật mới trên tài khoản admin đã đóng (lodai_a, lodai_b, khoa_a): gia tộc → PK → tiềm năng → nhặt đồ → xã hội
+    const trio = await clanTest();
+    await pkBotTest(trio);
+    await resetStatsTest(trio.b);
+    await pickupTest(trio);
+    await socialMoreTest(trio);
     await balanceBotTest(ctx);
     await saveTest(ctx);
   } catch (e) {
