@@ -25,7 +25,7 @@ const { dailyTest, dailyTaskTest, dailyTaskUnitTests } = require('./features/dai
 const { endgameTest } = require('./features/endgame');
 const { bagUnitTests, bagTest, useManyTest } = require('./features/inventory');
 const { audioUnitTests, audioHttpTest } = require('./features/audio');
-const { airTest, pickupTest } = require('./features/movement');
+const { airTest, pickupTest, movementUnitTests } = require('./features/movement');
 const { fashionTest } = require('./features/fashion');
 const { saveTest, reloadTest } = require('./features/persistence');
 const { unit: boundUnit, bot: boundBot } = require('./features/bound');
@@ -51,6 +51,7 @@ function unitTests() {
   tradeUnitTests();
   dailyTaskUnitTests();
   clanUnitTests();
+  movementUnitTests();
 }
 
 // tests/ops.js trong tiến trình con: gom đầu ra để in liền một khối sau phần bot chính

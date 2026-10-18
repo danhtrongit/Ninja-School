@@ -14,6 +14,12 @@ const GRAV = 1000;
 const AIR_MAX = 2.4;
 // gói tin đến sớm/muộn so với lúc máy khách thật sự nhảy
 const AIR_SLACK = 0.3;
+// Tốc chạy gốc (khớp SPEED ở game.js) và hệ số dư cho nhiễu mạng/khung hình
+const RUN = 110;
+const RUN_SLACK = 1.6;
+// Ngân sách quãng đường: tích theo thời gian thật, dồn tối đa 1.5 giây để chịu được mất sóng ~1 giây
+// (gói dồn tới cùng lúc). Không có ngân sách thì mỗi gói được +30px nên gửi dồn gói là chạy nhanh gấp nhiều lần.
+const MOVE_BURST = 1.5;
 
 // Độ cao cao nhất (px, so với chỗ cất nhảy) có thể đạt sau t giây: nhảy rồi nhảy đôi đúng lúc tối ưu
 function jumpReach(t) {
@@ -55,15 +61,28 @@ class Movement {
     const dt = Math.min(1.2, (now - p.lastMoveAt) / 1000);
     p.lastMoveAt = now;
     const def = p.map.def;
-    const nx = Math.max(4, Math.min(def.w - 4, x));
+    let nx = Math.max(4, Math.min(def.w - 4, x));
     let ny = Math.max(0, Math.min(GROUND, y));
     // tốc chạy gồm cả thú cưỡi (p.s.spd); vừa tháo thú cưỡi thì vẫn nhận tốc cũ thêm 2.5 giây
-    const maxD = 110 * (1 + p.moveSpd(now) / 100) * 1.6 * dt + 30;
-    if (now > p.moveGrace && Math.abs(nx - p.x) > maxD) {
+    const rate = RUN * (1 + p.moveSpd(now) / 100) * RUN_SLACK;
+    const cap = rate * MOVE_BURST;
+    const grace = now <= p.moveGrace;
+    // server vừa đặt vị trí (vào bản đồ, lướt chiêu) hoặc lần đầu: đầy ngân sách
+    p.moveBudget = grace || !p.budgetAt ? cap : Math.min(cap, p.moveBudget + (rate * Math.max(0, now - p.budgetAt)) / 1000);
+    p.budgetAt = now;
+    if (!grace && Math.abs(nx - p.x) > rate * dt + 30) {
       p.send('pos', { x: Math.round(p.x), y: Math.round(p.y) });
       return;
     }
     let fix = false;
+    if (!grace) {
+      const d = Math.abs(nx - p.x);
+      if (d > p.moveBudget) {
+        nx = p.x + Math.sign(nx - p.x) * p.moveBudget;
+        fix = true;
+      }
+      p.moveBudget = Math.max(0, p.moveBudget - Math.abs(nx - p.x));
+    }
     if (!onSurface(def, nx, ny)) {
       if (!p.airAt || now <= p.moveGrace) {
         // vừa rời chỗ đứng (hoặc vừa được server đặt lại vị trí): tính cú nhảy từ chỗ đứng cuối
@@ -156,5 +175,5 @@ module.exports = {
       act(p, n, a) { if (a.startsWith('go:')) this.teleport(p, a.slice(3)); },
     },
   },
-  Movement, jumpReach, onSurface,
+  Movement, jumpReach, onSurface, MOVE_BURST,
 };
