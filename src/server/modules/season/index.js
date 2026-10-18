@@ -126,7 +126,7 @@ class Season {
     cnt[row.id] = used + n;
     p.markMe();
     p.markInv();
-    if (this.world.db) this.world.db.dirty = true;
+    if (this.world.db) this.world.db.touch(p.name, true);
     const got = rewardLabel({ xuk: (r.xu || 0) * n, luong: (r.luong || 0) * n }, items);
     p.notice(`Đổi ${row.cost * n} ${tok} lấy ${got}.`, 'reward');
     return res(true, `Đã đổi: ${got}`);

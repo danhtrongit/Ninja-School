@@ -24,7 +24,10 @@ const SCHEDULED = ['hourly', 'daily', 'weekly'];
 const NAME_RE = /^(\d{8})-(\d{6})(?:-([A-Za-z0-9_.]{1,40}))?\.tgz$/;
 const TAG_RE = /^[A-Za-z0-9_.]{1,40}$/;
 // file/thư mục trong DATA_DIR không đưa vào bản sao lưu
-const skipEntry = (n) => n === 'backups' || n === 'restore' || n === LOCK || n.startsWith('.') || n.endsWith('.tmp') || n.includes('.corrupt-') || n.startsWith('before-restore-');
+// characters.migrated-*: bản một file cũ giữ lại sau khi tách sang chars/, đã có trong bản sao lưu trước khi tách
+const skipEntry = (n) => n === 'backups' || n === 'restore' || n === LOCK || n.startsWith('.') || n.endsWith('.tmp') || n.endsWith('.atmp') || n.includes('.corrupt-') || n.startsWith('before-restore-') || n.startsWith('characters.migrated-');
+// file tạm / hỏng bên trong chars/, journal/
+const TAR_SKIP = ['*.tmp', '*.atmp', '*.corrupt-*'].map((x) => `--exclude=${x}`);
 
 // chu kỳ (số nguyên tăng dần) của thời điểm t theo tầng
 function period(tier, t) {
@@ -210,7 +213,7 @@ class Backup {
   async tarSnapshot(dest) {
     const entries = fs.readdirSync(this.dataDir).filter((n) => !skipEntry(n)).sort();
     if (!entries.length) throw new Error('DATA_DIR không có dữ liệu để sao lưu');
-    const r = await run('tar', ['-czf', dest, '-C', this.dataDir, ...entries], { env: TAR_ENV });
+    const r = await run('tar', ['-czf', dest, ...TAR_SKIP, '-C', this.dataDir, ...entries], { env: TAR_ENV });
     if (r.code !== 0) throw new Error(`tar lỗi mã ${r.code}: ${(r.err || '').trim().slice(0, 200)}`);
     const got = new Set(await listArchive(dest));
     const miss = entries.filter((n) => !got.has(n) && !got.has(`${n}/`));

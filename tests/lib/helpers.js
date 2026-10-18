@@ -1,6 +1,8 @@
 'use strict';
 
 // Tiện ích cho bot dùng chung giữa các phần kiểm thử.
+const fs = require('fs');
+const path = require('path');
 const { sleep } = require('./harness');
 
 // Đợi tin loại t (thỏa pred) xuất hiện trong bot.msgs từ vị trí from (không phụ thuộc lần gửi gần nhất)
@@ -44,4 +46,31 @@ function safeX(c, x) {
   return c.x + side * (c.r + 30);
 }
 
-module.exports = { seek, dash, revive, safeX };
+// db giả cho thế giới giả: ghi lại các lần touch/commit (services/db.js lưu theo bản ghi)
+function fakeDb(extra = {}) {
+  return {
+    touched: [], commits: [],
+    touch(name) { this.touched.push(String(name)); },
+    commit(names, reason) { this.commits.push({ names: [].concat(names).map(String), reason }); return true; },
+    get dirty() { return this.touched.length + this.commits.length > 0; },
+    ...extra,
+  };
+}
+
+// nhân vật trên đĩa (bố cục chars/<khóa>.json của services/db.js): đọc hết thành { khóa: nhân vật } (bỏ _gen), ghi lại từng file
+const charPath = (dir, key) => path.join(dir, 'chars', `${encodeURIComponent(key)}.json`);
+function readChars(dir) {
+  const out = {};
+  for (const f of fs.readdirSync(path.join(dir, 'chars'))) {
+    if (!f.endsWith('.json')) continue;
+    const c = JSON.parse(fs.readFileSync(path.join(dir, 'chars', f), 'utf8'));
+    delete c._gen;
+    out[decodeURIComponent(f.slice(0, -5))] = c;
+  }
+  return out;
+}
+function writeChars(dir, chars) {
+  for (const [key, c] of Object.entries(chars)) fs.writeFileSync(charPath(dir, key), JSON.stringify(c));
+}
+
+module.exports = { seek, dash, revive, safeX, fakeDb, readChars, writeChars };

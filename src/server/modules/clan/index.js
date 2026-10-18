@@ -77,8 +77,12 @@ function cleanClans(db) {
   for (const c of Object.values(db.chars || {})) {
     if (!c || !c.clan) continue;
     const cl = own(out, String(c.clan)) ? out[String(c.clan)] : null;
-    if (!cl || !own(cl.members, String(c.name || '').toLowerCase())) c.clan = null;
+    if (!cl || !own(cl.members, String(c.name || '').toLowerCase())) {
+      c.clan = null;
+      if (db.touch && c.name) db.touch(c.name);
+    }
   }
+  if (db.touch) db.touch('#clans');
   return out;
 }
 
@@ -113,8 +117,8 @@ class Clan {
     p.c.xu -= CLAN_COST;
     const id = db.newClanId();
     db.clans[id] = { name, leader: p.name, created: Date.now(), notice: 'Chào mừng đến với gia tộc!', members: { [p.name.toLowerCase()]: { name: p.name, rank: 'leader', joined: Date.now() } } };
-    db.dirty = true;
     p.c.clan = id;
+    db.commit([p.name, '#clans', '#meta'], 'clanCreate');
     p.markMe();
     refreshInfo(p);
     this.world.announce(`${p.name} đã thành lập gia tộc ${name}!`, 'world');
@@ -167,7 +171,7 @@ class Clan {
     if (Object.keys(cl.members).length >= clanCap(cl)) return p.notice('Gia tộc đã đủ thành viên.');
     cl.members[p.name.toLowerCase()] = { name: p.name, rank: 'member', joined: Date.now() };
     p.c.clan = o.c.clan;
-    this.world.db.dirty = true;
+    this.world.db.commit([p.name, '#clans'], 'clanAccept');
     p.markMe();
     refreshInfo(p);
     this.clanBroadcast(p.c.clan, 'chat', { ch: 'clan', from: 'Hệ thống', msg: `${p.name} đã gia nhập gia tộc!` });
@@ -187,7 +191,7 @@ class Clan {
       refreshInfo(o);
       o.send('clan', null);
     }
-    db.dirty = true;
+    db.commit([name, '#clans'], 'clanLeave');
   }
 
   // Rời gia tộc (dùng cả khi xóa nhân vật): tộc trưởng rời thì nhường chức, còn 1 người thì giải tán
@@ -201,7 +205,7 @@ class Clan {
       if (!heir) {
         this.removeFromClan(name, id);
         delete db.clans[id];
-        db.dirty = true;
+        db.touch('#clans', true);
         return 'dissolved';
       }
       heir.rank = 'leader';
@@ -248,7 +252,7 @@ class Clan {
       if (elders() >= CLAN_ELDERS) return p.notice(`Gia tộc đã đủ ${CLAN_ELDERS} trưởng lão.`, 'warn');
       t.rank = 'elder';
     }
-    this.world.db.dirty = true;
+    this.world.db.touch('#clans');
     this.clanBroadcast(p.c.clan, 'chat', { ch: 'clan', from: 'Hệ thống', msg: `${t.name} nay là ${RANK_LABEL[t.rank]}.` });
     this.clanInfo(p);
   }
@@ -272,7 +276,8 @@ class Clan {
       cl.level++;
       up = true;
     }
-    this.world.db.dirty = true;
+    // xu rời nhân vật vào quỹ tộc: hai bản ghi ghi cùng một nhóm
+    this.world.db.commit([p.name, '#clans'], 'clanDonate');
     this.clanBroadcast(id, 'chat', { ch: 'clan', from: 'Hệ thống', msg: `${p.name} đã góp ${xu.toLocaleString('vi-VN')} xu vào quỹ gia tộc.` });
     if (up) {
       this.world.announce(`Gia tộc ${cl.name} đã đạt cấp ${cl.level}!`, 'world');
@@ -288,7 +293,7 @@ class Clan {
     const cl = this.myClan(p);
     if (!cl || memberOf(cl, p.name).rank === 'member') return p.notice('Chỉ tộc trưởng/trưởng lão mới sửa thông báo.');
     cl.notice = clean(m.text, 120);
-    this.world.db.dirty = true;
+    this.world.db.touch('#clans');
     this.clanInfo(p);
   }
 }

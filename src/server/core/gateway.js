@@ -186,9 +186,10 @@ function attachGateway(server, { db, world, config, gameData }) {
         if (acc.chars.length >= config.maxChars) return err(`Tối đa ${config.maxChars} nhân vật.`);
         if (db.getChar(name)) return err('Tên nhân vật đã tồn tại.');
         const c = newChar(name, m.cls, m.gender);
-        db.putChar(c);
+        db.chars[name.toLowerCase()] = c;
         acc.chars.push(name);
-        db.dirty = true;
+        // nhân vật mới và danh sách của tài khoản ghi cùng một nhóm: sập giữa chừng không để tài khoản trỏ vào nhân vật không có file
+        db.commit([name, '#accounts'], 'createChar');
         return sendChars(conn);
       }
       case 'deleteChar': {
@@ -200,8 +201,9 @@ function attachGateway(server, { db, world, config, gameData }) {
         if (online) world.leave(online);
         // rời gia tộc...
         world.emit('charDeleted', db.getChar(name));
-        db.deleteChar(name);
+        delete db.chars[name.toLowerCase()];
         acc.chars.splice(i, 1);
+        db.commit([name, '#accounts'], 'deleteChar');
         return sendChars(conn);
       }
       case 'selectChar': {

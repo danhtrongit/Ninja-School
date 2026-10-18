@@ -148,7 +148,7 @@ class Mailer {
       items: (m.items || []).filter((it) => it && own(ITEMS, it.id)).slice(0, MAIL.maxItems), read: false, got: false,
     };
     box.push(mail);
-    if (this.world.db) this.world.db.dirty = true;
+    if (this.world.db) this.world.db.touch(c.name, true);
     const p = this.online(c);
     if (p) {
       p.markMe();
@@ -188,7 +188,7 @@ class Mailer {
     if (!x || x.read) return;
     x.read = true;
     p.markMe();
-    if (this.world.db) this.world.db.dirty = true;
+    if (this.world.db) this.world.db.touch(p.name);
   }
 
   // Nhận quà đính kèm của một thư. Trả về 'ok' | 'full' | 'busy' | null (không có quà)
@@ -212,7 +212,7 @@ class Mailer {
     x.read = true;
     p.markMe();
     p.markInv();
-    if (this.world.db) this.world.db.dirty = true;
+    if (this.world.db) this.world.db.touch(p.name, true);
     if (!quiet) p.notice(`Đã nhận quà: ${rewardLabel({ xu: x.xu, xuk: x.xuk, luong: x.luong }, items) || 'thư trống'}.`, 'reward');
     return 'ok';
   }
@@ -252,7 +252,7 @@ class Mailer {
     if (!x) return;
     if (hasGift(x)) return p.notice('Hãy nhận quà đính kèm trước khi xóa thư.', 'warn');
     p.c.mail.splice(p.c.mail.indexOf(x), 1);
-    if (this.world.db) this.world.db.dirty = true;
+    if (this.world.db) this.world.db.touch(p.name);
     this.list(p);
   }
 
@@ -261,7 +261,7 @@ class Mailer {
     const before = (p.c.mail || []).length;
     p.c.mail = (p.c.mail || []).filter((x) => !x.read || hasGift(x));
     const n = before - p.c.mail.length;
-    if (n && this.world.db) this.world.db.dirty = true;
+    if (n && this.world.db) this.world.db.touch(p.name);
     p.notice(n ? `Đã xóa ${n} thư đã đọc.` : 'Không có thư đã đọc nào để xóa.');
     this.list(p);
   }
@@ -276,7 +276,7 @@ class Mailer {
     for (const k of Object.keys(db.meta.codes)) {
       if (!(db.meta.codes[k].until > now)) {
         delete db.meta.codes[k];
-        db.dirty = true;
+        db.touch('#meta');
       }
     }
     return db.meta.codes;
@@ -296,7 +296,7 @@ class Mailer {
     if (CODES.has(code)) return 'Trùng mã cố định trong extras.js.';
     const mc = this.adminCodes();
     mc[code] = def;
-    this.world.db.dirty = true;
+    this.world.db.touch('#meta', true);
     return null;
   }
 
@@ -304,7 +304,7 @@ class Mailer {
     const mc = this.adminCodes();
     if (!own(mc, code)) return false;
     delete mc[code];
-    this.world.db.dirty = true;
+    this.world.db.touch('#meta', true);
     return true;
   }
 
@@ -389,7 +389,8 @@ class Mailer {
       if (accCodes.length > 300) accCodes.splice(0, accCodes.length - 300);
     }
     if (def.src) def.src.used = (def.src.used || 0) + 1;
-    if (this.world.db) this.world.db.dirty = true;
+    // quà vào nhân vật, mã đã dùng vào tài khoản, lượt dùng mã tạm vào meta: một nhóm ghi
+    if (this.world.db) this.world.db.commit([p.name, '#accounts', '#meta'], 'giftcode');
     return res(true, mailed ? `Nhập mã thành công! Hành trang đầy nên quà (${label}) đã được gửi vào hộp thư.` : `Nhập mã thành công! Nhận: ${label}.`, { code, mail: mailed });
   }
 }

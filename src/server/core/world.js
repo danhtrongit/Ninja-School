@@ -46,10 +46,12 @@ class World {
     return this.golden ? 2 : 1;
   }
 
+  // tắt máy: chép vị trí người còn online rồi xả hết hàng đợi lưu bằng ghi đồng bộ
   stop() {
     clearInterval(this.timer);
     clearInterval(this.saveTimer);
     this.saveAll();
+    this.db.flushAllSync();
   }
 
   // ---------- Vòng lặp chính
@@ -67,6 +69,8 @@ class World {
     }
     if (this.tickN % 20 === 0) this.secondTick(now);
     this.emit('tick', now, this.tickN);
+    // lưu theo nhân vật: ghi phần bẩn, tối đa 8 ms / 20 bản ghi mỗi tick
+    if (this.db.flushTick) this.db.flushTick(now);
     if (this.tickN % 1200 === 0) this.computeRank();
     for (const p of this.players.values()) this.flush(p);
   }
@@ -156,7 +160,7 @@ class World {
       p.c.x = MAPS[p.c.map].spawnX;
       p.c.y = GROUND;
     }
-    this.db.putChar(p.c);
+    this.db.putChar(p.c, true);
     this.players.delete(p.id);
     if (this.byName.get(p.name.toLowerCase()) === p) this.byName.delete(p.name.toLowerCase());
     if (reason) p.send('kicked', { msg: reason });
@@ -266,12 +270,12 @@ class World {
     this.emit('rank');
   }
 
+  // 30 giây một lần: chép vị trí và đánh dấu bẩn người online; ghi xuống đĩa do db.flushTick() trong tick
   saveAll() {
     for (const p of this.players.values()) {
       this.persistPos(p);
       this.db.putChar(p.c);
     }
-    this.db.save();
   }
 
   handle(p, msg) {

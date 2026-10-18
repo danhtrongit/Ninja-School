@@ -3,7 +3,7 @@
 // Thú cưng: công thức và kỹ năng (thế giới giả), nuôi thú qua WebSocket thật.
 const { sleep, ok } = require('../lib/harness');
 const { Bot } = require('../lib/bot');
-const { seek } = require('../lib/helpers');
+const { seek, fakeDb } = require('../lib/helpers');
 
 // Thú cưng bằng thế giới giả (Player/GameMap thật): chỉ số theo cấp, chia EXP, kỹ năng nhặt đồ / hồi máu, thân mật
 function petUnitTests() {
@@ -23,7 +23,7 @@ function petUnitTests() {
   ok(bad.plv === 1 && bad.pexp === PET.need(1) - 1 && bad.love === 0 && cleanPet({ id: 'pet_bat', plv: 99, pexp: 7 }).plv === PET.maxLv,
     'dữ liệu thú hỏng (cấp lạ, EXP quá lớn, thân mật âm) được chuẩn hóa');
   const out = [];
-  const world = { nextPid: 1, nextMid: 1, nextGid: 1, db: { clans: {} }, players: new Map(), onLevelUp() {}, config: { admins: [] } };
+  const world = { nextPid: 1, nextMid: 1, nextGid: 1, db: fakeDb({ clans: {} }), players: new Map(), onLevelUp() {}, config: { admins: [] } };
   const conn = { send: (t, d) => out.push({ t, ...d }), sendRaw: (raw) => out.push(JSON.parse(raw)) };
   const c = newChar('PetTest', 'kiem', 'm');
   c.level = 60;
@@ -169,11 +169,15 @@ async function petTest(a) {
   // Cho ăn: +2500 EXP → từ cấp 1 lên cấp 6, +6 thân mật, chỉ số chủ tăng
   const hp0 = a.me.s.maxHp;
   const crit0 = a.me.s.crit;
+  // cá mua ở trên trả bằng xu khóa trước nên có thể là đồ khóa (cho ăn → thú bị khóa, phần giao dịch thú bên dưới không làm được):
+  // cho ăn một con cá thường do admin cấp
+  a.send('chat', { ch: 'map', msg: '/item pf_fish 1' });
+  await a.wait('inv', (m) => m.inv.some((it) => it && it.id === 'pf_fish' && !it.b));
   from = a.msgs.length;
-  a.send('useItem', { slot: at('pf_fish') });
+  a.send('useItem', { slot: a.inv.inv.findIndex((it) => it && it.id === 'pf_fish' && !it.b) });
   const fed = await a.wait('pet', (m) => m.plv > 1);
   await sleep(200);
-  ok(fed.plv === 6 && fed.love === 56 && cnt('pf_fish') === 2, `cho ăn Cá Khô: thú lên cấp ${fed.plv}, thân mật ${fed.love}`);
+  ok(fed.plv === 6 && fed.love === 56 && !pet().b && cnt('pf_fish') === 3, `cho ăn Cá Khô: thú lên cấp ${fed.plv}, thân mật ${fed.love}`);
   ok(a.me.s.maxHp > hp0 && a.me.s.crit >= crit0 && a.me.look.pl === 6, `thú lên cấp tăng chỉ số chủ (sinh lực ${hp0} → ${a.me.s.maxHp}), look có cấp thú mới`);
   ok(a.msgs.slice(from).some((m) => m.t === 'petAct' && m.k === 'feed') && a.msgs.slice(from).some((m) => m.t === 'petAct' && m.k === 'lv' && m.lv === 6)
     && a.msgs.slice(from).some((m) => m.t === 'pInfo' && m.id === a.me.id && m.look.pl === 6) && a.msgs.slice(from).some((m) => m.t === 'notice' && /đạt cấp 6/.test(m.msg)),
@@ -183,8 +187,9 @@ async function petTest(a) {
   await a.wait('inv', (m) => !m.equip.pet);
   a.send('useItem', { slot: at('pf_fish') });
   await a.wait('notice', (m) => /mang thú cưng/.test(m.msg));
-  ok(cnt('pf_fish') === 2, 'chưa mang thú: không cho ăn, thức ăn còn nguyên');
-  a.send('equip', { slot: at('pet_bunny') });
+  ok(cnt('pf_fish') === 3, 'chưa mang thú: không cho ăn, thức ăn còn nguyên');
+  // đúng con vừa tháo (cấp 6, thân mật 56): phần thưởng ngẫu nhiên ở các phần trước có thể cho thêm Thỏ Ngọc có hạn
+  a.send('equip', { slot: a.inv.inv.findIndex((it) => it && it.id === 'pet_bunny' && it.plv === 6 && it.love === 56) });
   await a.wait('inv', (m) => m.equip.pet && m.equip.pet.id === 'pet_bunny');
   ok(pet().plv === 6 && pet().love === 56, 'tháo ra mang lại: thú giữ nguyên cấp và thân mật');
   // cấp tối đa + thân mật đầy: từ chối cho ăn
@@ -192,7 +197,7 @@ async function petTest(a) {
   await a.wait('chat', (m) => /cấp 50/.test(m.msg));
   a.send('useItem', { slot: at('pf_fish') });
   await a.wait('notice', (m) => /no nê/.test(m.msg));
-  ok(cnt('pf_fish') === 2, 'thú cấp tối đa, thân mật đầy: không ăn thêm');
+  ok(cnt('pf_fish') === 3, 'thú cấp tối đa, thân mật đầy: không ăn thêm');
   a.send('useItem', { slot: '__proto__' });
   a.send('chat', { ch: 'map', msg: '/thu 12 70' });
   await a.wait('chat', (m) => /cấp 12, thân mật 70/.test(m.msg));
@@ -213,7 +218,8 @@ async function petTest(a) {
   const sp = await a.wait('storage', (m) => m.items.some((it) => it && it.id === 'pet_bunny'));
   a.send('storeTake', { npc: 'v_fire_storage', slot: sp.items.findIndex((it) => it && it.id === 'pet_bunny') });
   await a.wait('storage', (m) => !m.items.some((it) => it && it.id === 'pet_bunny'));
-  await sleep(150);
+  // ô của thú sau khi lấy ra phải đọc từ gói inv mới (gói cũ trỏ vào ô trước khi cất, có thể là món khóa)
+  await a.wait('inv', (m) => m.inv.some(same));
   ok(same(sp.items.find((it) => it && it.id === 'pet_bunny')) && petAt(a) >= 0, 'cất thú vào kho rồi lấy ra: giữ nguyên cấp 12, EXP và thân mật 70');
   const b = new Bot('B4');
   await b.connect();
@@ -251,7 +257,8 @@ async function petTest(a) {
       await trade(from, to, slot);
     } catch (e) {
       const notes = (bot, i) => bot.msgs.slice(i).filter((m) => m.t === 'notice' || m.t === 'tradeEnd').map((m) => m.msg || JSON.stringify(m)).join(' | ');
-      throw new Error(`${e.message} (${from.name} x=${Math.round(from.x)}: ${notes(from, f0)}; ${to.name} x=${Math.round(to.x)}: ${notes(to, t0)})`);
+      const it = from.inv.inv[slot];
+      throw new Error(`${e.message} (ô ${slot}: ${it ? `${it.id}${it.b ? ' khóa' : ''}${it.exp ? ' có hạn' : ''}` : 'trống'}; ${from.name} x=${Math.round(from.x)}: ${notes(from, f0)}; ${to.name} x=${Math.round(to.x)}: ${notes(to, t0)})`);
     }
   };
   await traced(a, b, petAt(a));

@@ -85,12 +85,12 @@ function fatal(kind, err) {
     for (const p of world.players.values()) {
       try {
         world.persistPos(p);
-        db.putChar(p.c);
+        db.putChar(p.c, true);
       } catch (e) { /* vẫn lưu phần còn lại */ }
     }
   }
   let saved = false;
-  try { saved = db.save(); } catch (e) { /* đã ghi ALERT trong save */ }
+  try { saved = db.flushAllSync(); } catch (e) { /* đã ghi ALERT */ }
   console.error(`[fatal] lưu khẩn cấp ${saved ? 'xong' : 'THẤT BẠI'}, thoát mã 1`);
   db.unlock();
   process.exit(1);
@@ -155,12 +155,19 @@ function shutdown() {
 }
 process.on('SIGINT', shutdown);
 process.on('SIGTERM', shutdown);
-setInterval(() => {
-  db.touchLock();
-  if (db.dirty || db.saveErrors) db.save();
-}, 15000);
-// kiểm thử: SIGUSR2 = lưu ngay (chỉ khi NS_TEST=1)
-if (process.env.NS_TEST === '1') process.on('SIGUSR2', () => db.save());
+// ghi dữ liệu do world.tick → db.flushTick() lo; ở đây chỉ làm mới khóa thư mục
+setInterval(() => db.touchLock(), 15000);
+// kiểm thử: SIGUSR2 = lưu ngay (chỉ khi NS_TEST=1). Chờ các lần ghi nền và nhóm ghi đang chạy xong trước,
+// để giả lỗi NS_TEST_SAVE_FAIL đếm đúng từng lần lưu tay
+if (process.env.NS_TEST === '1') {
+  process.on('SIGUSR2', () => {
+    Promise.all([...db.inflight.values(), db.commitQ]).then(() => {
+      db.armFail();
+      world.saveAll();
+      db.save();
+    });
+  });
+}
 
 // Sao lưu theo tầng (services/backup.js): kiểm lịch mỗi phút, lần đầu sau BACKUP_DELAY_MS (mặc định 60 giây).
 // PRE_DEPLOY=<nhãn>: thêm một bản "trước triển khai" lúc khởi động nếu chưa có bản cùng nhãn. BACKUP=0 tắt lịch.

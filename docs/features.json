@@ -752,7 +752,7 @@
     "phase": 0,
     "title": "Lưu theo nhân vật, chỉ ghi phần bẩn có ngân sách 8 ms/tick, nhật ký nhóm ghi cho thao tác nhiều bản ghi (ADR-10-1)",
     "priority": "Must",
-    "status": "todo",
+    "status": "done",
     "acceptance": [
       "persist-bench bố cục mới: 5.000 nhân vật hậu kỳ, 200 online → trễ vòng lặp p99 ≤ 10 ms, lượt chặn lớn nhất ≤ 25 ms trên M1; RSS đỉnh khi lưu ≤ RSS nền + 30 MB",
       "500 nhân vật hậu kỳ cùng bẩn xả hết trong ≤ 3 giây",
@@ -764,7 +764,9 @@
     "tests": [
       "tests/features/storage.js",
       "tests/features/persistence.js",
-      "tests/load/crash.js"
+      "tests/load/crash.js",
+      "tests/load/persist-bench.js",
+      "tests/smoke.js"
     ],
     "files": [
       "src/server/services/db.js",
@@ -773,7 +775,13 @@
       "src/server/modules/{mail,trade,clan,friends,arena,season,admin,checkin}/index.js",
       "tests/features/persistence.js",
       "tests/lib/helpers.js",
-      "CLAUDE.md"
+      "CLAUDE.md",
+      "src/server/services/backup.js",
+      "scripts/restore.js",
+      "tests/features/backup.js",
+      "tests/lib/chars.js",
+      "tests/load/crash.js",
+      "tests/load/persist-bench.js"
     ],
     "pillars": [
       "P5",
@@ -785,7 +793,31 @@
       "ops-db-safe-load",
       "ops-backup"
     ],
-    "notes": "R-01, R-02, R-07, R-08"
+    "notes": "R-01, R-02, R-07, R-08. commit() không chặn vòng lặp: nhật ký ghi trước, các nhóm ghi chạy tuần tự, flushAllSync ghi thay nhóm còn dở. Đo trên M1 Pro: p99 2,6-3,0 ms, chặn lớn nhất 11-22 ms (GC riêng tới 19 ms), RSS +25 MB. 5.000 nhân vật hậu kỳ chiếm ~890 MB RAM: xem lại ở ops-deploy (--max-old-space-size, RAM VPS).",
+    "proof": [
+      [
+        "tests/load/persist-bench.js :: persist-bench bố cục mới: 5000 nhân vật hậu kỳ, 200 online → trễ vòng lặp p99 ≤ 10 ms",
+        "tests/load/persist-bench.js :: persist-bench: lượt chặn lớn nhất ≤ 25 ms",
+        "tests/load/persist-bench.js :: persist-bench: RSS đỉnh khi lưu ≤ RSS nền + 30 MB"
+      ],
+      [
+        "tests/features/storage.js :: 500 nhân vật hậu kỳ cùng bẩn xả hết trong ≤ 3 giây"
+      ],
+      [
+        "tests/load/crash.js :: giao dịch chốt → tiến trình bị SIGKILL ngay sau bản ghi thứ nhất của commit",
+        "tests/load/crash.js :: NS_CRASH_AFTER=commit-rec-1 → khởi động lại, tổng vật phẩm + xu hai bên trước = sau"
+      ],
+      [
+        "tests/features/storage.js :: tách dữ liệu một file cũ: số file chars/ = số khóa characters.json",
+        "tests/features/storage.js :: từng nhân vật giống hệt (trừ _gen)"
+      ],
+      [
+        "tests/features/storage.js :: grep -rn \"db.dirty = true\" src/server không còn kết quả"
+      ],
+      [
+        "tests/smoke.js :: npm test: không kiểm tra nào hỏng"
+      ]
+    ]
   },
   {
     "id": "quest-daily-task",

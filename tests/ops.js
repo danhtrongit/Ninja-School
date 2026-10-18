@@ -5,15 +5,18 @@
 // Chạy riêng: node tests/ops.js
 const { ok, fail, failCount } = require('./lib/harness');
 const { loginBurstTest } = require('./features/account');
-const { storageUnitTests, storageProcTests, crashGuardTests } = require('./features/storage');
+const { storageUnitTests, storageShardTests, storageProcTests, crashGuardTests } = require('./features/storage');
+const { crashTradeTest } = require('./load/crash');
 const { backupUnitTests, backupRestoreTest, backupRestartTest, backupLagTest } = require('./features/backup');
 
 async function main() {
   try {
     await storageUnitTests();
+    await storageShardTests();
     await backupUnitTests();
     await storageProcTests();
     await crashGuardTests();
+    await crashTradeTest();
     await loginBurstTest();
     await backupRestoreTest();
     await backupRestartTest();

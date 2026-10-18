@@ -10,7 +10,9 @@ const http = require('http');
 const { spawn, spawnSync } = require('child_process');
 const { ok, sleep } = require('../lib/harness');
 const { LightBot } = require('../lib/lightbot');
+const { isDeepStrictEqual } = require('util');
 const { DB } = require('../../src/server/services/db');
+const { lateChar } = require('../lib/chars');
 
 const ROOT = path.join(__dirname, '..', '..');
 const SERVER = path.join(ROOT, 'src', 'server', 'index.js');
@@ -102,13 +104,13 @@ async function storageUnitTests() {
     try { new DB(z); } catch (e) { err = e; }
     ok(err && err.code === 'EDBLOAD' && /0 byte/.test(err.message), 'DB: file 0 byte (mất điện) cũng là lỗi nạp');
 
-    // (b) .tmp hợp lệ: nạp và đưa về làm file chính
+    // (b) .tmp hợp lệ: nạp, rồi tách sang chars/ (bố cục 2); file cũ giữ lại dưới tên characters.migrated-*
     const b = tmpDir();
     writeJson(b, 'characters.json', '{"a":');
     writeJson(b, 'characters.json.tmp', { kiemsi: { name: 'KiemSi', level: 7 } });
     const db = new DB(b);
-    ok(db.chars.kiemsi && db.chars.kiemsi.level === 7 && files(b).includes('characters.json') && !files(b).includes('characters.json.tmp'),
-      'DB: file gốc hỏng + characters.json.tmp hợp lệ → nạp từ .tmp và đưa về file chính');
+    ok(db.chars.kiemsi && db.chars.kiemsi.level === 7 && files(path.join(b, 'chars')).join() === 'kiemsi.json' && !files(b).includes('characters.json.tmp'),
+      'DB: file gốc hỏng + characters.json.tmp hợp lệ → nạp từ .tmp rồi tách sang chars/');
     const c = tmpDir();
     writeJson(c, 'characters.json.tmp', { cung: { name: 'Cung', level: 3 } });
     ok(new DB(c).chars.cung.level === 3, 'DB: thiếu file gốc + .tmp hợp lệ → nạp từ .tmp');
@@ -121,24 +123,26 @@ async function storageUnitTests() {
     const rename = fs.renameSync;
     fs.renameSync = (x, y) => { renames.push(path.basename(x)); return rename(x, y); };
     db.chars.kiemsi.level = 8;
+    db.touch('KiemSi');
     const saved = db.save();
     fs.fsyncSync = fsync;
     fs.renameSync = rename;
-    ok(saved && syncs >= 5 && renames.includes('characters.json.tmp') && !files(b).some((n) => n.endsWith('.tmp'))
-      && JSON.parse(fs.readFileSync(path.join(b, 'characters.json'), 'utf8')).kiemsi.level === 8,
-    `DB: ghi .tmp + fsync (${syncs} lần: 4 file + thư mục) + rename, không để lại .tmp`);
+    const onDisk = (dir) => JSON.parse(fs.readFileSync(path.join(dir, 'chars', 'kiemsi.json'), 'utf8')).level;
+    ok(saved && syncs >= 5 && renames.includes('kiemsi.json.tmp') && !files(path.join(b, 'chars')).some((n) => n.includes('.tmp')) && onDisk(b) === 8,
+      `DB: ghi .tmp + fsync (${syncs} lần: 3 bảng + nhân vật + thư mục) + rename, không để lại .tmp`);
 
     // lỗi ghi: đếm liên tiếp, file cũ còn nguyên, ghi được thì về 0
     const seen = [];
     db.onSaveError = (e, n) => seen.push(n);
     db._failLeft = 2;
     db.chars.kiemsi.level = 9;
+    db.touch('kiemsi');
     const r1 = db.save();
     const r2 = db.save();
     const mid = db.saveErrors;
-    const kept = JSON.parse(fs.readFileSync(path.join(b, 'characters.json'), 'utf8')).kiemsi.level;
+    const kept = onDisk(b);
     const r3 = db.save();
-    ok(!r1 && !r2 && mid === 2 && seen.join() === '1,2' && kept === 8 && r3 && db.saveErrors === 0 && !files(b).some((n) => n.endsWith('.tmp')),
+    ok(!r1 && !r2 && mid === 2 && seen.join() === '1,2' && kept === 8 && r3 && db.saveErrors === 0 && onDisk(b) === 9 && !files(b).some((n) => n.endsWith('.tmp')),
       'DB: lỗi ghi đếm saveErrors liên tiếp, file cũ còn nguyên, ghi được lại → saveErrors 0');
 
     // khóa: pid đã chết → lấy lại được
@@ -158,6 +162,185 @@ async function storageUnitTests() {
       'tài khoản tạo bằng băm bất đồng bộ đăng nhập được cả hai đường, sai mật khẩu bị từ chối');
   } finally {
     console.error = quiet;
+    cleanup();
+  }
+}
+
+// ---------- Lưu theo nhân vật (ops-persist-shard, ADR-10-1): tách bố cục, ngân sách mỗi tick, nhịp 30 giây, xả 500 nhân vật
+const charFile = (dir, key) => path.join(dir, 'chars', `${encodeURIComponent(key)}.json`);
+const onDiskChar = (dir, key) => {
+  const c = JSON.parse(fs.readFileSync(charFile(dir, key), 'utf8'));
+  delete c._gen;
+  return c;
+};
+// chờ mọi lần ghi bất đồng bộ xong
+async function settle(db) {
+  for (let i = 0; i < 400 && db.inflight.size; i++) await sleep(10);
+}
+// dựng DATA_DIR bố cục mới với n nhân vật hậu kỳ
+function seedLate(dir, n) {
+  const db = new DB(dir);
+  for (let i = 0; i < n; i++) {
+    const c = lateChar(`Hk${i}`, i);
+    db.chars[c.name.toLowerCase()] = c;
+    db.touch(c.name);
+  }
+  db.flushAllSync();
+  return db;
+}
+
+async function storageShardTests() {
+  console.log('0k. Lưu theo nhân vật (đơn vị)');
+  const quiet = console.error;
+  const qlog = console.log;
+  try {
+    // (d) tách characters.json (bố cục 1) → chars/<khóa>.json
+    const m = tmpDir();
+    const legacy = {};
+    for (let i = 0; i < 40; i++) {
+      const c = lateChar(i % 7 ? `Ninja${i}` : `Kiếm Sĩ ${i}`, i);
+      legacy[c.name.toLowerCase()] = c;
+    }
+    const raw = JSON.stringify(legacy);
+    writeJson(m, 'characters.json', raw);
+    writeJson(m, 'accounts.json', { u1: { username: 'u1', chars: ['Ninja1'] } });
+    console.log = () => {};
+    const mdb = new DB(m);
+    console.log = qlog;
+    const want = JSON.parse(raw);
+    const list = files(path.join(m, 'chars'));
+    const diff = Object.keys(want).filter((k) => !isDeepStrictEqual(onDiskChar(m, k), want[k]) || !isDeepStrictEqual(mdb.chars[k], want[k]));
+    const kept = files(m).find((n) => /^characters\.migrated-.*\.json$/.test(n));
+    ok(list.length === Object.keys(want).length && list.every((n) => n.endsWith('.json')) && !diff.length && kept && fs.readFileSync(path.join(m, kept), 'utf8') === raw && !files(m).includes('characters.json'),
+      `tách dữ liệu một file cũ: số file chars/ = số khóa characters.json (${list.length}), từng nhân vật giống hệt (trừ _gen), file cũ giữ dưới tên characters.migrated-*${diff.length ? ` (lệch: ${diff.slice(0, 3).join(', ')})` : ''}`);
+    const again = new DB(m);
+    ok(again.meta.layout === 2 && isDeepStrictEqual(JSON.parse(JSON.stringify(again.chars)), want) && again.accounts.u1,
+      'khởi động lại sau khi tách: nạp từ chars/ (meta.layout = 2), dữ liệu không đổi');
+
+    // ngân sách: mỗi tick tối đa 20 bản ghi hoặc 8 ms phần đồng bộ, cũ nhất ghi trước
+    const t = tmpDir();
+    const tdb = seedLate(t, 300);
+    const keys = Object.keys(tdb.chars);
+    for (const k of keys) tdb.touch(k, true);
+    const timed = () => {
+      const t0 = process.hrtime.bigint();
+      const n = tdb.flushTick(Date.now());
+      return { n, ms: Number(process.hrtime.bigint() - t0) / 1e6 };
+    };
+    const r1 = timed();
+    const first = [...tdb.inflight.keys()];
+    await settle(tdb);
+    const n1 = r1.n;
+    ok(n1 > 0 && n1 <= 20 && tdb.dirtyMap.size === 300 - n1 && isDeepStrictEqual(first, keys.slice(0, n1)),
+      `flushTick: một tick ghi ${n1} bản ghi (≤ 20), bản ghi bẩn cũ nhất ghi trước`);
+    // ngân sách thời gian: sau 8 ms không bắt đầu bản ghi mới → mỗi tick ≤ 8 ms + thời gian một bản ghi
+    const ticks = [r1];
+    while (tdb.dirtyMap.size && ticks.length < 100) {
+      ticks.push(timed());
+      await settle(tdb);
+    }
+    const over = ticks.filter((x) => x.n > 20 || x.ms > 8 + x.ms / x.n + 1);
+    const worst = ticks.reduce((w, x) => (x.ms > w.ms ? x : w), ticks[0]);
+    ok(!tdb.dirtyMap.size && ticks.length >= 15 && !over.length,
+      `300 bản ghi khẩn xả qua ${ticks.length} tick, mỗi tick ≤ 20 bản ghi và ≤ 8 ms + 1 bản ghi (chậm nhất ${worst.ms.toFixed(2)} ms / ${worst.n} bản ghi)`);
+
+    // nhịp 30 giây: nhân vật vừa ghi không ghi lại trước 30 giây trừ khi khẩn
+    const k0 = keys[0];
+    tdb.chars[k0].xu = 4242;
+    tdb.touch(k0);
+    const now = Date.now();
+    const skip = tdb.flushTick(now);
+    const later = tdb.flushTick(now + 30001);
+    await settle(tdb);
+    const wrote = onDiskChar(t, k0).xu === 4242;
+    tdb.chars[k0].xu = 4343;
+    tdb.touch(k0, true);
+    const urg = tdb.flushTick(Date.now());
+    await settle(tdb);
+    ok(skip === 0 && later === 1 && wrote && urg === 1 && onDiskChar(t, k0).xu === 4343,
+      'nhân vật vừa ghi: bẩn thường chờ đủ 30 giây mới ghi lại, bẩn khẩn (thư có quà, thoát game) ghi ngay tick sau');
+    const tb = '#accounts';
+    tdb.touch(tb, true);
+    tdb.flushTick(Date.now());
+    await settle(tdb);
+    tdb.accounts.u9 = { username: 'u9', chars: [] };
+    tdb.touch(tb);
+    const tSkip = tdb.flushTick(Date.now());
+    const tLater = tdb.flushTick(Date.now() + 5001);
+    await settle(tdb);
+    ok(tSkip === 0 && tLater === 1 && JSON.parse(fs.readFileSync(path.join(t, 'accounts.json'), 'utf8')).u9,
+      'bảng tài khoản/gia tộc/meta: nhịp 5 giây');
+
+    // ghi bất đồng bộ dở dang lúc tắt: flushAllSync ghi lại bản ghi đang bay, không mất
+    tdb.chars[k0].xu = 5151;
+    tdb.touch(k0, true);
+    tdb.flushTick(Date.now());
+    const flying = tdb.inflight.has(k0);
+    tdb.flushAllSync();
+    const sync = onDiskChar(t, k0).xu;
+    await settle(tdb);
+    ok(flying && sync === 5151 && onDiskChar(t, k0).xu === 5151 && !files(path.join(t, 'chars')).some((n) => n.endsWith('tmp')),
+      'tắt máy khi đang ghi bất đồng bộ: flushAllSync ghi lại đồng bộ, lần ghi cũ không đè, không để lại file tạm');
+
+    // (b) 500 nhân vật hậu kỳ cùng bẩn (lần ghi trước đã quá 30 giây: nạp lại từ đĩa), xả theo nhịp tick 50 ms
+    const b = tmpDir();
+    seedLate(b, 500);
+    const bdb = new DB(b);
+    for (const k of Object.keys(bdb.chars)) {
+      bdb.chars[k].xu += 7;
+      bdb.touch(k);
+    }
+    const b0 = Date.now();
+    await new Promise((resolve) => {
+      const iv = setInterval(() => {
+        bdb.flushTick(Date.now());
+        if (!bdb.dirtyMap.size && !bdb.inflight.size) {
+          clearInterval(iv);
+          resolve();
+        }
+      }, 50);
+    });
+    const bms = Date.now() - b0;
+    const stale = Object.keys(bdb.chars).filter((k) => onDiskChar(b, k).xu !== bdb.chars[k].xu);
+    ok(bms <= 3000 && !stale.length, `500 nhân vật hậu kỳ cùng bẩn xả hết trong ≤ 3 giây (${(bms / 1000).toFixed(2)} s), đĩa khớp RAM${stale.length ? ` (lệch ${stale.length})` : ''}`);
+
+    // nhóm ghi: không chặn vòng lặp, ghi xong thì không còn nhật ký; lỗi đĩa → false, giữ nhóm để thử lại / tắt máy ghi thay
+    const [x1, x2] = Object.keys(bdb.chars);
+    bdb.chars[x1].xu -= 300;
+    bdb.chars[x2].xu += 300;
+    const c0 = process.hrtime.bigint();
+    const job = bdb.commit([x1, x2], 'trade');
+    const cms = Number(process.hrtime.bigint() - c0) / 1e6;
+    const busy = bdb.pending.has(x1) && bdb.pending.has(x2) && bdb.journals.size === 1;
+    const cok = await job;
+    const jleft = fs.existsSync(path.join(b, 'journal')) ? files(path.join(b, 'journal')).length : 0;
+    ok(cok === true && busy && cms < 5 && !jleft && !bdb.pending.size && onDiskChar(b, x1).xu === bdb.chars[x1].xu && onDiskChar(b, x2).xu === bdb.chars[x2].xu,
+      `commit giao dịch: phần đồng bộ ${cms.toFixed(2)} ms (chụp bản ghi), ghi nhật ký → hai bản ghi → xóa nhật ký không chặn vòng lặp`);
+    console.error = () => {};
+    bdb._failLeft = 1;
+    bdb.chars[x1].xu -= 1;
+    bdb.chars[x2].xu += 1;
+    const cr = await bdb.commit([x1, x2], 'trade');
+    const held = bdb.journals.size === 1 && bdb.pending.has(x1) && bdb.saveErrors === 1;
+    const fl = bdb.flushAllSync();
+    ok(cr === false && held && fl && !bdb.journals.size && !bdb.pending.size && onDiskChar(b, x1).xu === bdb.chars[x1].xu && onDiskChar(b, x2).xu === bdb.chars[x2].xu && !files(path.join(b, 'journal')).length,
+      'commit lỗi ghi: trả false, giữ nhóm (hai bản ghi không bị ghi lẻ); flushAllSync ghi nhật ký rồi cả hai bản ghi, xóa nhật ký');
+    console.error = quiet;
+
+    // (e) không còn cờ bẩn toàn cục
+    const hits = [];
+    const walk = (d) => {
+      for (const x of fs.readdirSync(d, { withFileTypes: true })) {
+        const f = path.join(d, x.name);
+        if (x.isDirectory()) walk(f);
+        else if (x.name.endsWith('.js') && /db\.dirty\s*=\s*true/.test(fs.readFileSync(f, 'utf8'))) hits.push(path.relative(ROOT, f));
+      }
+    };
+    walk(path.join(ROOT, 'src', 'server'));
+    ok(!hits.length, `grep -rn "db.dirty = true" src/server không còn kết quả${hits.length ? ` (còn: ${hits.join(', ')})` : ''}`);
+  } finally {
+    console.error = quiet;
+    console.log = qlog;
     cleanup();
   }
 }
@@ -182,8 +365,8 @@ async function storageProcTests() {
     const s2 = serve(b, 4311);
     const up2 = await s2.ready();
     await s2.stop();
-    const after = JSON.parse(fs.readFileSync(path.join(b, 'characters.json'), 'utf8'));
-    ok(up2 && after.tmpchar && after.tmpchar.level === 11, 'có characters.json.tmp hợp lệ → khởi động thành công với dữ liệu trong .tmp');
+    const after = onDiskChar(b, 'tmpchar');
+    ok(up2 && after.level === 11, 'có characters.json.tmp hợp lệ → khởi động thành công với dữ liệu trong .tmp');
     const s3 = serve(a, 4312, { FORCE_EMPTY: '1' });
     const up3 = await s3.ready();
     await s3.stop();
@@ -297,4 +480,4 @@ async function crashGuardTests() {
   }
 }
 
-module.exports = { storageUnitTests, storageProcTests, crashGuardTests, serve, getJson, node, tmpDir, cleanup };
+module.exports = { storageUnitTests, storageShardTests, storageProcTests, crashGuardTests, serve, getJson, node, tmpDir, cleanup };

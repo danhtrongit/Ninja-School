@@ -31,11 +31,13 @@ const LOG_OF = {
   'tests/e2e/ui-audit.js': ['ui-audit.log'],
   'tests/prod/smoke-prod.js': ['prod.log'],
   'tests/load/load.js': ['load.log'],
+  'tests/load/persist-bench.js': ['persist.log'],
+  'tests/load/crash.js': ['smoke.log'],
   'tests/features/verify.js': ['verify-self.log'],
   'scripts/verify.js': ['verify.log'],
 };
 const logsFor = (file) => LOG_OF[file] || (file.startsWith('tests/features/') ? ['smoke.log'] : null);
-const BROWSER_LOGS = new Set(['verify.log', 'e2e-d.log', 'e2e-m.log', 'ui.log', 'perf-d.log', 'perf-m.log', 'visual.log', 'sfx.log', 'ui-audit.log', 'load.log', 'prod.log']);
+const BROWSER_LOGS = new Set(['verify.log', 'e2e-d.log', 'e2e-m.log', 'ui.log', 'perf-d.log', 'perf-m.log', 'visual.log', 'sfx.log', 'ui-audit.log', 'load.log', 'persist.log', 'prod.log']);
 
 let fj;
 try { fj = JSON.parse(fs.readFileSync(path.join(ROOT, 'docs', 'features.json'), 'utf8')); } catch (e) {

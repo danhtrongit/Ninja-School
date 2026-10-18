@@ -24,21 +24,24 @@ class Metrics {
     const f = obj[k].bind(obj);
     obj[k] = (...a) => {
       const t0 = process.hrtime.bigint();
-      try { return f(...a); } finally { rec(Number(process.hrtime.bigint() - t0) / 1e6); }
+      let r;
+      try { r = f(...a); return r; } finally { rec(Number(process.hrtime.bigint() - t0) / 1e6, r); }
     };
   }
 
   watch(world, db) {
     this.world = world;
     this.wrap(world, 'tick', (ms) => { this.ticks[this.tickN++ % WINDOW] = ms; });
-    const save = (ms) => {
+    const save = (ms, r) => {
+      // flushTick không có gì để ghi (trả 0) thì không tính
+      if (r === 0) return;
       this.saves.push(ms);
       if (this.saves.length > 200) this.saves.shift();
       this.saveMax = Math.max(this.saveMax, ms);
       this.saveWin = Math.max(this.saveWin, ms);
     };
-    // world.saveAll cũng gọi db.save nên chỉ đo db.save
-    this.wrap(db, 'save', save);
+    // lưu theo nhân vật: đo phần chặn vòng lặp của mỗi lượt xả (stringify + mở ghi), nhóm ghi và lần xả đồng bộ
+    for (const k of ['flushTick', 'commit', 'flushAllSync']) if (typeof db[k] === 'function') this.wrap(db, k, save);
   }
 
   snapshot() {

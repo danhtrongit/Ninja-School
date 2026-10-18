@@ -2,6 +2,7 @@
 
 // Cân bằng boss / Tà Thú / quái thường / hồi chiêu bình thuốc: công thức (không cần server) và gói dữ liệu.
 const { ok } = require('../lib/harness');
+const { fakeDb } = require('../lib/helpers');
 
 // Công thức và dải cân bằng, đo bằng Player/Combat thật (không cần server)
 function balanceUnitTests() {
@@ -56,7 +57,7 @@ function balanceUnitTests() {
     const { Player, newChar } = require('../../src/server/core/player');
     const { Inventory } = require('../../src/server/modules/inventory');
     const { makeItem } = require('../../src/shared/data/items');
-    const world = { nextPid: 1, db: { dirty: false }, announce() {}, clanView() { return null; }, social: { handle() {} } };
+    const world = { nextPid: 1, db: fakeDb(), announce() {}, clanView() { return null; }, social: { handle() {} } };
     const inv = new Inventory(world);
     const p = new Player(world, { send() {} }, newChar('balpot', 'kiem', 'm'));
     p.recalc();

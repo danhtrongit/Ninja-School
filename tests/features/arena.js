@@ -2,6 +2,7 @@
 
 // Lôi đài xếp hạng: Elo, mã tuần, ghép cặp (không cần server) và trận đấu thật qua WebSocket.
 const { sleep, ok } = require('../lib/harness');
+const { fakeDb } = require('../lib/helpers');
 const { Bot } = require('../lib/bot');
 
 // Lôi đài: Elo tổng không đổi, mã tuần theo giờ Việt Nam, dọn dữ liệu hỏng, ghép cặp theo biên điểm nới dần
@@ -82,7 +83,7 @@ function arenaUnitTests() {
   ok(ea.c.arena.elo === 1016 && ea.c.arena.win === 1 && ea.xu === ARENA.win.xu && eb.c.arena.lose === 1, 'đã giao đấu rồi mới bỏ: tính thua bình thường');
 
   // số trận tính điểm của từng cặp lưu trong db.meta (khởi động lại máy chủ không làm mới giới hạn)
-  const w2 = { players, byName: world.byName, db: { meta: {} } };
+  const w2 = { players, byName: world.byName, db: fakeDb({ meta: {} }) };
   const D1 = new Arena(w2);
   D1.pairAdd(ea, eb, Date.now());
   D1.pairAdd(eb, ea, Date.now());
@@ -121,6 +122,11 @@ async function arenaTest() {
   y.send('arenaJoin');
   ok(!!(await y.wait('notice', (m) => /Cần đạt cấp 20/.test(m.msg)).catch(() => null)), 'dưới cấp 20: không đăng ký được');
   await say(x, '/lv 120', /Cấp hiện tại/);
+  // dồn tiềm năng vào nhanh nhẹn: chính xác ≥ né tránh của B × 25 → đòn không bao giờ trượt (trượt ngẫu nhiên làm
+  // đòn 1 của Song Tiêu không hạ gục, phần kiểm "đòn 2 không đánh tiếp" bên dưới mất ý nghĩa)
+  x.send('addStat', { k: 'agi', n: 500 });
+  const sure = await x.wait('me', (m) => m.s && m.s.hit * 0.04 >= y.me.s.dodge).catch(() => null);
+  ok(!!sure, `A dồn 500 điểm nhanh nhẹn: chính xác ${sure && sure.s.hit} đủ xóa né tránh ${y.me.s.dodge}% của B`);
   // A cầm Phi Tiêu bậc cao nhất +16: một đòn là hạ gục B, nên đòn thứ hai của Song Tiêu phải bị chặn
   await say(x, '/item w_tieu_11 1 3', /Đã thêm vật phẩm/);
   const wInv = await x.wait('inv');

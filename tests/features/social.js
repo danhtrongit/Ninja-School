@@ -2,6 +2,7 @@
 
 // Nhiều người chơi: dịch chuyển, nhóm, chat nhóm/bản đồ, giao dịch.
 const { sleep, ok } = require('../lib/harness');
+const { fakeDb } = require('../lib/helpers');
 const { Bot } = require('../lib/bot');
 
 // Giao dịch trên thế giới giả (Player + module trade thật): trần xu, vị trí lúc chốt, cờ chiến trường
@@ -13,7 +14,7 @@ function tradeUnitTests() {
   const { makeItem } = require('../../src/shared/data/items');
   const { XU_MAX } = require('../../src/shared/constants');
   const sent = [];
-  const world = { nextPid: 1, db: { dirty: false }, players: new Map(), byName: new Map(), mods: {} };
+  const world = { nextPid: 1, db: fakeDb(), players: new Map(), byName: new Map(), mods: {} };
   const map = { id: 'v_fire', broadcast() {}, def: {} };
   const mk = (name) => {
     const p = new Player(world, { send: (t, d) => sent.push([name, t, d]) }, newChar(name, 'kiem', 'm'));

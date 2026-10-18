@@ -90,13 +90,14 @@ async function backupRestoreTest() {
     const out = tmpDir('ns-bk-push-');
     seedData(dir);
     fs.writeFileSync(path.join(dir, 'characters.json.corrupt-20260101-000000'), '{"a":');
+    fs.writeFileSync(path.join(dir, 'chars', 'bkone.json.corrupt-20260101-000000'), '{"a":');
     fs.writeFileSync(path.join(dir, 'clans.json.tmp'), '{');
     const bk = new Backup(dir, { pushCmd: `cp "$BACKUP_FILE" "${out}/pushed.tgz"`, log() {} });
     const made = await bk.tick();
     const tiers = made.map((f) => path.basename(path.dirname(f))).sort().join();
     const entries = await listArchive(made[0]);
     ok(tiers === 'daily,hourly,weekly' && fs.statSync(made[0]).ino === fs.statSync(made[1]).ino, 'lượt đầu tạo bản giờ/ngày/tuần từ một bản chụp (liên kết cứng)');
-    ok(entries.includes('characters.json') && entries.includes('accounts.json') && !entries.some((n) => /corrupt|\.tmp|lock|backups/.test(n)),
+    ok(entries.includes('chars/bkone.json') && entries.includes('accounts.json') && !entries.some((n) => /corrupt|\.tmp|lock|backups/.test(n)),
       'bản sao lưu gồm file dữ liệu, bỏ backups/, khóa, .tmp, .corrupt-*');
     const last = JSON.parse(fs.readFileSync(path.join(dir, 'backups', 'last.json'), 'utf8'));
     ok(last.ok && last.bytes > 0, 'ghi backups/last.json sau khi tạo và kiểm bản');
@@ -120,14 +121,26 @@ async function backupRestoreTest() {
     await s.ready();
     const ap = await node(['scripts/restore.js', '--apply', rel, '--data', dir]);
     await s.stop();
-    ok(ap.code === 3 && /Từ chối/.test(ap.out) && fs.existsSync(path.join(dir, 'characters.json')), '--apply khi server đang chạy bị từ chối (mã 3), dữ liệu không bị đụng');
-    const chars = JSON.parse(fs.readFileSync(path.join(dir, 'characters.json'), 'utf8'));
-    chars.bkone.level = 99;
-    fs.writeFileSync(path.join(dir, 'characters.json'), JSON.stringify(chars));
+    const bkFile = path.join(dir, 'chars', 'bkone.json');
+    ok(ap.code === 3 && /Từ chối/.test(ap.out) && fs.existsSync(bkFile), '--apply khi server đang chạy bị từ chối (mã 3), dữ liệu không bị đụng');
+    const cur = JSON.parse(fs.readFileSync(bkFile, 'utf8'));
+    cur.level = 99;
+    fs.writeFileSync(bkFile, JSON.stringify(cur));
+    // bản sao lưu của bố cục mới: chars/<khóa>.json + journal/, không kèm file tạm hay bản một file cũ đã tách
+    fs.writeFileSync(path.join(dir, 'chars', 'bktwo.json.atmp'), '{');
+    fs.writeFileSync(path.join(dir, 'characters.migrated-20260101-000000.json'), '{}');
+    const shard = await new Backup(dir, { log() {} }).pre('shard');
+    const sEntries = await listArchive(shard);
+    ok(sEntries.includes('chars/bkone.json') && sEntries.includes('chars/bktwo.json') && sEntries.includes('meta.json') && !sEntries.some((n) => /atmp|migrated/.test(n)),
+      'bản sao lưu bố cục mới gồm chars/<khóa>.json, bỏ .atmp và characters.migrated-*');
+    fs.unlinkSync(path.join(dir, 'chars', 'bktwo.json.atmp'));
+    const chk3 = await node(['scripts/restore.js', '--check', shard, '--data', dir]);
+    ok(chk3.code === 0 && /HỢP LỆ/.test(chk3.out) && /2 nhân vật/.test(chk3.out) && fs.readFileSync(bkFile, 'utf8').includes('"level":99'),
+      'restore.js --check trên bản bố cục mới trả mã 0 (chỉ đọc, không đụng DATA_DIR)');
     const ap2 = await node(['scripts/restore.js', '--apply', rel, '--data', dir]);
-    const back = JSON.parse(fs.readFileSync(path.join(dir, 'characters.json'), 'utf8'));
+    const back = JSON.parse(fs.readFileSync(bkFile, 'utf8'));
     const keep = fs.readdirSync(dir).find((n) => n.startsWith('before-restore-'));
-    ok(ap2.code === 0 && back.bkone.level === 33 && keep && JSON.parse(fs.readFileSync(path.join(dir, keep, 'characters.json'), 'utf8')).bkone.level === 99 && !fs.existsSync(path.join(dir, 'server.lock')),
+    ok(ap2.code === 0 && back.level === 33 && keep && JSON.parse(fs.readFileSync(path.join(dir, keep, 'chars', 'bkone.json'), 'utf8')).level === 99 && !fs.existsSync(path.join(dir, 'server.lock')),
       '--apply khi server tắt: phục hồi bản, dữ liệu cũ dời vào before-restore-*');
     const one = await node(['scripts/restore.js', '--char', 'BkTwo', '--from', rel, '--data', dir]);
     ok(one.code === 0 && fs.readdirSync(path.join(dir, 'restore')).some((n) => n.startsWith('BkTwo-')), 'restore.js --char lấy một nhân vật ra DATA_DIR/restore/');

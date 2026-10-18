@@ -4,6 +4,31 @@ Ghi sau mỗi tính năng / mỗi lần đổi mốc ảnh. Mới nhất ở tr�
 
 ## 2026-10-19
 
+### Lưu theo nhân vật (`ops-persist-shard`, ADR-10-1) → done
+
+- `services/db.js`:
+  - Mỗi nhân vật một file `chars/<khóa>.json`, ba bảng `accounts/clans/meta.json`.
+  - Dữ liệu một file cũ tự tách lúc khởi động. `characters.json` giữ lại dưới tên `characters.migrated-*.json`.
+  - Ghi theo phần bẩn: `db.touch(tên, khẩn)`. Nhân vật ghi tối đa 1 lần/30 giây, bảng 5 giây, đồ khẩn ghi ngay tick sau. `flushTick` mỗi tick ≤ 8 ms hoặc 20 bản ghi, tối đa 24 lần ghi cùng lúc, bộ đệm ghi dùng lại.
+  - Nhóm ghi `db.commit([...], lý do)` cho giao dịch, tạo/xóa nhân vật, gia tộc, mã quà, lôi đài. Nhật ký `journal/<gen>.json` ghi trước, các nhóm chạy tuần tự, không chặn vòng lặp. Sập giữa chừng thì khởi động lại phát lại.
+  - Không còn `db.dirty = true`.
+- Sửa trong lúc đo:
+  - `commit` ghi đồng bộ từng chặn vòng lặp 70 ms (fsync tranh với ghi nền). Nay ghi bất đồng bộ, phần chặn ~2 ms.
+  - Tắt máy khi đang ghi nền có thể mất bản ghi đó. `flushAllSync` nay ghi lại cả bản ghi đang bay và nhóm ghi dở.
+- Sao lưu và phục hồi:
+  - Sao lưu bỏ `*.atmp` và `characters.migrated-*`.
+  - `restore.js --check/--char` chỉ đọc.
+  - `NS_TEST_SAVE_FAIL` bắt đầu tính từ lần lưu tay đầu tiên (SIGUSR2).
+- Kiểm thử:
+  - `storageShardTests` (tách bố cục giống hệt, ngân sách tick, nhịp 30 giây, 500 nhân vật hậu kỳ xả trong 1,4 s, nhóm ghi lỗi).
+  - `tests/load/crash.js`: SIGKILL giữa giao dịch thật → phát lại → tổng xu + vật phẩm hai bên khớp.
+  - `npm run test:persist` (bước 9a của verify), 5.000 nhân vật hậu kỳ, 200 online: p99 2,6-3,0 ms, chặn lớn nhất 11-22 ms (GC riêng đã tới 19 ms), RSS +25 MB.
+- Lưu ý: 5.000 nhân vật hậu kỳ chiếm ~890 MB RAM. Cần xem lại ở `ops-deploy` (RAM VPS, `--max-old-space-size`).
+- Sửa test chập chờn (10 lần `npm test` trên bản sạch bf5fa49: 7/10 sạch; Thỏ Ngọc nhặt đồ 10/10):
+  - `pets.js`: cá mua bằng xu khóa làm thú bị khóa → không giao dịch được. Nay cho ăn cá thường.
+  - `arena.js`: B né ngẫu nhiên đòn 1 của Song Tiêu. Nay A dồn nhanh nhẹn để chính xác xóa né tránh.
+- `npm test` đạt 246,7 s, sát mốc 250 s: cần rút ngắn bộ bot chính.
+
 ### Gắn bằng chứng (`proof`) cho mọi mục done trong docs/features.json
 
 - 60 mục done: 7 mục đã có proof (kiểm lại vẫn đạt) + 22 mục mới gắn proof đủ mọi dòng acceptance → còn 29 mục done.

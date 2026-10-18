@@ -37,8 +37,9 @@ async function extract(file) {
 }
 
 // Nạp bản giải nén như máy chủ: lỗi → ném; trả số liệu
+// chỉ đọc: không tách bố cục, nhật ký nhóm ghi chỉ phát lại trong RAM
 function inspect(dir) {
-  const db = new DB(dir, { forceEmpty: false });
+  const db = new DB(dir, { forceEmpty: false, readonly: true });
   const { Player } = require('../src/server/core/player');
   const world = { nextPid: 1, db: { dirty: false }, announce() {}, clanView() { return null; }, players: new Map(), mods: {}, byName: new Map() };
   const bad = [];
@@ -122,7 +123,7 @@ async function apply(file) {
 async function oneChar(name, file) {
   const tmp = await extract(file);
   try {
-    const db = new DB(tmp, { forceEmpty: false });
+    const db = new DB(tmp, { forceEmpty: false, readonly: true });
     const c = db.getChar(name);
     if (!c) {
       console.error(`Bản sao lưu không có nhân vật ${name}`);

@@ -4,6 +4,7 @@
 module.exports = { unit, bot };
 
 const { ok } = require('../lib/harness');
+const { fakeDb } = require('../lib/helpers');
 const { Bot } = require('../lib/bot');
 
 // Bộ ca kiểm thử đơn vị dùng Player/module thật với bản đồ giả (không cần server)
@@ -23,7 +24,7 @@ function unit(okFn) {
 
   const sent = [];
   const world = {
-    nextPid: 1, db: { dirty: false }, announce() {}, clanView() { return null; },
+    nextPid: 1, db: fakeDb(), announce() {}, clanView() { return null; },
     players: new Map(), mods: {}, byName: new Map(),
   };
   const mk = (npcType) => {

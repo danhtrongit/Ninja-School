@@ -118,7 +118,8 @@ class Trade {
       pl.send('tradeEnd', { ok: true });
       pl.notice('Giao dịch thành công!', 'reward');
     }
-    this.world.db.dirty = true;
+    // đồ và xu đổi chủ giữa hai bản ghi: bắt buộc nhóm ghi (sập giữa chừng không nhân bản / không mất đồ)
+    this.world.db.commit([p.name, o.name], 'trade');
   }
 
   tradeCancel(p) {

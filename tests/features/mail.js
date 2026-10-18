@@ -2,6 +2,7 @@
 
 // Hộp thư, giftcode, lễ hội theo mùa: thế giới giả và qua WebSocket thật.
 const { sleep, ok } = require('../lib/harness');
+const { fakeDb } = require('../lib/helpers');
 const { Bot } = require('../lib/bot');
 
 // Hộp thư, giftcode, sự kiện theo mùa bằng thế giới giả (Player/Mailer/Season thật)
@@ -30,7 +31,7 @@ function mailUnitTests() {
   // gửi cho nhân vật offline (chỉ có dữ liệu trong db)
   const off = newChar('VangMat', 'kiem', 'm');
   delete off.mail;
-  const db = { dirty: false, meta: {}, chars: { vangmat: off }, getChar: (n) => (Object.prototype.hasOwnProperty.call(db.chars, n) ? db.chars[n] : null) };
+  const db = fakeDb({ meta: {}, chars: { vangmat: off }, getChar: (n) => (Object.prototype.hasOwnProperty.call(db.chars, n) ? db.chars[n] : null) });
   const world = { nextPid: 1, db, byName: new Map(), config: { admins: [] }, announce() {}, broadcastAll() {}, clanView: () => null };
   const M = new Mailer(world);
   world.mail = M;

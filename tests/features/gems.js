@@ -3,7 +3,7 @@
 // Ngọc khảm: công thức, ghép ngọc, hút máu (không cần server) và khảm/ghép qua WebSocket thật.
 const { sleep, ok, serverLog } = require('../lib/harness');
 const { Bot } = require('../lib/bot');
-const { seek } = require('../lib/helpers');
+const { seek, fakeDb } = require('../lib/helpers');
 
 // Ngọc khảm: chỉ số, dọn dữ liệu hỏng, giá bán, rơi đồ, hút máu (không cần server)
 function gemUnitTests() {
@@ -53,7 +53,7 @@ function gemActionUnitTests() {
   const { Combat } = require('../../src/server/core/combat');
   const I = require('../../src/shared/data/items');
   const sent = [];
-  const world = { nextPid: 1, db: { dirty: false }, announce() {}, clanView() { return null; }, social: { handle() {} } };
+  const world = { nextPid: 1, db: fakeDb(), announce() {}, clanView() { return null; }, social: { handle() {} } };
   const mk = () => {
     const p = new Player(world, { send: (t, d) => sent.push([t, d]) }, newChar('gemunit', 'kiem', 'm'));
     p.map = { findNpc: () => ({ id: 'n', type: 'smith', x: p.x }), broadcast: (t, d) => sent.push([t, d]) };

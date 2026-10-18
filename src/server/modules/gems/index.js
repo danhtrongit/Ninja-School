@@ -49,7 +49,7 @@ class Gems {
     if (res.eq) p.recalc();
     p.markInv();
     p.markMe();
-    this.world.db.dirty = true;
+    this.world.db.touch(p.name, true);
     p.send('gemResult', { ...g, item: res.def.name, bound: !!res.it.b });
   }
 

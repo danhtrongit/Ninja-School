@@ -116,9 +116,10 @@ async function main() {
   const exited = srv.exitCode !== null ? Promise.resolve() : new Promise((r) => srv.once('exit', r));
   srv.kill('SIGTERM');
   await Promise.race([exited, sleep(10000)]);
-  const files = fs.readdirSync(DATA);
-  ok(files.includes('characters.json'), 'ghi file dữ liệu khi tắt server');
-  if (files.includes('characters.json')) await reloadTest();
+  // lưu theo nhân vật: chars/<khóa>.json, không còn characters.json một file
+  const saved = fs.existsSync(path.join(DATA, 'chars', 'kiemsi.json'));
+  ok(saved && !fs.existsSync(path.join(DATA, 'characters.json')), 'ghi file dữ liệu khi tắt server (chars/kiemsi.json)');
+  if (saved) await reloadTest();
   // vận hành: máy chủ riêng (cổng 4310-4339, DATA_DIR tạm, log riêng vì các phần này cố ý gây lỗi)
   const r = await ops;
   process.stdout.write(r.out);

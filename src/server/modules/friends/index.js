@@ -25,7 +25,8 @@ class Friends {
       a.notice(`${b.name} và bạn đã trở thành bạn bè!`, 'reward');
       this.friendList(a);
     }
-    this.world.db.dirty = true;
+    this.world.db.touch(p.name);
+    this.world.db.touch(o.name);
   }
 
   friendDel(p, m) {
@@ -35,7 +36,8 @@ class Friends {
     const c = o ? o.c : this.world.db.getChar(name);
     if (c) c.friends = (c.friends || []).filter((n) => n.toLowerCase() !== p.name.toLowerCase());
     if (o) this.friendList(o);
-    this.world.db.dirty = true;
+    this.world.db.touch(p.name);
+    if (c) this.world.db.touch(c.name);
     this.friendList(p);
   }
 

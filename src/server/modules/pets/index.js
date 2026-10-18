@@ -26,7 +26,7 @@ class Pets {
     it.love = Math.min(PET.loveMax, it.love + (e.love || 0));
     const got = maxLv ? 0 : p.petAddExp(e.petExp || 0);
     p.markPet();
-    this.world.db.dirty = true;
+    this.world.db.touch(p.name);
     if (p.map) p.map.broadcast('petAct', { id: p.id, k: 'feed' });
     const parts = [];
     if (got) parts.push(`+${got.toLocaleString('vi-VN')} EXP`);

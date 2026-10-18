@@ -3,6 +3,7 @@
 // Gia tộc: kiểm tra đơn vị (chèn prototype, dọn dữ liệu lúc nạp, giới hạn trưởng lão, góp quỹ) và
 // 3 bot thật (NPC lập tộc, mời, từ chối, nhận, thông báo, thăng chức, nhường trưởng tộc, đuổi, rời, giải tán, quyền sai).
 const { sleep, ok } = require('../lib/harness');
+const { fakeDb } = require('../lib/helpers');
 const { Bot } = require('../lib/bot');
 const clanMod = require('../../src/server/modules/clan');
 
@@ -10,11 +11,11 @@ const { cleanClans } = clanMod;
 
 // Thế giới giả đủ cho module gia tộc (db + byName + announce)
 function fakeWorld(clans, chars = {}) {
-  const db = {
-    clans, chars, dirty: false, meta: { nextClanId: 50 },
+  const db = fakeDb({
+    clans, chars, meta: { nextClanId: 50 },
     getChar(n) { const k = String(n).toLowerCase(); return Object.prototype.hasOwnProperty.call(this.chars, k) ? this.chars[k] : null; },
     newClanId() { return String(this.meta.nextClanId++); },
-  };
+  });
   const world = { db, byName: new Map(), announce() {} };
   return world;
 }

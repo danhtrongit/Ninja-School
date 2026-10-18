@@ -1,10 +1,9 @@
 'use strict';
 
 // Lưu dữ liệu: đăng nhập lại giữ nguyên nhân vật, khởi động lại server từ file JSON.
-const path = require('path');
-const fs = require('fs');
 const { sleep, ok, fail, startServer, DATA } = require('../lib/harness');
 const { Bot } = require('../lib/bot');
+const { readChars, writeChars } = require('../lib/helpers');
 
 // Đăng nhập lại bằng token sau khi đã chơi qua mọi phần: trang bị, thú, buff, kỹ năng, ngọc còn nguyên
 async function saveTest(ctx) {
@@ -33,8 +32,7 @@ async function saveTest(ctx) {
 async function reloadTest() {
   console.log('9. Tải lại từ file: bộ kỹ năng & dữ liệu cũ');
   const { SKILLS } = require('../../src/shared/data/skills');
-  const file = path.join(DATA, 'characters.json');
-  const chars = JSON.parse(fs.readFileSync(file, 'utf8'));
+  const chars = readChars(DATA);
   const k = chars.kiemsi;
   ok(k && k.hotbars.length === 3 && k.hbi === 1 && !('hotbar' in k), 'file lưu hotbars + hbi, không lưu trùng hotbar');
   const kBar = k ? k.hotbars[1].join() : '';
@@ -61,7 +59,7 @@ async function reloadTest() {
       items: [{ id: 'pet_fox', q: 1, p: 0, r: 2, o: [], plv: 7, pexp: 50, love: 66 }, { id: 'w_kiem_0', q: 1, p: 3, r: 1, o: [], gems: ['gem_hoa_2'] }] }]);
     if (!k.equip.mount) k.equip.mount = { id: 'mount_wolf', q: 1, p: 0, r: 2, o: [] };
   }
-  fs.writeFileSync(file, JSON.stringify(chars));
+  writeChars(DATA, chars);
   const srv = await startServer();
   try {
     const d = new Bot('D');

@@ -19,6 +19,7 @@
     "test:audit": "node tests/e2e/ui-audit.js",
     "test:prod": "node tests/prod/smoke-prod.js",
     "test:load": "node tests/load/load.js",
+    "test:persist": "node tests/load/persist-bench.js",
     "backup": "node scripts/backup.js",
     "restore": "node scripts/restore.js"
   },

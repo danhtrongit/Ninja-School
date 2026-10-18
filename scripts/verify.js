@@ -330,6 +330,7 @@ async function stepCmd(name, cmd, args, o, pass) {
         fs.rmSync(dataDir, { recursive: true, force: true });
       }
     } else report('8 Trình duyệt', null, ['bỏ qua (--no-browser)']);
+    if (LOAD) await stepCmd('9a Đo lưu (persist-bench)', process.execPath, ['tests/load/persist-bench.js'], { log: path.join(OUT, 'persist.log'), timeout: 900000 }, (r) => r.code === 0 && r.out.includes('PERSIST-BENCH ĐẠT'));
     if (LOAD) await stepCmd('9 Tải (test:load)', process.execPath, ['tests/load/load.js'], { env: { OUT: path.join(OUT, 'load') }, log: path.join(OUT, 'load.log'), timeout: 2 * 3600000 }, (r) => r.code === 0 && r.out.includes('TẢI ĐẠT'));
     else report('9 Tải (test:load)', null, ['bỏ qua (--no-load)']);
     if (PROD) await stepCmd('9b Production (test:prod)', process.execPath, ['tests/prod/smoke-prod.js'], { log: path.join(OUT, 'prod.log'), timeout: 600000 }, (r) => r.code === 0 && r.out.includes('PRODUCTION ĐẠT'));
@@ -340,7 +341,7 @@ async function stepCmd(name, cmd, args, o, pass) {
     // bảng bước tới đây làm log cho check:features (bằng chứng "scripts/verify.js :: <nhãn>")
     fs.writeFileSync(path.join(OUT, 'verify.log'), steps.map((s) => `${s.ok === null ? '–' : s.ok ? '✔' : '✘'} ${s.name}${s.lines.length ? `: ${s.lines.join(' | ')}` : ''}`).join('\n') + '\n');
     // bước bị tắt bằng cờ (CI: --no-browser --no-load) thì check:features bỏ qua bằng chứng nằm trong log của bước đó
-    const skip = [...(BROWSER ? [] : ['e2e-d.log', 'e2e-m.log', 'ui.log', 'perf-d.log', 'perf-m.log', 'visual.log', 'sfx.log', 'ui-audit.log']), ...(LOAD ? [] : ['load.log']), ...(PROD ? [] : ['prod.log'])];
+    const skip = [...(BROWSER ? [] : ['e2e-d.log', 'e2e-m.log', 'ui.log', 'perf-d.log', 'perf-m.log', 'visual.log', 'sfx.log', 'ui-audit.log']), ...(LOAD ? [] : ['load.log', 'persist.log']), ...(PROD ? [] : ['prod.log'])];
     await stepCmd('10 Sổ tính năng (check:features)', process.execPath, ['scripts/check-features.js'], { env: { VERIFY_LOGS: OUT, VERIFY_SKIP: skip.join(',') }, log: path.join(OUT, 'features.log'), timeout: 600000 }, (r) => r.code === 0);
   }
 

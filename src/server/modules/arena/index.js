@@ -398,7 +398,8 @@ class Arena {
       p.send('arenaResult', p.arenaLast);
       if (p.match === m) p.send('arena', { st: 'end' });
     }
-    if (this.world.db) this.world.db.dirty = true;
+    // điểm, xu của hai bên và số trận theo cặp (meta) ghi cùng một nhóm
+    if (this.world.db) this.world.db.commit([winner.name, loser.name, '#meta'], 'arena');
     const how = draw ? `hòa ${loser.name}` : reason === 'ko' ? `hạ gục ${loser.name}` : reason === 'time' ? `thắng ${loser.name} khi hết giờ` : `thắng ${loser.name} (đối thủ bỏ cuộc)`;
     const msg = nc ? `Lôi đài: trận ${winner.name} - ${loser.name} không tính vì chưa bên nào ra đòn.` : `Lôi đài: ${winner.name} ${how}${rated ? ` (${d >= 0 ? '+' : ''}${d} điểm)` : ''}.`;
     m.map.broadcast('chat', { ch: 'sys', msg });
@@ -478,7 +479,7 @@ class Arena {
     if (db.meta.arenaWeek !== wk) {
       if (db.meta.arenaWeek) this.payWeek(db.meta.arenaWeek);
       db.meta.arenaWeek = wk;
-      db.dirty = true;
+      db.touch('#meta', true);
     }
   }
 
@@ -516,6 +517,7 @@ class Arena {
       const tier = weeklyTier(rank);
       if (!tier || c.arena.paid === week) return;
       c.arena.paid = week;
+      if (this.world.db) this.world.db.touch(c.name, true);
       n++;
       const items = rewardItems(tier);
       const base = {
@@ -539,7 +541,6 @@ class Arena {
         c.pending.push(...items);
       }
     });
-    if (this.world.db) this.world.db.dirty = true;
     if (n && list.length) this.world.announce(`Lôi đài tuần đã tổng kết! Hạng nhất: ${list[0].name} (${fmt(list[0].arena.elo)} điểm). Phần thưởng đã được gửi qua hộp thư.`, 'world');
     return n;
   }
