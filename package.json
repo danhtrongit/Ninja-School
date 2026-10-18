@@ -17,7 +17,9 @@
     "test:visual": "node tests/e2e/gallery.js",
     "test:sfx": "node tests/e2e/sfx.js",
     "test:prod": "node tests/prod/smoke-prod.js",
-    "test:load": "node tests/load/load.js"
+    "test:load": "node tests/load/load.js",
+    "backup": "node scripts/backup.js",
+    "restore": "node scripts/restore.js"
   },
   "engines": {
     "node": ">=18"

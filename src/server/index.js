@@ -4,7 +4,9 @@
 const fs = require('fs');
 const path = require('path');
 const { execFileSync } = require('child_process');
+const { monitorEventLoopDelay } = require('perf_hooks');
 const { DB } = require('./services/db');
+const { Backup } = require('./services/backup');
 const { createHttpServer } = require('./services/http');
 const { World } = require('./core/world');
 const { buildGameData } = require('./core/gamedata');
@@ -42,11 +44,95 @@ function revision() {
 }
 const COMMIT = revision();
 const VERSION = require('../../package.json').version + (COMMIT ? `+${COMMIT.slice(0, 7)}` : '');
-const db = new DB(config.dataDir);
-const world = new World(db, config);
+
+// Dữ liệu: khóa DATA_DIR (mã 3 nếu tiến trình khác đang dùng), nạp an toàn (mã 2 nếu file hỏng, không chạy rỗng)
+let db;
+try {
+  db = new DB(config.dataDir, { lock: true });
+} catch (e) {
+  if (e.code === 'EDBLOCK') {
+    console.error(`[db] ${e.message}. Tắt tiến trình kia hoặc dùng DATA_DIR khác.`);
+    process.exit(3);
+  }
+  if (e.code === 'EDBLOAD') {
+    console.error(`[db] ${e.message}`);
+    console.error('[db] File hỏng đã được giữ nguyên dưới tên *.corrupt-<giờ>. Cách xử lý:');
+    console.error('  - xem bản sao lưu: node scripts/restore.js --list, kiểm rồi phục hồi: --check <bản>, --apply <bản>');
+    console.error('  - hoặc chấp nhận chạy rỗng phần hỏng: FORCE_EMPTY=1 (mất dữ liệu của file đó)');
+    process.exit(2);
+  }
+  throw e;
+}
+
+let world = null;
+const isAdmin = (p) => !!(p.conn && p.conn.account) && config.admins.includes(String(p.conn.account).toLowerCase());
+function tellAdmins(msg) {
+  if (!world) return;
+  for (const p of world.players.values()) if (isAdmin(p)) p.notice(msg, 'warn');
+}
+db.onSaveError = (e, n) => tellAdmins(`Lưu dữ liệu thất bại ${n} lần liên tiếp: ${e.message}`);
+db.onSaveOk = (n) => tellAdmins(`Lưu dữ liệu đã bình thường lại (sau ${n} lần lỗi).`);
+
+// Lỗi chưa bắt: lưu khẩn cấp đồng bộ rồi thoát mã 1 (Docker/pm2 khởi động lại)
+let dying = false;
+function fatal(kind, err) {
+  if (dying) return;
+  dying = true;
+  try {
+    process.stderr.write(`${JSON.stringify({ lvl: 'fatal', kind, err: String((err && err.message) || err), stack: err && err.stack, at: new Date().toISOString() })}\n`);
+  } catch (e) { /* stderr đóng */ }
+  if (world) {
+    for (const p of world.players.values()) {
+      try {
+        world.persistPos(p);
+        db.putChar(p.c);
+      } catch (e) { /* vẫn lưu phần còn lại */ }
+    }
+  }
+  let saved = false;
+  try { saved = db.save(); } catch (e) { /* đã ghi ALERT trong save */ }
+  console.error(`[fatal] lưu khẩn cấp ${saved ? 'xong' : 'THẤT BẠI'}, thoát mã 1`);
+  db.unlock();
+  process.exit(1);
+}
+process.on('uncaughtException', (e) => fatal('uncaughtException', e));
+process.on('unhandledRejection', (e) => fatal('unhandledRejection', e));
+process.on('exit', () => db.unlock());
+
+world = new World(db, config);
 const metrics = new Metrics();
 metrics.watch(world, db);
-const server = createHttpServer(path.join(__dirname, '..', 'client'), () => ({ ok: true, version: VERSION, commit: COMMIT, online: world.players.size, accounts: Object.keys(db.accounts).length }), {
+
+// NS_DEBUG_LAG=1: mỗi giây in độ trễ tick lớn nhất (so với nhịp 50 ms) và trễ vòng lặp lớn nhất
+if (process.env.NS_DEBUG_LAG === '1') {
+  const loop = monitorEventLoopDelay({ resolution: 1 });
+  loop.enable();
+  let last = 0;
+  let worst = 0;
+  const tick = world.tick;
+  world.tick = function lagTick(...a) {
+    const t = performance.now();
+    if (last) worst = Math.max(worst, t - last - 50);
+    last = t;
+    return tick.apply(this, a);
+  };
+  setInterval(() => {
+    console.log(`[lag] tick trễ tối đa ${Math.max(0, worst).toFixed(1)} ms, vòng lặp tối đa ${(loop.max / 1e6).toFixed(1)} ms`);
+    worst = 0;
+    loop.reset();
+  }, 1000);
+}
+
+const status = () => ({
+  ok: db.saveErrors === 0,
+  version: VERSION,
+  commit: COMMIT,
+  online: world.players.size,
+  accounts: Object.keys(db.accounts).length,
+  saveErrors: db.saveErrors,
+  lastSaveAt: db.lastSaveAt,
+});
+const server = createHttpServer(path.join(__dirname, '..', 'client'), status, {
   extra: (req, res, url) => metrics.handle(req, res, url, process.env.METRICS_TOKEN || ''),
   devTools: config.devTools,
 });
@@ -64,12 +150,31 @@ function shutdown() {
   console.log('Đang lưu dữ liệu và tắt server...');
   for (const p of [...world.players.values()]) world.leave(p, 'Máy chủ đang bảo trì.');
   world.stop();
-  process.exit(0);
+  // lần lưu cuối lỗi: mã ≠ 0 để trình quản lý tiến trình biết
+  process.exit(db.saveErrors ? 1 : 0);
 }
 process.on('SIGINT', shutdown);
 process.on('SIGTERM', shutdown);
-setInterval(() => { if (db.dirty) db.save(); }, 15000);
-setInterval(() => db.backup(), 6 * 3600 * 1000);
-setTimeout(() => db.backup(), 60 * 1000);
+setInterval(() => {
+  db.touchLock();
+  if (db.dirty || db.saveErrors) db.save();
+}, 15000);
+// kiểm thử: SIGUSR2 = lưu ngay (chỉ khi NS_TEST=1)
+if (process.env.NS_TEST === '1') process.on('SIGUSR2', () => db.save());
 
-module.exports = { server, world, db, metrics };
+// Sao lưu theo tầng (services/backup.js): kiểm lịch mỗi phút, lần đầu sau BACKUP_DELAY_MS (mặc định 60 giây).
+// PRE_DEPLOY=<nhãn>: thêm một bản "trước triển khai" lúc khởi động nếu chưa có bản cùng nhãn. BACKUP=0 tắt lịch.
+const backup = new Backup(config.dataDir);
+const backupRun = (p) => p.then((files) => {
+  for (const f of [].concat(files || [])) console.log(`[backup] đã tạo ${path.relative(backup.dir, f)}`);
+}).catch((e) => console.error(`[ALERT] sao lưu thất bại: ${e.message}`));
+if (process.env.PRE_DEPLOY) backupRun(backup.pre(process.env.PRE_DEPLOY, { once: true }));
+if (process.env.BACKUP !== '0') {
+  const delay = /^\d+$/.test(process.env.BACKUP_DELAY_MS || '') ? +process.env.BACKUP_DELAY_MS : 60 * 1000;
+  setTimeout(() => {
+    backupRun(backup.tick());
+    setInterval(() => backupRun(backup.tick()), 60 * 1000);
+  }, delay);
+}
+
+module.exports = { server, world, db, metrics, backup };

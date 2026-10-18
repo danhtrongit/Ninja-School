@@ -36,4 +36,44 @@ async function accountTest(ctx) {
   ctx.auth = auth;
 }
 
-module.exports = { accountTest };
+// 50 lần đăng nhập mật khẩu đồng thời (máy chủ riêng cổng 4320, NS_DEBUG_LAG=1): băm mật khẩu chạy ngoài luồng chính
+async function loginBurstTest() {
+  console.log('12. 50 lần đăng nhập mật khẩu đồng thời');
+  const { LightBot } = require('../lib/lightbot');
+  const { serve, tmpDir, cleanup } = require('./storage');
+  const N = 50;
+  const port = 4320;
+  const s = serve(tmpDir('ns-burst-'), port, { NS_DEBUG_LAG: '1' });
+  const bots = [];
+  try {
+    await s.ready();
+    const url = `ws://localhost:${port}/ws`;
+    const once = async (i, t, d) => {
+      const b = new LightBot(url, `burst${String(i).padStart(2, '0')}`, i);
+      bots.push(b);
+      await b.connect();
+      const got = Promise.race([b.next('auth'), b.next('err').then((m) => ({ err: m.msg }))]);
+      b.send(t, d(b));
+      const r = await got;
+      b.close();
+      return r;
+    };
+    const reg = await Promise.all(Array.from({ length: N }, (_, i) => once(i, 'register', (b) => ({ u: b.user, p: 'secret123' }))));
+    await new Promise((r) => setTimeout(r, 1200));
+    const from = s.log.length;
+    const t0 = Date.now();
+    const res = await Promise.all(Array.from({ length: N }, (_, i) => once(i, 'login', (b) => ({ u: b.user, p: 'secret123' }))));
+    const ms = Date.now() - t0;
+    await new Promise((r) => setTimeout(r, 1200));
+    const lags = [...s.log.slice(from).matchAll(/\[lag\] tick trễ tối đa ([\d.]+) ms/g)].map((m) => +m[1]);
+    const worst = lags.length ? Math.max(...lags) : -1;
+    ok(reg.every((r) => r && r.ok) && res.every((r) => r && r.ok && r.token), `50 tài khoản đăng ký rồi đăng nhập mật khẩu đồng thời đều thành công (${ms} ms)`);
+    ok(lags.length >= 1 && worst >= 0 && worst <= 50, `50 lần đăng nhập mật khẩu đồng thời không làm tick nào trễ > 50 ms (NS_DEBUG_LAG=1, tối đa ${worst} ms)`);
+  } finally {
+    for (const b of bots) b.close();
+    await s.stop();
+    cleanup();
+  }
+}
+
+module.exports = { accountTest, loginBurstTest };
