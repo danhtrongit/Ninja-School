@@ -710,7 +710,15 @@ kbd {
 .inv-pick .sub-title { color: #ff9a80; }
 .inv-top .row { gap: 4px; }
 .inv-top .sub-title { white-space: nowrap; }
-/* túi mở rộng tới 100 ô: cuộn trong lưới, chừa chỗ cho viền sáng của ô đang chọn */
-.inv-right .inv-grid { max-height: 306px; overflow-y: auto; padding: 3px; margin: -3px; }
+/* trang hành trang (túi mở rộng tới 100 ô) */
+.slot-locked { opacity: 0.55; background: repeating-linear-gradient(135deg, #1a0f08 0 5px, #120a06 5px 10px); }
+.slot-locked::after { content: ''; position: absolute; left: 50%; top: 50%; width: 12px; height: 9px; margin: -2px 0 0 -6px; border-radius: 2px; background: #6d5236; box-shadow: 0 0 0 1px #120804; }
+.slot-locked::before { content: ''; position: absolute; left: 50%; top: 50%; width: 6px; height: 7px; margin: -9px 0 0 -5px; border: 2px solid #6d5236; border-bottom: none; border-radius: 5px 5px 0 0; }
+.slot-locked.can { cursor: pointer; }
+.slot-locked.can:hover { opacity: 0.9; }
+.inv-pages { display: flex; justify-content: center; gap: 6px; margin-top: 6px; }
+.inv-pages .btn { display: inline-flex; align-items: baseline; gap: 5px; }
+.inv-pages .ip-n { font-size: 15px; opacity: 0.85; }
+.inv-pages .ip-n.full { color: #ffb4a0; }
 .overlay { position: fixed; inset: 0; z-index: 100; display: flex; align-items: center; justify-content: center; background: rgba(0, 0, 0, 0.55); }
 #rotate-hint { display: none; }

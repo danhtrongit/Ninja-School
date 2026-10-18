@@ -9,6 +9,8 @@ import { STYLE_SLOTS, gearSlots, expLeft, elColorOfSkill, passiveText, skImg, mo
 // Vị trí ô trang bị quanh hình nhân vật: [cột, hàng]. Tab Trang bị: 9 ô chiến đấu; tab Thời trang: 4 ô thời trang + thú cưng
 const DOLL_POS = { hat: [1, 1], armor: [1, 2], gloves: [1, 3], pants: [1, 4], weapon: [3, 1], necklace: [3, 2], ring: [3, 3], amulet: [3, 4], shoes: [2, 4] };
 const STYLE_POS = { mask: [1, 1], cloak: [1, 2], costume: [1, 3], mount: [3, 1], pet: [3, 2] };
+// số ô mỗi trang hành trang (8 cột × 5 hàng, bằng túi gốc)
+const INV_PAGE = 40;
 
 export default {
   // ----- Túi đồ
@@ -73,13 +75,34 @@ export default {
     drawNinja(ctx, cv.width / 2 + (sc === 2 ? 4 : 0), cv.height - 9, { ...o, look, dir: 1, anim: 'idle', t, scale: sc });
   },
 
+  // Lưới hành trang chia trang INV_PAGE ô (túi mở rộng tới 100 ô); trang đang xem dùng chung cho túi, kho, cửa hàng, giao dịch
   invGrid(onclick, mark) {
+    const pages = Math.max(1, Math.ceil(S.inv.length / INV_PAGE));
+    const pg = Math.min(this.invPage || 0, pages - 1);
+    const from = pg * INV_PAGE;
     const grid = h('div', { class: 'inv-grid' });
-    S.inv.forEach((it, i) => {
+    S.inv.slice(from, from + INV_PAGE).forEach((it, k) => {
+      const i = from + k;
       if (!it) return grid.appendChild(h('div', { class: 'slot empty' }));
       grid.appendChild(itemIcon(it, { sel: mark && mark.has(i), onclick: () => onclick(it, i) }));
     });
-    return grid;
+    if (pages < 2) return grid;
+    // trang cuối chưa đủ ô: lấp ô khóa để lưới không co lại; bấm vào thì hỏi mở rộng
+    const E = S.G.invExpand;
+    const canExpand = E && E.cost[Math.round((S.inv.length - E.base) / E.step)] != null;
+    for (let k = S.inv.length - from; k < INV_PAGE; k++) {
+      grid.appendChild(h('div', { class: `slot empty slot-locked${canExpand ? ' can' : ''}`, title: canExpand ? 'Ô chưa mở · bấm để mở rộng hành trang' : 'Ô chưa mở',
+        onclick: canExpand ? () => this.askExpand() : null }));
+    }
+    const nav = h('div', { class: 'inv-pages' }, ...Array.from({ length: pages }, (_, p) => {
+      const part = S.inv.slice(p * INV_PAGE, (p + 1) * INV_PAGE);
+      const used = part.filter(Boolean).length;
+      const picked = mark ? [...mark].filter((i) => i >= p * INV_PAGE && i < (p + 1) * INV_PAGE).length : 0;
+      return h('button', { class: `btn small${p === pg ? ' on' : ''}`, 'data-invpage': p, title: `Trang ${p + 1}: ${used}/${part.length} ô có đồ`,
+        onclick: () => { this.invPage = p; this.refresh(); } },
+      `Trang ${p + 1}`, h('span', { class: `ip-n${used === part.length ? ' full' : ''}` }, picked ? `✓${picked}` : `${used}/${part.length}`));
+    }));
+    return h('div', { class: 'inv-paged' }, grid, nav);
   },
 
   renderInv() {
@@ -119,13 +142,19 @@ export default {
     const n = Math.round((S.inv.length - E.base) / E.step);
     const cost = E.cost[n];
     if (cost == null) return null;
-    return h('button', { class: 'btn small', 'data-act': 'inv-expand', title: `Thêm ${E.step} ô: ${cost} lượng`, onclick: async () => {
-      const ok = await this.ask({ title: 'Mở rộng hành trang', icon: 'luong', ok: `Mở rộng (${cost} lượng)`,
-        text: [h('div', null, `Thêm ${E.step} ô hành trang: ${S.inv.length} → ${S.inv.length + E.step} ô.`),
-          h('div', { class: S.me.luong < cost ? 'bad' : 'muted' }, `Giá ${fmt(cost)} lượng · đang có ${fmt(S.me.luong)} lượng`),
-          h('div', { class: 'muted tiny' }, `Còn mở rộng được ${E.cost.length - n} lần (tối đa ${E.base + E.step * E.cost.length} ô).`)] });
-      if (ok) this.net.send('invExpand');
-    } }, '+ Mở rộng');
+    return h('button', { class: 'btn small', 'data-act': 'inv-expand', title: `Thêm ${E.step} ô: ${cost} lượng`, onclick: () => this.askExpand() }, '+ Mở rộng');
+  },
+
+  async askExpand() {
+    const E = S.G.invExpand;
+    const n = Math.round((S.inv.length - E.base) / E.step);
+    const cost = E.cost[n];
+    if (cost == null) return;
+    const ok = await this.ask({ title: 'Mở rộng hành trang', icon: 'luong', ok: `Mở rộng (${cost} lượng)`,
+      text: [h('div', null, `Thêm ${E.step} ô hành trang: ${S.inv.length} → ${S.inv.length + E.step} ô.`),
+        h('div', { class: S.me.luong < cost ? 'bad' : 'muted' }, `Giá ${fmt(cost)} lượng · đang có ${fmt(S.me.luong)} lượng`),
+        h('div', { class: 'muted tiny' }, `Còn mở rộng được ${E.cost.length - n} lần (tối đa ${E.base + E.step * E.cost.length} ô).`)] });
+    if (ok) this.net.send('invExpand');
   },
 
   // Chọn nhanh trang bị trắng chưa cường hóa, không khảm ngọc (đồ nhặt dọc đường)
