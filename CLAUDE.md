@@ -14,6 +14,7 @@ npm start                      # http://localhost:3000
 npm test                       # khởi động server tạm + bot WebSocket chơi thử, phải đạt hết
 npm run check                  # kiểm tra chéo dữ liệu game (item, quái, bản đồ, nhiệm vụ)
 npm run test:ui / test:e2e / test:perf   # kiểm thử trình duyệt thật (Playwright), xem đầu file trong tests/e2e/
+npm run test:prod              # smoke test máy chủ thật (PROD_URL, mặc định https://ninja.iqx.vn): đăng ký → lên cấp, kiểm /api/status trùng commit main
 PORT=3000 DATA_DIR=/tmp/ns ADMINS=tentk1,tentk2 node src/server/index.js   # admin dùng được lệnh /lv /item /plus /tp /xu /boss /bosshp /chet /event /mail /code /sukien /arena
 ```
 
