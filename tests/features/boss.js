@@ -173,8 +173,11 @@ async function bossEventTest(a) {
   const muls = Array.from({ length: 20 }, (_, i) => Math.round(MONSTERS.ev_hacviem.baseHp * eventHpMul(i + 1)));
   ok(muls.includes(boss.mhp), `HP Tà Thú theo số người online đủ cấp (${boss.mhp})`);
   // G đứng xa boss hơn tầm chiêu cột nhắm người thứ hai (360 px, startCast) và tầm phát hiện; A đứng bên phải boss để chiêu dải hướng ra xa G
-  const W = require('../../src/shared/data/maps').MAPS.wasteland.w;
-  const gx = boss.x - 450 >= 40 ? boss.x - 450 : Math.min(W - 40, boss.x + 450);
+  // trong các chỗ cách boss ≥ 450 px, chọn chỗ xa bãi quái thường nhất (quái thường hạ được G trong lúc chờ niệm)
+  const WL = require('../../src/shared/data/maps').MAPS.wasteland;
+  const mobGap = (x) => Math.min(...WL.spawns.map((sp) => (x < sp.x1 ? sp.x1 - x : x > sp.x2 ? x - sp.x2 : 0)));
+  let gx = boss.x - 450 >= 40 ? boss.x - 450 : Math.min(WL.w - 40, boss.x + 450);
+  for (let x = 40; x <= WL.w - 40; x += 10) if (Math.abs(x - boss.x) >= 450 && mobGap(x) > mobGap(gx)) gx = x;
   await dash(g, Math.round(gx));
   const gHp = g.me.hp;
 
@@ -201,8 +204,11 @@ async function bossEventTest(a) {
     h1 = await seek(a, 'bossHit', (m) => m.id === boss.id, c1.i, 4000);
     waited = Date.now() - t1;
     hit1 = await seek(a, 'hit', (m) => m.bs && m.a === `m${boss.id}`, h1.i, 800).catch(() => null);
-    // gục trước khi chiêu nổ thì không tính, chờ lần niệm sau
-    if (!a.msgs.slice(c1.i, h1.i).some((m) => m.t === 'dead')) break;
+    // A gục trước khi chiêu nổ, hay G gục vì quái thường trước lúc nổ: lần này không đo được, chờ lần niệm sau
+    const gt = g.msgs.slice(gWait);
+    const gb = gt.findIndex((m) => m.t === 'bossHit' && m.id === boss.id);
+    const gd = gt.findIndex((m) => m.t === 'dead');
+    if (!a.msgs.slice(c1.i, h1.i).some((m) => m.t === 'dead') && (gd < 0 || gd > gb)) break;
   }
   if (!c1) throw new Error('A: hết thời gian chờ "bossCast" lần 1');
   ok(c1.m.dur >= 900 && waited >= c1.m.dur - 150 && h1.m.k === c1.m.k, `bossCast (${c1.m.name}, ${c1.m.shape}, ${c1.m.dur}ms) đến trước bossHit sau thời gian niệm`);

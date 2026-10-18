@@ -4,13 +4,13 @@
     "phase": 0,
     "title": "Gia tộc cơ bản: sửa chèn prototype, dọn dữ liệu, giới hạn trưởng lão, kiểm thử đủ",
     "priority": "Must",
-    "status": "todo",
+    "status": "done",
     "acceptance": [
       "tests/features/clan.js có ≥ 25 ok() đạt phủ 8 hành động + NPC lập tộc",
       "Đơn vị: clanPromote { name: '__proto__', rank: 'leader' } và clanKick { name: 'constructor' } không làm ({}).rank khác undefined, cl.leader giữ nguyên",
       "Đơn vị cleanClans: leader không còn trong members được chọn lại; rank 'boss' về member; fund -5 về 0",
       "clanDonate 999 xu bị từ chối; thăng trưởng lão thứ 5 báo 'Gia tộc đã đủ 4 trưởng lão.'",
-      "node gddwork/lab/soc/proto-clan.js (chép vào kiểm thử) không còn đặt Object.prototype.rank",
+      "kịch bản proto-clan (gddwork/lab/soc/proto-clan.js không còn trong repo, viết lại thành kiểm thử dội gói clan* rác từ cả 3 chức) không còn đặt Object.prototype.rank",
       "npm test in 'TẤT CẢ KIỂM TRA ĐỀU ĐẠT'"
     ],
     "tests": [
@@ -28,7 +28,40 @@
     "section": "docs/gdd/05-he-thong-xa-hoi-pvp.md §1.10",
     "size": "M",
     "depends": [],
-    "notes": "Đã có trong code (modules/clan), 7/8 hành động chưa có kiểm thử (R7); phải xong trước clan-war"
+    "notes": "Đã có trong code (modules/clan), 7/8 hành động chưa có kiểm thử (R7); phải xong trước clan-war",
+    "proof": [
+      [
+        "tests/features/clan.js :: NPC Lão Gia Tộc mở hộp thoại lập gia tộc",
+        "tests/features/clan.js :: lập gia tộc TocMoc qua NPC",
+        "tests/features/clan.js :: clanInvite: TocLao nhận lời mời",
+        "tests/features/clan.js :: clanAccept: TocLao vào tộc",
+        "tests/features/clan.js :: clanNotice: tộc trưởng sửa thông báo",
+        "tests/features/clan.js :: clanInfo: thành viên xem thông báo",
+        "tests/features/clan.js :: clanPromote: TocLao lên trưởng lão",
+        "tests/features/clan.js :: clanDonate 1.000 xu: quỹ 1.000",
+        "tests/features/clan.js :: clanKick: trưởng lão đuổi thành viên thường",
+        "tests/features/clan.js :: clanLeave: tộc trưởng TocLao rời gia tộc"
+      ],
+      [
+        "tests/features/clan.js :: clanPromote { name: '__proto__', rank: 'leader' }: ({}).rank vẫn undefined, tộc trưởng giữ nguyên",
+        "tests/features/clan.js :: clanKick { name: 'constructor' } / '__proto__': không đuổi ai"
+      ],
+      [
+        "tests/features/clan.js :: cleanClans: tộc trưởng không còn trong members thì chọn lại",
+        "tests/features/clan.js :: cleanClans: chức lạ 'boss' về member",
+        "tests/features/clan.js :: cleanClans: quỹ -5 về 0"
+      ],
+      [
+        "tests/features/clan.js :: clanDonate 999 xu bị từ chối",
+        "tests/features/clan.js :: thăng trưởng lão thứ 5 bị từ chối: 'Gia tộc đã đủ 4 trưởng lão.'"
+      ],
+      [
+        "tests/features/clan.js :: dội gói clan* rác (tên/chức/xu lạ) từ cả 3 chức: Object.prototype không có rank"
+      ],
+      [
+        "tests/smoke.js :: npm test: không kiểm tra nào hỏng"
+      ]
+    ]
   },
   {
     "id": "core-account",
@@ -235,7 +268,7 @@
     "phase": 0,
     "title": "Kiểm thử cho hành động còn trống: gia tộc, Tiểu Nhị, PK, rời nhóm, tẩy tiềm năng, xem người chơi, ngắt kết nối giữa giao dịch",
     "priority": "Must",
-    "status": "todo",
+    "status": "done",
     "acceptance": [
       "mọi hành động trong bảng 5.2 của docs/gdd/02-hien-trang.md có ≥ 1 ok( liên quan trong tests/features/ (báo cáo phủ của scripts/verify.js)",
       "npm test in 'TẤT CẢ KIỂM TRA ĐỀU ĐẠT', tổng thời gian ≤ 250 giây trên M1",
@@ -250,7 +283,10 @@
       "tests/features/skills.js",
       "tests/features/movement.js",
       "tests/features/gems.js",
-      "tests/features/combat.js"
+      "tests/features/combat.js",
+      "tests/features/pets.js",
+      "tests/features/repo.js",
+      "tests/smoke.js"
     ],
     "files": [
       "tests/features/",
@@ -264,7 +300,30 @@
     "depends": [
       "ops-commit-restructure"
     ],
-    "notes": "audit-systems mục 8.2, R7 Kiểm 18-10-2026: chạy npm test 2 lần trên cây hiện tại, kết quả hỏng/đạt; ca hỏng là \"Thỏ Ngọc tự nhặt đồ rơi gần chủ\" (tests/features/pets.js)."
+    "notes": "audit-systems mục 8.2, R7 Kiểm 18-10-2026: chạy npm test 2 lần trên cây hiện tại, kết quả hỏng/đạt; ca hỏng là \"Thỏ Ngọc tự nhặt đồ rơi gần chủ\" (tests/features/pets.js).",
+    "proof": [
+      [
+        "tests/features/repo.js :: phủ kiểm thử: hành động router:"
+      ],
+      [
+        "tests/smoke.js :: npm test: không kiểm tra nào hỏng",
+        "tests/smoke.js :: npm test xong trong ≤ 250 giây"
+      ],
+      [
+        "tests/features/clan.js :: lập gia tộc TocMoc qua NPC",
+        "tests/features/clan.js :: clanAccept: TocLao vào tộc",
+        "tests/features/clan.js :: clanPromote: TocLao lên trưởng lão",
+        "tests/features/clan.js :: nhường trưởng tộc: TocLao làm tộc trưởng",
+        "tests/features/clan.js :: clanLeave: tộc trưởng TocLao rời gia tộc",
+        "tests/features/clan.js :: clanKick: trưởng lão đuổi thành viên thường",
+        "tests/features/clan.js :: người cuối cùng rời: gia tộc giải tán",
+        "tests/features/clan.js :: trưởng lão phong chức bị từ chối",
+        "tests/features/clan.js :: trưởng lão đuổi tộc trưởng bị từ chối"
+      ],
+      [
+        "tests/features/pets.js :: Thỏ Ngọc tự nhặt đồ rơi gần chủ"
+      ]
+    ]
   },
   {
     "id": "dev-test-harness",
@@ -319,16 +378,18 @@
     "phase": 0,
     "title": "Lệnh kiểm chứng một chạm scripts/verify.js + npm run verify (cú pháp, check, id DOM, API công khai, quy tắc tĩnh, sàn nội dung, test)",
     "priority": "Must",
-    "status": "todo",
+    "status": "done",
     "acceptance": [
       "npm run verify -- --quick mã 0 trong ≤ 15 giây trên cây hiện tại, in bảng 7 bước (bước 7 'bỏ qua')",
-      "npm run verify mã 0, thời gian ≤ thời gian npm test + 15 giây",
+      "npm run verify chạy đủ các bước theo D-02; thời gian thêm của chính verify ngoài các bộ test (bước 1-6, bật/tắt server) ≤ 15 giây (bước 9c)",
       "trên bản sao --root: xóa id=\"hud-map\" → mã 1 và in #hud-map; thêm confirm( vào một cửa sổ → mã 1, in file:dòng; lỗi cú pháp file client → mã 1; xóa export function drawNinja → mã 1",
-      "npm run verify -- --floor trên cây hiện tại → mã 1 và in đúng 6 dòng thiếu sàn",
+      "npm run verify -- --floor trên cây hiện tại → mã 1 và in đúng một dòng thiếu sàn cho mỗi mục sàn chưa đạt",
       "CI dùng npm run verify và xanh"
     ],
     "tests": [
-      "tests/features/verify.js"
+      "tests/features/verify.js",
+      "scripts/verify.js",
+      "tests/features/repo.js"
     ],
     "files": [
       "scripts/verify.js",
@@ -348,7 +409,29 @@
     "depends": [
       "ops-commit-restructure"
     ],
-    "notes": "Kiểm 18-10-2026: scripts/verify.js chưa có."
+    "notes": "Acceptance #2 viết lại theo D-02 (verify mặc định chạy cả trình duyệt và tải 60 phút nên không so được với thời gian npm test); #4 đổi 'đúng 6 dòng' thành một dòng cho mỗi mục sàn chưa đạt vì số mục giảm dần khi thêm nội dung.",
+    "proof": [
+      [
+        "tests/features/verify.js :: --quick trên cây hiện tại: mã 0",
+        "tests/features/verify.js :: --quick xong trong ≤ 15 giây",
+        "tests/features/verify.js :: --quick in bảng các bước, bước 7 \"bỏ qua\""
+      ],
+      [
+        "scripts/verify.js :: 9c Thời gian thêm ngoài các bộ test"
+      ],
+      [
+        "tests/features/verify.js :: xóa id=\"hud-map\" khỏi index.html → mã 1",
+        "tests/features/verify.js :: thêm confirm( vào một cửa sổ → mã 1",
+        "tests/features/verify.js :: lỗi cú pháp ở file client → mã 1",
+        "tests/features/verify.js :: xóa export function drawNinja → mã 1"
+      ],
+      [
+        "tests/features/verify.js :: --floor trên cây hiện tại: mã 1, đúng một dòng thiếu sàn cho mỗi mục chưa đạt"
+      ],
+      [
+        "tests/features/repo.js :: CI chạy npm run verify với node 24"
+      ]
+    ]
   },
   {
     "id": "ops-admin-cmd",
@@ -397,7 +480,7 @@
     "phase": 0,
     "title": "Khóa quyền quản trị: cấm đăng ký tên có trong ADMINS, tắt lệnh kiểm thử ở production, log lệnh admin",
     "priority": "Must",
-    "status": "todo",
+    "status": "done",
     "acceptance": [
       "ADMINS=chuaco + bot register { u: 'chuaco' } → bị từ chối, log có [ALERT]",
       "server không có NS_TEST: /lv 50 trả 'Lệnh không tồn tại.'; /mail vẫn chạy",
@@ -406,7 +489,8 @@
     ],
     "tests": [
       "tests/features/account.js",
-      "tests/features/admin.js"
+      "tests/features/admin.js",
+      "tests/smoke.js"
     ],
     "files": [
       "src/server/core/gateway.js",
@@ -423,6 +507,23 @@
     "size": "S",
     "depends": [
       "ops-commit-restructure"
+    ],
+    "proof": [
+      [
+        "tests/features/admin.js :: ADMINS=chuaco + register { u: 'chuaco' } → bị từ chối",
+        "tests/features/admin.js :: tài khoản \"chuaco\" không được tạo"
+      ],
+      [
+        "tests/features/admin.js :: không có NS_TEST: \"/lv 50\" trả \"Lệnh không tồn tại.\"",
+        "tests/features/admin.js :: không có NS_TEST: /mail vẫn chạy"
+      ],
+      [
+        "tests/features/admin.js :: mỗi lệnh admin in một dòng \"[ADMIN] <tài khoản> /<lệnh> <tham số>\" ra log"
+      ],
+      [
+        "tests/smoke.js :: npm test: không kiểm tra nào hỏng",
+        "tests/features/admin.js :: server kiểm thử: lệnh admin ghi log \"[ADMIN] bot_two /lv 6\""
+      ]
     ]
   },
   {
@@ -430,16 +531,17 @@
     "phase": 0,
     "title": "Sao lưu theo tầng giờ/ngày/tuần/trước triển khai, bản ngày đẩy ra ngoài máy, scripts/restore.js",
     "priority": "Must",
-    "status": "todo",
+    "status": "done",
     "acceptance": [
       "20 lần khởi động lại liên tiếp vẫn còn bản ngày hôm trước và đủ bản giờ",
-      "xoay vòng giả lập 60 ngày (đồng hồ giả) giữ đúng 48 bản giờ / 30 bản ngày / 12 bản tuần",
+      "xoay vòng giả lập 60 ngày (đồng hồ giả) giữ đúng 48 bản giờ / 30 bản ngày; chạy tiếp tới 120 ngày giữ đúng 48 / 30 / 12 bản tuần (60 ngày mới có 9 tuần)",
       "node scripts/restore.js --check trên bản vừa tạo trả mã 0, trên bản bị cắt cụt trả mã ≠ 0; --apply khi server đang chạy bị từ chối",
       "tạo bản sao lưu 5.000 nhân vật trộn không làm trễ vòng lặp > 20 ms",
       "npm test đạt"
     ],
     "tests": [
-      "tests/features/backup.js"
+      "tests/features/backup.js",
+      "tests/smoke.js"
     ],
     "files": [
       "src/server/services/backup.js",
@@ -458,7 +560,29 @@
     "depends": [
       "ops-db-safe-load"
     ],
-    "notes": "R-09"
+    "notes": "R-09",
+    "proof": [
+      [
+        "tests/features/backup.js :: 20 lần khởi động lại liên tiếp vẫn còn bản ngày hôm trước",
+        "tests/features/backup.js :: 20 lần khởi động lại liên tiếp: đủ 48 bản giờ"
+      ],
+      [
+        "tests/features/backup.js :: xoay vòng giả lập 60 ngày: đúng 48 bản giờ",
+        "tests/features/backup.js :: xoay vòng giả lập 60 ngày: đúng 30 bản ngày",
+        "tests/features/backup.js :: xoay vòng giả lập tiếp tới 120 ngày: đúng 48 bản giờ / 30 bản ngày / 12 bản tuần"
+      ],
+      [
+        "tests/features/backup.js :: node scripts/restore.js --check trên bản vừa tạo trả mã 0",
+        "tests/features/backup.js :: restore.js --check trên bản bị cắt cụt trả mã ≠ 0",
+        "tests/features/backup.js :: --apply khi server đang chạy bị từ chối"
+      ],
+      [
+        "tests/features/backup.js :: tạo bản sao lưu 5.000 nhân vật trộn"
+      ],
+      [
+        "tests/smoke.js :: npm test: không kiểm tra nào hỏng"
+      ]
+    ]
   },
   {
     "id": "ops-commit-restructure",
@@ -526,7 +650,7 @@
     "phase": 0,
     "title": "Chống sập: bắt lỗi chưa xử lý để lưu khẩn cấp, cô lập lỗi móc, băm mật khẩu bất đồng bộ",
     "priority": "Must",
-    "status": "todo",
+    "status": "done",
     "acceptance": [
       "50 lần đăng nhập mật khẩu đồng thời không làm tick nào trễ > 50 ms (NS_DEBUG_LAG=1)",
       "NS_TEST_THROW=second → server vẫn chạy, log có tên module lỗi",
@@ -535,7 +659,8 @@
     ],
     "tests": [
       "tests/features/storage.js",
-      "tests/features/account.js"
+      "tests/features/account.js",
+      "tests/smoke.js"
     ],
     "files": [
       "src/server/index.js",
@@ -552,14 +677,29 @@
     "depends": [
       "ops-db-safe-load"
     ],
-    "notes": "R-10, R-16"
+    "notes": "R-10, R-16",
+    "proof": [
+      [
+        "tests/features/account.js :: 50 lần đăng nhập mật khẩu đồng thời không làm tick nào trễ > 50 ms"
+      ],
+      [
+        "tests/features/storage.js :: NS_TEST_THROW=second → server vẫn chạy, log có tên module lỗi"
+      ],
+      [
+        "tests/features/storage.js :: NS_TEST_THROW=fatal → tiến trình thoát mã 1",
+        "tests/features/storage.js :: NS_TEST_THROW=fatal: cấp vừa đổi bằng /lv còn sau khi khởi động lại"
+      ],
+      [
+        "tests/smoke.js :: npm test: không kiểm tra nào hỏng"
+      ]
+    ]
   },
   {
     "id": "ops-db-safe-load",
     "phase": 0,
     "title": "Nạp dữ liệu an toàn: không chạy rỗng khi file hỏng, ghi có fsync, báo lỗi lưu, khóa DATA_DIR",
     "priority": "Must",
-    "status": "todo",
+    "status": "done",
     "acceptance": [
       "characters.json = '{\"a\":' → khởi động thoát mã 2, file gốc còn dưới tên .corrupt-*, không có characters.json rỗng mới",
       "có characters.json.tmp hợp lệ → khởi động thành công với dữ liệu trong .tmp; FORCE_EMPTY=1 → khởi động được",
@@ -568,7 +708,8 @@
       "npm test đạt"
     ],
     "tests": [
-      "tests/features/storage.js"
+      "tests/features/storage.js",
+      "tests/smoke.js"
     ],
     "files": [
       "src/server/services/db.js",
@@ -583,7 +724,28 @@
     "depends": [
       "ops-commit-restructure"
     ],
-    "notes": "R-03, R-04, R-05"
+    "notes": "R-03, R-04, R-05",
+    "proof": [
+      [
+        "tests/features/storage.js :: characters.json = '{\"a\":' → khởi động thoát mã 2, file gốc còn dưới tên .corrupt-*, không có characters.json rỗng mới"
+      ],
+      [
+        "tests/features/storage.js :: có characters.json.tmp hợp lệ → khởi động thành công với dữ liệu trong .tmp",
+        "tests/features/storage.js :: FORCE_EMPTY=1 → khởi động được khi file hỏng"
+      ],
+      [
+        "tests/features/storage.js :: hai tiến trình cùng DATA_DIR → tiến trình thứ hai thoát mã 3"
+      ],
+      [
+        "tests/features/storage.js :: giả writeSync ném lỗi 3 lần → /api/status có saveErrors: 3, ok: false",
+        "tests/features/storage.js :: lỗi lưu: admin online nhận notice cảnh báo",
+        "tests/features/storage.js :: lỗi lưu ≥ 3 lần: selectChar bị từ chối",
+        "tests/features/storage.js :: lần ghi sau thành công → saveErrors: 0"
+      ],
+      [
+        "tests/smoke.js :: npm test: không kiểm tra nào hỏng"
+      ]
+    ]
   },
   {
     "id": "ops-persist-shard",
@@ -630,7 +792,7 @@
     "phase": 0,
     "title": "Nhiệm vụ hằng ngày Tiểu Nhị: bổ sung kiểm thử bot và admin /tieunhi",
     "priority": "Must",
-    "status": "todo",
+    "status": "done",
     "acceptance": [
       "dailyTaskTest: nhận việc → me.daily.task.n === DAILY.count(cấp)",
       "npcAct finish khi chưa đủ không cộng gì; /tieunhi done rồi finish cộng đúng DAILY.reward(cấp).exp và 1 lượng",
@@ -639,7 +801,8 @@
       "npm test in 'TẤT CẢ KIỂM TRA ĐỀU ĐẠT'"
     ],
     "tests": [
-      "tests/features/daily.js"
+      "tests/features/daily.js",
+      "tests/smoke.js"
     ],
     "files": [
       "tests/features/daily.js",
@@ -653,17 +816,37 @@
     "section": "docs/gdd/05-he-thong-pve.md",
     "size": "S",
     "depends": [],
-    "notes": "Đã có trong code, chưa có kiểm thử bot (R6); giữ song song Việc Làng"
+    "notes": "Đã có trong code, chưa có kiểm thử bot (R6); giữ song song Việc Làng",
+    "proof": [
+      [
+        "tests/features/daily.js :: nhận việc → me.daily.task.n === DAILY.count(80)"
+      ],
+      [
+        "tests/features/daily.js :: npcAct finish khi chưa đủ tiến độ không cộng gì",
+        "tests/features/daily.js :: /tieunhi done rồi finish → +23400 EXP (DAILY.reward(80).exp) và +1 lượng"
+      ],
+      [
+        "tests/features/daily.js :: lượt thứ 5 thêm 1 Rương Báu vào túi",
+        "tests/features/daily.js :: lượt 21 bị từ chối",
+        "tests/features/daily.js :: gửi finish 2 lần liền chỉ cộng một lần"
+      ],
+      [
+        "tests/features/daily.js :: DAILY.reward(120).exp === 46560"
+      ],
+      [
+        "tests/smoke.js :: npm test: không kiểm tra nào hỏng"
+      ]
+    ]
   },
   {
     "id": "soc-trade",
     "phase": 0,
     "title": "Giao dịch 1-1 khóa + xác nhận, kẹp trần xu, kiểm vị trí lúc chốt",
     "priority": "Must",
-    "status": "todo",
+    "status": "done",
     "acceptance": [
       "Đơn vị: A 2.000.000.000 xu, B đặt 1.000.000.000 xu, khóa + xác nhận → giao dịch hủy, A vẫn 2.000.000.000, B vẫn 1.000.000.000",
-      "node gddwork/lab/soc/trade-cap.js (chép vào kiểm thử) không còn in 'VƯỢT trần 2e9'",
+      "kịch bản trade-cap (gddwork/lab/soc/trade-cap.js không còn trong repo, viết lại thành kiểm thử): mọi tổ hợp xu không bên nào vượt trần 2e9",
       "Bot: B đi xa 400 px sau khi khóa, hai bên xác nhận → tradeEnd { ok: false }, đồ không đổi chủ",
       "tradeReq/tradeAccept từ chối khi p.bf hoặc p.cw (khi các tính năng đó có)",
       "Client: bên kia không đặt gì thì nút đổi thành 'Xác nhận (bạn không nhận gì)'",
@@ -671,7 +854,11 @@
     ],
     "tests": [
       "tests/features/social.js",
-      "tests/e2e/ui-multiplayer.js"
+      "tests/e2e/ui-multiplayer.js",
+      "tests/features/fashion.js",
+      "tests/features/gems.js",
+      "tests/features/pets.js",
+      "tests/smoke.js"
     ],
     "files": [
       "src/server/modules/trade/index.js",
@@ -683,7 +870,32 @@
     ],
     "section": "docs/gdd/05-he-thong-xa-hoi-pvp.md §1.5",
     "size": "S",
-    "depends": []
+    "depends": [],
+    "proof": [
+      [
+        "tests/features/social.js :: trần xu: A 2.000.000.000 xu, B đặt 1.000.000.000 → giao dịch hủy"
+      ],
+      [
+        "tests/features/social.js :: trade-cap: 784 tổ hợp xu, không bên nào vượt trần 2e9"
+      ],
+      [
+        "tests/features/social.js :: bot: B đi xa 400 px rồi hai bên xác nhận → tradeEnd { ok: false }, đồ và xu không đổi chủ",
+        "tests/features/social.js :: vị trí lúc chốt: B đi xa 400 px sau khi khóa"
+      ],
+      [
+        "tests/features/social.js :: tradeReq/tradeAccept từ chối khi một bên có p.bf hoặc p.cw"
+      ],
+      [
+        "tests/e2e/ui-multiplayer.js :: bạn không nhận gì"
+      ],
+      [
+        "tests/smoke.js :: npm test: không kiểm tra nào hỏng",
+        "tests/features/social.js :: giao dịch xu + vật phẩm thành công",
+        "tests/features/fashion.js :: tráo đồ trong ô đã đặt sau khi khóa: giao dịch bị hủy",
+        "tests/features/gems.js :: giao dịch thành công: ngọc khảm đi theo món",
+        "tests/features/pets.js :: giao dịch thú sang người khác"
+      ]
+    ]
   },
   {
     "id": "ui-ask-dialog",
@@ -855,6 +1067,78 @@
         "tests/features/repo.js :: main có đủ 8 nhóm commit D-01"
       ]
     ]
+  },
+  {
+    "id": "art-x3-world",
+    "phase": 1,
+    "title": "Lớp thế giới pixel ×3 (vẽ tỉ lệ nguyên rồi thu mượt) và bộ nạp atlas ảnh AI (DESIGN_RULES mục 1, 11; D-07)",
+    "priority": "Must",
+    "status": "todo",
+    "acceptance": [
+      "lớp thế giới vẽ vào canvas phụ ở tỉ lệ nguyên k = ceil(s) với imageSmoothingEnabled = false rồi dán ra màn hình đúng một lần mỗi khung có làm mượt; s nguyên thì vẽ thẳng; ninja.game có art = 3, k, s đúng ở 1280×720 DPR 1, 844×390 DPR 2 và DPR 3",
+      "hình code cũ phóng nguyên ×3 (khối 3×3, không làm mượt); tọa độ vẽ làm tròn Math.round(x * 3); NINJA_H, monsterHeight, petHeight vẫn trả đơn vị thế giới; nhãn tên và thanh máu đúng chỗ",
+      "bộ nạp atlas đọc src/client/art/<nhóm>/<id>.png + .json khi prewarmMonsters; thiếu file hoặc chưa tải xong thì vẽ hình code, không chặn vào bản đồ, không lỗi console",
+      "tools/check-data.js kiểm mọi atlas: JSON đủ khóa (fw, fh, foot, anims), chiều cao khớp monsterHeight × 3, số màu ≤ trần, viền ngoài #1d1424, đủ 5 hoạt ảnh idle/walk/atk/hit/die",
+      "test:perf máy tính và MOBILE=1 (kèm điện thoại @3x) sau khi chuyển lớp thế giới: ≥ 58 fps, CPU trung bình ≤ 5 ms, p95 ≤ 8 ms",
+      "ảnh tools/shot.js 1280×720 và 844×390 trước/sau lưu docs/shots/art-x3-world/, in OK no console errors"
+    ],
+    "tests": [
+      "tests/e2e/e2e.js",
+      "tests/e2e/perf.js",
+      "tools/check-data.js",
+      "tests/e2e/gallery.js"
+    ],
+    "files": [
+      "src/client/js/game/game.js",
+      "src/client/js/render/monsterart.js",
+      "src/client/js/render/monster/**",
+      "src/client/art/",
+      "tools/check-data.js",
+      "DESIGN_RULES.md"
+    ],
+    "pillars": [
+      "P1"
+    ],
+    "section": "DESIGN_RULES.md mục 11",
+    "size": "L",
+    "depends": [],
+    "notes": "Thêm theo D-07 (DESIGN_RULES mục 11, bước 1 của thứ tự chuyển đổi)."
+  },
+  {
+    "id": "art-x3-hellgate",
+    "phase": 1,
+    "title": "Atlas ×3 từ ảnh AI cho trọn vùng Cổng Địa Ngục: Địa Ngục Khuyển, Tử Thần Kỵ Sĩ, Hắc Long và boss Ma Thần (DESIGN_RULES mục 11 bước 2)",
+    "priority": "Must",
+    "status": "todo",
+    "acceptance": [
+      "src/client/art/monster/{hellhound,deathknight,darkdragon}.png+json và src/client/art/boss/boss_god.png+json, mỗi atlas đủ idle 8, walk 8, atk 10-14 có hitF, hit 6, die 16-18; npm run check kiểm atlas không lỗi",
+      "src/client/art/CREDITS.md ghi model, prompt (có câu phong cách chung), seed, ngày cho từng ảnh nguồn; không ảnh nào tải từ nơi khác",
+      "trên bản đồ hell_gate mọi quái và boss vẽ bằng atlas ×3 (không nửa ×1 nửa ×3); hình code cũ của 4 loài này bị xóa",
+      "gallery có mục atlas ×3: mỗi loài × 5 hoạt ảnh không ô trống, mã băm ổn định",
+      "test:perf MAPS=hell_gate máy tính và MOBILE=1: ≥ 58 fps, CPU trung bình ≤ 5 ms, p95 ≤ 8 ms",
+      "ảnh 1280×720 và 844×390 ở forceHour 12 và 22 lưu docs/shots/art-x3-hellgate/, OK no console errors"
+    ],
+    "tests": [
+      "tools/check-data.js",
+      "tests/e2e/gallery.js",
+      "tests/e2e/perf.js",
+      "tests/e2e/e2e.js"
+    ],
+    "files": [
+      "src/client/art/monster/",
+      "src/client/art/boss/",
+      "src/client/art/CREDITS.md",
+      "src/client/js/render/monster/**"
+    ],
+    "pillars": [
+      "P1"
+    ],
+    "section": "DESIGN_RULES.md mục 11",
+    "size": "L",
+    "depends": [
+      "art-x3-world"
+    ],
+    "notes": "Thêm theo D-07. Ảnh tạo bằng Cloudflare Workers AI, công cụ cắt/khung xương ở ~/.local/share/ninja-art/."
   },
   {
     "id": "art-anim-standard",

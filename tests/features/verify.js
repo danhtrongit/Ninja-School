@@ -14,7 +14,7 @@ const ok = (cond, msg) => { console.log(`${cond ? '  ✔' : '  ✘'} ${msg}`); i
 
 function copyTree() {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ns-verify-copy-'));
-  for (const p of ['src', 'tools', 'scripts', 'docs', 'CLAUDE.md', 'package.json']) {
+  for (const p of ['src', 'tests', 'tools', 'scripts', 'docs', 'CLAUDE.md', 'package.json']) {
     fs.cpSync(path.join(ROOT, p), path.join(dir, p), { recursive: true, filter: (s) => !s.startsWith(path.join(ROOT, 'src', 'client', 'audio') + path.sep) });
   }
   return dir;
@@ -33,7 +33,10 @@ function main() {
 
   const floor = spawnSync(process.execPath, [VERIFY, '--quick', '--floor'], { encoding: 'utf8' });
   const lack = floor.stdout.split('\n').filter((l) => l.trim().startsWith('thiếu sàn:'));
-  ok(floor.status === 1 && lack.length > 0, `--floor trên cây hiện tại: mã 1 và in các dòng thiếu sàn (${lack.length} dòng)`);
+  // mỗi mục sàn chưa đạt ở bảng --quick (dòng '·') phải có đúng một dòng 'thiếu sàn' khi chạy --floor
+  const unmet = clean.stdout.split('\n').filter((l) => l.trim().startsWith('· '));
+  ok(floor.status === (unmet.length ? 1 : 0) && lack.length === unmet.length && unmet.every((u) => lack.some((l) => l.includes(u.trim().slice(2).split(':')[0]))),
+    `--floor trên cây hiện tại: mã ${floor.status}, đúng một dòng thiếu sàn cho mỗi mục chưa đạt (${lack.length}/${unmet.length})`);
 
   const cases = [
     ['xóa id="hud-map" khỏi index.html', (d) => edit(d, 'src/client/index.html', (s) => s.replace('id="hud-map"', 'id="hud-mapx"')), [], (r) => r.stdout.includes('#hud-map')],

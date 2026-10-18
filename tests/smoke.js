@@ -4,6 +4,8 @@
 // các bot qua WebSocket. Các phần chạy nối tiếp và dùng chung trạng thái (bot, nhân vật) phần trước để lại,
 // nên giữ đúng thứ tự dưới đây. Mỗi tính năng một file trong features/, hạ tầng trong lib/.
 const fs = require('fs');
+const path = require('path');
+const { spawn } = require('child_process');
 const { DATA, sleep, ok, fail, failCount, serverLog, startServer } = require('./lib/harness');
 const { passiveUnitTests, passiveBookTest, passiveRulesTest } = require('./features/passive');
 const { bossUnitTests, bossCleanupUnitTests, bossEventTest } = require('./features/boss');
@@ -14,7 +16,7 @@ const { gemUnitTests, gemTest } = require('./features/gems');
 const { petUnitTests, petTest } = require('./features/pets');
 const { mailUnitTests, mailTest } = require('./features/mail');
 const { arenaUnitTests, arenaTest } = require('./features/arena');
-const { accountTest, loginBurstTest } = require('./features/account');
+const { accountTest } = require('./features/account');
 const { questTest } = require('./features/quest');
 const { combatTest } = require('./features/combat');
 const { skillsTest, resetStatsTest } = require('./features/skills');
@@ -30,8 +32,6 @@ const { unit: boundUnit, bot: boundBot } = require('./features/bound');
 const { balanceUnitTests, balanceBotTest } = require('./features/balance');
 const { devtoolsTest } = require('./features/devtools');
 const { adminTest } = require('./features/admin');
-const { storageUnitTests, storageProcTests, crashGuardTests } = require('./features/storage');
-const { backupUnitTests, backupRestoreTest, backupRestartTest, backupLagTest } = require('./features/backup');
 
 // Kiểm thử không cần server (thế giới giả hoặc gọi thẳng công thức)
 function unitTests() {
@@ -53,10 +53,22 @@ function unitTests() {
   clanUnitTests();
 }
 
+// tests/ops.js trong tiến trình con: gom đầu ra để in liền một khối sau phần bot chính
+function runOps() {
+  return new Promise((resolve) => {
+    const ch = spawn(process.execPath, [path.join(__dirname, 'ops.js')], { env: process.env });
+    let out = '';
+    ch.stdout.on('data', (d) => { out += d; });
+    ch.stderr.on('data', (d) => { out += d; });
+    ch.on('close', (code) => resolve({ code, out }));
+  });
+}
+
 async function main() {
+  const t0 = Date.now();
   unitTests();
-  await storageUnitTests();
-  await backupUnitTests();
+  // phần vận hành (máy chủ riêng) chạy song song, kết quả in ở cuối
+  const ops = runOps();
   const srv = await startServer();
 
   // trạng thái dùng chung giữa các phần: ctx.a = bot admin (KiemSi), ctx.b = bot CungThu, ctx.auth = gói đăng nhập của A
@@ -108,24 +120,21 @@ async function main() {
   ok(files.includes('characters.json'), 'ghi file dữ liệu khi tắt server');
   if (files.includes('characters.json')) await reloadTest();
   // vận hành: máy chủ riêng (cổng 4310-4339, DATA_DIR tạm, log riêng vì các phần này cố ý gây lỗi)
-  try {
-    await storageProcTests();
-    await crashGuardTests();
-    await loginBurstTest();
-    await backupRestoreTest();
-    await backupRestartTest();
-    await backupLagTest();
-  } catch (e) {
-    fail();
-    console.error('  ✘ Lỗi:', e.message);
-  }
+  const r = await ops;
+  process.stdout.write(r.out);
+  const bad = (r.out.match(/^\s*✘/gm) || []).length;
+  for (let i = 0; i < bad; i++) fail();
+  if (r.code !== 0 && !bad) ok(false, `tests/ops.js thoát mã ${r.code}`);
   if (/Error|Lỗi xử lý/.test(serverLog())) {
     console.log(serverLog());
     ok(false, 'server không có lỗi trong log');
   }
   fs.rmSync(DATA, { recursive: true, force: true });
+  const sec = (Date.now() - t0) / 1000;
+  ok(sec <= 250, `npm test xong trong ≤ 250 giây (${sec.toFixed(1)} s)`);
   const failures = failCount();
-  console.log(failures ? `\nTHẤT BẠI: ${failures} kiểm tra lỗi` : '\nTẤT CẢ KIỂM TRA ĐỀU ĐẠT');
+  // dòng ✔ cuối để docs/features.json dẫn bằng chứng "npm test đạt" (scripts/check-features.js chỉ đọc dòng ✔)
+  console.log(failures ? `\nTHẤT BẠI: ${failures} kiểm tra lỗi` : `\n  ✔ npm test: không kiểm tra nào hỏng (${sec.toFixed(1)} s)\nTẤT CẢ KIỂM TRA ĐỀU ĐẠT`);
   process.exit(failures ? 1 : 0);
 }
 

@@ -171,6 +171,8 @@ Lễ Hội Trăng Rằm 2026 đang chạy tới 2026-11-08: mùa đang chạy kh
 | T1.32 | `ui-touch` | Điều khiển cảm ứng: D-pad, cụm kỹ năng, nút tự đánh, gợi ý xoay ngang | Must | xong | M | không |
 | T1.33 | `ui-windows` | Khung cửa sổ và 23 tệp cửa sổ (22 khóa refresh() + hội thoại) | Must | xong | L | không |
 | T1.34 | `world-movement` | Di chuyển, nhảy đôi, xuống bục, máy chủ kiểm tốc và độ cao nhảy | Must | xong | S | không |
+| T1.35 | `art-x3-world` | Lớp thế giới pixel ×3 (vẽ tỉ lệ nguyên rồi thu mượt) và bộ nạp atlas ảnh AI (D-07) | Must | chưa xong | L | không |
+| T1.36 | `art-x3-hellgate` | Atlas ×3 cho trọn vùng Cổng Địa Ngục (Địa Ngục Khuyển, Tử Thần Kỵ Sĩ, Hắc Long, Ma Thần) | Must | chưa xong | L | T1.35 |
 
 **Lô thực hiện và thứ tự gộp.**
 

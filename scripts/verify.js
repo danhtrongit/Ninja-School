@@ -333,6 +333,12 @@ async function stepCmd(name, cmd, args, o, pass) {
     if (LOAD) await stepCmd('9 Tải (test:load)', process.execPath, ['tests/load/load.js'], { env: { OUT: path.join(OUT, 'load') }, log: path.join(OUT, 'load.log'), timeout: 2 * 3600000 }, (r) => r.code === 0 && r.out.includes('TẢI ĐẠT'));
     else report('9 Tải (test:load)', null, ['bỏ qua (--no-load)']);
     if (PROD) await stepCmd('9b Production (test:prod)', process.execPath, ['tests/prod/smoke-prod.js'], { log: path.join(OUT, 'prod.log'), timeout: 600000 }, (r) => r.code === 0 && r.out.includes('PRODUCTION ĐẠT'));
+    // D-02: verify chạy đủ các bộ test; phần thêm của chính verify (bước 1-6, bật/tắt server, dọn) không quá 15 giây
+    const testMs = steps.filter((s) => /^(7|8|9)/.test(s.name) && s.ms != null).reduce((n, s) => n + s.ms, 0);
+    const extra = Date.now() - t0 - testMs;
+    report('9c Thời gian thêm ngoài các bộ test', extra <= 15000, [`${(extra / 1000).toFixed(1)} s (≤ 15 s), các bộ test ${(testMs / 1000).toFixed(1)} s`]);
+    // bảng bước tới đây làm log cho check:features (bằng chứng "scripts/verify.js :: <nhãn>")
+    fs.writeFileSync(path.join(OUT, 'verify.log'), steps.map((s) => `${s.ok === null ? '–' : s.ok ? '✔' : '✘'} ${s.name}${s.lines.length ? `: ${s.lines.join(' | ')}` : ''}`).join('\n') + '\n');
     // bước bị tắt bằng cờ (CI: --no-browser --no-load) thì check:features bỏ qua bằng chứng nằm trong log của bước đó
     const skip = [...(BROWSER ? [] : ['e2e-d.log', 'e2e-m.log', 'ui.log', 'perf-d.log', 'perf-m.log', 'visual.log', 'sfx.log', 'ui-audit.log']), ...(LOAD ? [] : ['load.log']), ...(PROD ? [] : ['prod.log'])];
     await stepCmd('10 Sổ tính năng (check:features)', process.execPath, ['scripts/check-features.js'], { env: { VERIFY_LOGS: OUT, VERIFY_SKIP: skip.join(',') }, log: path.join(OUT, 'features.log'), timeout: 600000 }, (r) => r.code === 0);

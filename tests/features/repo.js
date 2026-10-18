@@ -46,6 +46,9 @@ function repoUnitTests() {
   ok(/hộp xác nhận `ask\(\)` 90/.test(dr), 'DESIGN_RULES.md mục 8 có lớp z-index 90 cho hộp xác nhận');
   const ci = require('fs').readFileSync(path.join(ROOT, '.github', 'workflows', 'ci.yml'), 'utf8');
   ok(/node-version:\s*24\b/.test(ci) && /npm run verify\b/.test(ci), 'CI chạy npm run verify với node 24');
+  // phủ kiểm thử: mọi hành động router có ít nhất một tests/features/*.js gửi tới (scripts/lib/coverage.js, bước 6b của verify)
+  const cov = require('../../scripts/lib/coverage').stepCoverage(ROOT, false);
+  ok(cov.ok, `phủ kiểm thử: ${cov.lines[0]}${cov.ok ? '' : ` (${cov.lines.filter((l) => l.startsWith('THIẾU')).join('; ')})`}`);
   // bản sao sạch (verify trên clone): src, tests, tools không có thay đổi chưa commit
   if (process.env.NS_CLEAN_CLONE === '1') {
     const st = git('status', '--short', '--', 'src', 'tests', 'tools');
