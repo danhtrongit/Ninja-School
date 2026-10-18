@@ -104,8 +104,14 @@ async function clickPlayer(page, name) {
     await p.click('.win-trade .win-foot .btn:has-text("Khóa")');
     await wait(p, 300);
   }
+  // A đưa đồ + xu, B không đặt gì: nút xác nhận của A cảnh báo, của B giữ chữ thường
+  const okText = (p) => p.textContent('.win-trade [data-act=trade-ok]').then((s) => (s || '').trim());
+  const okA = await okText(a);
+  const okB = await okText(b);
+  ok(okA === 'Xác nhận (bạn không nhận gì)' && okB === 'Xác nhận', `bên kia không đặt gì → nút đổi thành "${okA}" (B: "${okB}")`);
+  await a.screenshot({ path: `${OUT}-3b-trade-warn.png` });
   for (const p of [a, b]) {
-    await p.click('.win-trade .win-foot .btn:has-text("Đồng ý")');
+    await p.click('.win-trade [data-act=trade-ok]');
     await wait(p, 400);
   }
   await wait(b, 600);

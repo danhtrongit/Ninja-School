@@ -1,6 +1,7 @@
 'use strict';
 
-// Lệnh quản trị (tài khoản trong ADMINS): /lv /item /plus /tp /xu /boss /mail /code /sukien /arena... /xuk
+// Lệnh quản trị (tài khoản trong ADMINS). Lệnh vận hành (/mail /code /sukien /arena /all /kick /mobs) luôn chạy;
+// lệnh kiểm thử/gian lận (TEST_CMDS) chỉ chạy khi server có NS_TEST=1 (bộ test), production không đặt
 const { ITEMS, UPGRADE } = require('../../../shared/data/items');
 const { MAPS } = require('../../../shared/data/maps');
 const { MONSTERS } = require('../../../shared/data/monsters');
@@ -11,6 +12,10 @@ const { int, own, refreshInfo } = require('../../core/util');
 const { rewardItems, rewardLabel, normCode } = require('../mail');
 const { find } = require('../invites');
 const { bind } = require('../../../shared/bound');
+
+const TEST_CMDS = new Set(['lv', 'item', 'hethan', 'plus', 'thu', 'xu', 'xuk', 'luong', 'tp', 'boss', 'bosshp', 'chet', 'event', 'tieunhi']);
+// đọc lúc gọi (không chốt lúc nạp module) để kiểm thử đơn vị đổi được
+const testMode = () => process.env.NS_TEST === '1';
 
 class Admin {
   constructor(world) {
@@ -85,8 +90,12 @@ class Admin {
 
   // Lệnh admin (chat đã kiểm tra quyền)
   command(p, cmd, args, sys) {
+    const name = String(cmd).toLowerCase();
+    // chưa có nhật ký kiểm toán: mỗi lệnh một dòng log (args đã tách theo khoảng trắng nên không chứa xuống dòng)
+    console.log(`[ADMIN] ${(p.conn && p.conn.account) || p.name} /${name}${args.length ? ` ${args.join(' ').slice(0, 200)}` : ''}`);
+    if (TEST_CMDS.has(name) && !testMode()) return sys('Lệnh không tồn tại.');
     const n = int(args[0], 0);
-    switch (cmd.toLowerCase()) {
+    switch (name) {
       case 'lv': {
         const target = Math.max(1, Math.min(MAX_LEVEL, n));
         const diff = target - p.c.level;
@@ -179,6 +188,23 @@ class Admin {
         const e = ev.start(args[1] || null, args[2] || null);
         return sys(e || 'Đã gọi Tà Thú.');
       }
+      case 'tieunhi': {
+        // kiểm thử nhiệm vụ Tiểu Nhị: done = đủ tiến độ việc đang nhận, reset = xóa tiến độ hôm nay
+        const sub = String(args[0] || '').toLowerCase();
+        const d = this.world.mods.quest.ensureDaily(p);
+        if (sub === 'done') {
+          if (!d.task) return sys('Chưa nhận nhiệm vụ Tiểu Nhị.');
+          d.task.prog = d.task.n;
+          p.markMe();
+          return sys(`Nhiệm vụ Tiểu Nhị: ${d.task.prog}/${d.task.n}.`);
+        }
+        if (sub === 'reset') {
+          p.c.daily = { day: '', done: 0, task: null };
+          p.markMe();
+          return sys('Đã xóa tiến độ nhiệm vụ Tiểu Nhị hôm nay.');
+        }
+        return sys('Dùng: /tieunhi done | /tieunhi reset');
+      }
       case 'all': return this.world.announce(args.join(' '), 'world');
       case 'kick': {
         const o = find(this.world, args[0]);
@@ -194,5 +220,5 @@ class Admin {
 module.exports = {
   name: 'admin',
   init: (world) => new Admin(world),
-  Admin,
+  Admin, TEST_CMDS,
 };

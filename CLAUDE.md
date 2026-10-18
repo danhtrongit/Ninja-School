@@ -15,7 +15,10 @@ npm test                       # khởi động server tạm + bot WebSocket ch�
 npm run check                  # kiểm tra chéo dữ liệu game (item, quái, bản đồ, nhiệm vụ)
 npm run test:ui / test:e2e / test:perf   # kiểm thử trình duyệt thật (Playwright), xem đầu file trong tests/e2e/
 npm run test:prod              # smoke test máy chủ thật (PROD_URL, mặc định https://ninja.iqx.vn): đăng ký → lên cấp, kiểm /api/status trùng commit main
-PORT=3000 DATA_DIR=/tmp/ns ADMINS=tentk1,tentk2 node src/server/index.js   # admin dùng được lệnh /lv /item /plus /tp /xu /boss /bosshp /chet /event /mail /code /sukien /arena
+PORT=3000 DATA_DIR=/tmp/ns ADMINS=tentk1,tentk2 NS_TEST=1 node src/server/index.js   # admin dùng được lệnh vận hành /mail /code /sukien /arena /all /kick
+# NS_TEST=1 (chỉ server kiểm thử, production KHÔNG đặt): mở lệnh kiểm thử /lv /item /plus /tp /xu /xuk /luong /boss /bosshp /chet /event /hethan /thu /tieunhi
+# và cho đăng ký tên có trong ADMINS; không có NS_TEST thì tên trong ADMINS chưa có tài khoản không đăng ký được ([ALERT] trong log).
+# Mỗi lệnh admin ghi một dòng "[ADMIN] <tài khoản> /<lệnh> ..." ra log. Script tự bật server (tests/, scripts/verify.js) phải đặt NS_TEST=1.
 ```
 
 ## Cấu trúc thư mục

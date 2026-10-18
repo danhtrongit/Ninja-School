@@ -121,6 +121,12 @@ function attachGateway(server, { db, world, config, gameData }) {
         const pw = String(m.p || '');
         if (!USER_RE.test(u)) return err('Tên tài khoản 4-16 ký tự (chữ, số, _).');
         if (pw.length < 6 || pw.length > 64) return err('Mật khẩu 6-64 ký tự.');
+        // quyền admin theo tên: tên trong ADMINS chưa có tài khoản thì ai đăng ký trước sẽ thành admin, nên cấm
+        // (server kiểm thử NS_TEST=1 cho phép vì bot tự đăng ký tài khoản admin)
+        if (process.env.NS_TEST !== '1' && config.admins.includes(u.toLowerCase()) && !db.accounts[u.toLowerCase()]) {
+          console.log(`[ALERT] chặn đăng ký tên trong ADMINS: ${u} (ip ${conn.ip})`);
+          return err('Tên tài khoản không hợp lệ.');
+        }
         if (!regAllowed(conn.ip)) return err('Đã tạo quá nhiều tài khoản từ mạng này. Hãy thử lại sau.');
         const acc = db.createAccount(u, pw);
         if (!acc) return err('Tài khoản đã tồn tại.');

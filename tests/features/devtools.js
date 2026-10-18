@@ -53,7 +53,7 @@ async function devtoolsTest() {
   const fs = require('fs');
   const data = fs.mkdtempSync(path.join(os.tmpdir(), 'ns-dev-'));
   const srv = spawn(process.execPath, [path.join(__dirname, '..', '..', 'src', 'server', 'index.js')], {
-    env: { ...process.env, PORT: String(port), DATA_DIR: data, ADMINS: 'devadmin', DEV_TOOLS: '1', METRICS_TOKEN: 'tk123', GIT_SHA: sha, TATHU: '0', SEASON: '0' }, stdio: 'ignore',
+    env: { ...process.env, PORT: String(port), DATA_DIR: data, NS_TEST: '1', ADMINS: 'devadmin', DEV_TOOLS: '1', METRICS_TOKEN: 'tk123', GIT_SHA: sha, TATHU: '0', SEASON: '0' }, stdio: 'ignore',
   });
   try {
     for (let i = 0; i < 50 && (await get(port, '/api/status')).status !== 200; i++) await sleep(100);
