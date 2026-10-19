@@ -17,6 +17,10 @@ class Metrics {
     this.start = Date.now();
     this.loop = monitorEventLoopDelay({ resolution: 1 });
     this.loop.enable();
+    // heapUsed tại một thời điểm lẫn cả rác chờ GC (răng cưa 20-75 MB); đáy heap trong cửa sổ ≈ phần còn giữ thật, rò rỉ làm đáy tăng
+    this.heapLo = Infinity;
+    this.memTimer = setInterval(() => { this.heapLo = Math.min(this.heapLo, process.memoryUsage().heapUsed); }, 1000);
+    this.memTimer.unref();
   }
 
   // Bọc obj[k] để đo thời gian chạy đồng bộ (ms) và gọi rec(ms)
@@ -53,13 +57,15 @@ class Metrics {
     this.loop.reset();
     const saveWin = this.saveWin;
     this.saveWin = 0;
+    const heapLo = Math.min(this.heapLo, mem.heapUsed);
+    this.heapLo = Infinity;
     return {
       up: Math.round((Date.now() - this.start) / 1000),
       online: this.world ? this.world.players.size : 0,
       tick: { n: this.tickN, p50: q(0.5), p95: q(0.95), p99: q(0.99), max: n ? +t[n - 1].toFixed(2) : 0 },
       save: { n: this.saves.length, last: this.saves.length ? +this.saves[this.saves.length - 1].toFixed(2) : 0, max: +this.saveMax.toFixed(2), win: +saveWin.toFixed(2) },
       loop,
-      mem: { rss: Math.round(mem.rss / 1048576), heap: Math.round(mem.heapUsed / 1048576) },
+      mem: { rss: Math.round(mem.rss / 1048576), heap: Math.round(mem.heapUsed / 1048576), heapLo: Math.round(heapLo / 1048576) },
     };
   }
 

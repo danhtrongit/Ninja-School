@@ -4,7 +4,7 @@
 // Tự bật server tạm (cổng 37xx, DATA_DIR tạm, METRICS_TOKEN ngẫu nhiên), đưa N bot WebSocket (mặc định 500) rải các bãi luyện,
 // đi và đánh quái, chat thỉnh thoảng; đọc /api/metrics mỗi phút trong LOAD_MIN phút (mặc định 60).
 // Ngưỡng (giai đoạn ổn định, sau khi đủ bot): tick p95 ≤ 50 ms mỗi phút; mỗi lần lưu chặn vòng lặp ≤ 20 ms;
-// bộ nhớ ổn định: heap trung bình 1/3 cuối ≤ 1,15 × heap trung bình 1/3 đầu (và RSS ≤ 1,2 ×); server không lỗi.
+// bộ nhớ ổn định: đáy heap (sau GC) trung bình 1/3 cuối ≤ 1,15 × 1/3 đầu (và RSS ≤ 1,2 ×); server không lỗi.
 // Biến môi trường: N, LOAD_MIN, OUT (thư mục ghi load-report.json), DATA_DIR (dùng dữ liệu có sẵn).
 const fs = require('fs');
 const os = require('os');
@@ -90,7 +90,7 @@ async function metrics() {
       r.kbps = +((b - (rows.length ? rows[rows.length - 1].bytes : bytes0)) / 60 / 1024 / Math.max(1, alive)).toFixed(1);
       r.bytes = b;
       rows.push(r);
-      console.log(`  phút ${m}: online ${r.online}, tick p50 ${r.tick.p50} p95 ${r.tick.p95} max ${r.tick.max} ms, lưu ${r.save.win} ms, vòng lặp p99 ${r.loop.p99} ms, heap ${r.mem.heap} MB, rss ${r.mem.rss} MB, ${r.kbps} KB/s/người`);
+      console.log(`  phút ${m}: online ${r.online}, tick p50 ${r.tick.p50} p95 ${r.tick.p95} max ${r.tick.max} ms, lưu ${r.save.win} ms, vòng lặp p99 ${r.loop.p99} ms, heap ${r.mem.heap} MB (đáy ${r.mem.heapLo}), rss ${r.mem.rss} MB, ${r.kbps} KB/s/người`);
     } else console.log(`  phút ${m}: không đọc được /api/metrics`);
   }
   clearInterval(loop);
@@ -106,9 +106,9 @@ async function metrics() {
   const avg = (a, k) => a.reduce((s, r) => s + r.mem[k], 0) / Math.max(1, a.length);
   const head = rows.slice(0, third);
   const tail = rows.slice(-third);
-  const hg = avg(tail, 'heap') / Math.max(1, avg(head, 'heap'));
+  const hg = avg(tail, 'heapLo') / Math.max(1, avg(head, 'heapLo'));
   const rg = avg(tail, 'rss') / Math.max(1, avg(head, 'rss'));
-  ok(hg <= LIM.heapGrow, `bộ nhớ ổn định: heap 1/3 cuối / 1/3 đầu = ${hg.toFixed(2)} (≤ ${LIM.heapGrow})`);
+  ok(hg <= LIM.heapGrow, `bộ nhớ ổn định: đáy heap (sau GC, mẫu mỗi giây) 1/3 cuối / 1/3 đầu = ${hg.toFixed(2)} (≤ ${LIM.heapGrow})`);
   ok(rg <= LIM.rssGrow, `bộ nhớ ổn định: RSS 1/3 cuối / 1/3 đầu = ${rg.toFixed(2)} (≤ ${LIM.rssGrow})`);
 
   for (const b of bots) b.close();
