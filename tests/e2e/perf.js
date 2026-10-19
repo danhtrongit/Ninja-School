@@ -2,6 +2,7 @@
 // + 30 người chơi khác (bot WebSocket) đánh quái cùng bản đồ. Cần Playwright + Chromium.
 // Dùng: BASE_URL=http://localhost:3000 ACC=<tk admin> BOTS=<30 tk admin, cách bằng dấu phẩy> MOBILE=1 DPR=3 MAPS=heaven,abyss OUT=/tmp/perf NODE_PATH=$(npm root -g) npm run test:perf
 // DPR: tỉ lệ điểm ảnh thiết bị (mặc định 1 máy tính, 2 điện thoại); điện thoại @3x vẽ lớp thế giới ×3 lớn nhất (DESIGN_RULES mục 10, 11)
+// GPU=1: Chromium vẽ canvas bằng GPU (bước điện thoại @3x, như điện thoại thật); mặc định vẽ bằng CPU (khắt khe hơn).
 // Ngưỡng mỗi bản đồ: trung bình ≥ 58 khung/giây, CPU mỗi khung trung bình ≤ 5 ms, p95 ≤ 8 ms, thấy đủ 30 người chơi khác.
 const fs = require('fs');
 const os = require('os');
@@ -12,6 +13,7 @@ const BASE = process.env.BASE_URL || 'http://localhost:3000/';
 const MOBILE = process.env.MOBILE === '1';
 const ACC = process.env.ACC || 'fin3';
 const DPR = +process.env.DPR || (MOBILE ? 2 : 1);
+const GPU = process.env.GPU === '1';
 const MAPS = (process.env.MAPS || 'heaven,dragon_palace,abyss,crystal_cave,hell_gate').split(',');
 const OUT = (process.env.OUT || path.join(os.tmpdir(), 'ninja-e2e', 'perf')) + '-' + (MOBILE ? 'm' : 'd') + (process.env.DPR ? DPR : '');
 fs.mkdirSync(path.dirname(OUT), { recursive: true });
@@ -22,7 +24,7 @@ let fails = 0;
 const ok = (c, m) => { console.log((c ? '  ✔ ' : '  ✘ ') + m); if (!c) fails++; };
 
 (async () => {
-  const browser = await chromium.launch();
+  const browser = await chromium.launch(GPU ? { args: ['--enable-gpu-rasterization', '--ignore-gpu-blocklist', '--use-angle=metal'] } : {});
   const ctx = await browser.newContext(MOBILE ? { viewport: { width: 844, height: 390 }, deviceScaleFactor: DPR, hasTouch: true, isMobile: true } : { viewport: { width: 1280, height: 720 }, deviceScaleFactor: DPR });
   const page = await ctx.newPage();
   const errors = [];
@@ -177,7 +179,7 @@ const ok = (c, m) => { console.log((c ? '  ✔ ' : '  ✘ ') + m); if (!c) fails
     });
     ok(!u.bad.length && Number.isInteger(u.ninjaH) && u.ninjaH > 0 && u.cam, `${mapId}: chiều cao ${u.n} quái và NINJA_H (${u.ninjaH}) tính bằng đơn vị thế giới (atlas = h / 3), camera trên lưới pixel nghệ thuật 1/3${u.bad.length ? ': lệch ' + u.bad.slice(0, 6).join(', ') : ''}`);
     console.log(mapId, JSON.stringify(r));
-    ok(r.fps >= LIM.fps, `${mapId} ${MOBILE ? 'điện thoại' : 'máy tính'} @${DPR}x: ${r.fps} khung/giây (≥ ${LIM.fps})`);
+    ok(r.fps >= LIM.fps, `${mapId} ${MOBILE ? 'điện thoại' : 'máy tính'} @${DPR}x${GPU ? ' GPU' : ''}: ${r.fps} khung/giây (≥ ${LIM.fps})`);
     ok(r.cpuAvg <= LIM.cpuAvg, `${mapId}: CPU mỗi khung trung bình ${r.cpuAvg} ms (≤ ${LIM.cpuAvg})`);
     ok(r.cpuP95 <= LIM.cpuP95, `${mapId}: CPU mỗi khung p95 ${r.cpuP95} ms (≤ ${LIM.cpuP95})`);
     ok(r.players >= LIM.players, `${mapId}: thấy ${r.players} người chơi khác (≥ ${LIM.players})`);

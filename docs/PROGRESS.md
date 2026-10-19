@@ -4,6 +4,23 @@ Ghi sau mỗi tính năng / mỗi lần đổi mốc ảnh. Mới nhất ở tr�
 
 ## 2026-10-19
 
+### Hiệu năng lớp thế giới ×3 trên điện thoại (DECISIONS D-08)
+
+- Verify trên bản sạch `2e82e8e` hỏng ở `test:perf` điện thoại:
+  - @2x 49,5-56,1 khung/giây (CPU 1,5-2,4 ms);
+  - @3x 14,5-16,4 khung/giây (CPU 50-58 ms).
+- Lần verify `5c9c59e` trước khi gộp ×3: điện thoại 60 khung/giây. Bước @3x mới thêm trong nhánh đồ họa nhưng chưa chạy trước khi gộp. Đó là sai sót quy trình, nay mọi bước perf chạy trước khi gộp.
+- Đo bằng cách tắt từng lớp (`perf.js` bản dò): mỗi lớp ×1 toàn màn hình vẽ ở độ phân giải thiết bị tốn 7-11 khung/giây.
+- Sửa ở `game.js`:
+  - nền + địa hình + cổng + bóng đêm vẽ vào canvas ×1 rồi phóng một lần;
+  - khi `s` lẻ, hạt/sương/ánh sáng vẽ thẳng lên màn hình theo `zoom` nguyên, chỉ thực thể + hiệu ứng ×3 qua canvas phụ `k`.
+- Sau sửa:
+  - máy tính 60 khung/giây (CPU p95 2,4-3,2 ms);
+  - điện thoại @2x 60 khung/giây (CPU p95 2,5-3,7 ms);
+  - @3x khi vẽ bằng GPU 60 khung/giây (CPU p95 2,1-2,7 ms).
+  - @3x khi vẽ bằng CPU vẫn 28-31 khung/giây (giới hạn của Chromium headless vẽ bằng CPU ở 3 triệu điểm ảnh), nên bước 8e3 đo với GPU, ngưỡng giữ nguyên.
+- Ảnh kiểm tra Cổng Địa Ngục @2x/@3x, 12 giờ và 22 giờ: lớp nền khớp nhân vật/quái, không lệch, không đường nối.
+
 ### Đồ họa ×3: lớp thế giới và 4 loài Cổng Địa Ngục (`art-x3-world`, `art-x3-hellgate`) → done
 
 - Lớp thế giới ×3 (DESIGN_RULES mục 1, 11):

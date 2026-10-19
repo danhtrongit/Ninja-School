@@ -47,3 +47,23 @@ Ghi các quyết định lệch hoặc bổ sung so với `GDD.md` / `ROADMAP.md
 ## Mục "blocked"
 
 Chưa có.
+
+## D-08 (2026-10-19) Lớp ×1 vẽ ở độ phân giải ×1; bước test:perf điện thoại @3x đo khi Chromium vẽ bằng GPU
+
+- Sau khi gộp lớp thế giới ×3 (`2e82e8e`), `test:perf` điện thoại @2x tụt còn 49-56 khung/giây (trước 60) dù CPU mỗi khung chỉ 1,5-2,5 ms.
+  - Nguyên nhân: nền trời, parallax, địa hình, bóng đêm, sương, ánh sáng đều là hình ×1, nhưng bị vẽ thẳng lên canvas 1688×780. Mỗi lớp toàn màn hình tốn gấp 9 lần so với canvas ×1 cũ.
+  - Đo bằng cách tắt từng lớp: nền +9, ánh sáng +11, sương +11 khung/giây.
+- Sửa (`game/game.js`):
+  - Nền + địa hình + cổng + bóng đêm vẽ vào canvas ×1 rồi phóng một lần không làm mượt. Cùng điểm ảnh như trước vì các lớp này dùng tọa độ nguyên.
+  - Khi `s` lẻ, lớp ×1 (nền, hạt, sương, ánh sáng) vẽ thẳng lên màn hình theo `zoom` nguyên. Chỉ thực thể và hiệu ứng ×3 đi qua canvas phụ `k` rồi thu mượt (đúng DESIGN_RULES mục 1).
+  - Kết quả @2x: 60 khung/giây ở cả 5 bản đồ, CPU p95 2,5-3,7 ms. @3x: CPU mỗi khung trung bình từ 36-58 ms xuống 6 ms.
+- @3x (canvas 2532×1170, canvas phụ 3048×1410) trong Chromium headless vẽ bằng CPU:
+  - chỉ còn 28-31 khung/giây;
+  - tắt hết lớp bản đồ và hiệu ứng vẫn chỉ 54-60;
+  - một lượt phủ toàn màn hình thêm (multiply) tốn ~15 khung/giây.
+  - Không cách gộp lớp nào đưa được về ≥ 58 khi máy CPU tự vẽ từng điểm ảnh.
+- Điện thoại thật luôn vẽ canvas bằng GPU. Quyết định:
+  - bước `8e3` của verify chạy `perf.js` với `GPU=1` (`--enable-gpu-rasterization --ignore-gpu-blocklist --use-angle=metal`), ngưỡng giữ nguyên (≥ 58 khung/giây, CPU ≤ 5 / p95 ≤ 8 ms). Đo được 60 khung/giây, CPU p95 2,1-2,7 ms.
+  - Bước máy tính 1280×720 và điện thoại @2x vẫn vẽ bằng CPU (khắt khe hơn), ngưỡng không đổi.
+- Đảo lại được: bỏ `GPU: '1'` ở `scripts/verify.js`. Muốn @3x đạt khi vẽ bằng CPU thì phải hạ số lượt phủ toàn màn hình (gộp sương + ánh sáng thành một lượt nhân + một lượt cộng ở ×1), vẫn không đủ theo số đo trên.
+

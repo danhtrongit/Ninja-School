@@ -1495,18 +1495,41 @@ export class Game {
     this.view = { x: camXa, y: camYa };
     const camX = Math.floor(camXa);
     const camY = Math.floor(camYa);
-    const unit = this.direct ? this.zoom : ART * this.k;
-    c.setTransform(unit, 0, 0, unit, -Math.round((camXa - camX) * unit), -Math.round((camYa - camY) * unit));
-    c.imageSmoothingEnabled = false;
-    c.art = ART;
-    c.viewW = W;
-    c.viewH = H;
+    // hình ×1 (nền, hạt, sương, ánh sáng) luôn vẽ lên canvas màn hình theo zoom nguyên, không làm mượt;
+    // s lẻ thì chỉ lớp ×3 (thực thể, hiệu ứng) đi qua canvas phụ k rồi thu mượt
+    const main = this.ctx;
+    const zoom = this.zoom;
+    main.setTransform(zoom, 0, 0, zoom, -Math.round((camXa - camX) * zoom), -Math.round((camYa - camY) * zoom));
+    main.imageSmoothingEnabled = false;
+    main.art = ART;
+    main.viewW = W;
+    main.viewH = H;
+    if (!this.direct) {
+      const unit = ART * this.k;
+      c.setTransform(1, 0, 0, 1, 0, 0);
+      c.clearRect(0, 0, this.lo.width, this.lo.height);
+      c.setTransform(unit, 0, 0, unit, -Math.round((camXa - camX) * unit), -Math.round((camYa - camY) * unit));
+      c.imageSmoothingEnabled = false;
+      c.art = ART;
+      c.viewW = W;
+      c.viewH = H;
+    }
     const hour = this.forceHour == null ? undefined : this.forceHour;
-    R.drawBackground(c, camX, camY, W, H, t);
-    R.drawTerrain(c, camX, camY, W, H);
-    R.drawPortals(c, camX, camY, t);
+    // lớp nền (trời, parallax, địa hình, cổng, bóng đêm) vẫn là hình ×1 tọa độ nguyên: vẽ vào canvas ×1 rồi phóng
+    // một lần (không làm mượt) cho cùng điểm ảnh; vẽ thẳng ở độ phân giải thiết bị thì mỗi lớp toàn màn hình
+    // tốn gấp 9 lần (điện thoại @2x tụt dưới 58 khung/giây)
+    const bk = this.bk || (this.bk = document.createElement('canvas'));
+    if (bk.width !== W || bk.height !== H) { bk.width = W; bk.height = H; }
+    const b = bk.getContext('2d');
+    b.imageSmoothingEnabled = false;
+    b.viewW = W;
+    b.viewH = H;
+    R.drawBackground(b, camX, camY, W, H, t);
+    R.drawTerrain(b, camX, camY, W, H);
+    R.drawPortals(b, camX, camY, t);
     // đêm làm tối nền + địa hình (lỗ sáng ở đèn và quanh nhân vật), thực thể vẽ sau chỉ bị ám nhẹ
-    R.drawNight(c, camX, camY, W, H, hour, me.x, me.y - 20);
+    R.drawNight(b, camX, camY, W, H, hour, me.x, me.y - 20);
+    main.drawImage(bk, 0, 0);
     // hiệu ứng nằm trên mặt đất (cảnh báo boss, vết nứt) dưới chân quái/người
     this.fx.drawGround(c, camX, camY);
 
@@ -1585,19 +1608,19 @@ export class Game {
       c.fillRect(ax, ay + 3, 1, 1);
     }
     this.fx.draw(c, camX, camY);
-    R.drawParticles(c, camX, camY, W, H, 1 / 60);
-    R.drawForeground(c, camX, camY, W, H, t);
-    R.drawLighting(c, camX, camY, W, H, hour, me.x, me.y - 20);
-
-    // s lẻ: thu mượt cả lớp từ k về s đúng một lần
-    const ctx = this.ctx;
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    // s lẻ: thu mượt lớp ×3 từ k về s đúng một lần, dán lên nền ×1 đã vẽ ở màn hình
     if (!this.direct) {
       const u = ART * this.k;
-      ctx.imageSmoothingEnabled = true;
-      ctx.drawImage(this.lo, 0, 0, this.W * u, this.H * u, 0, 0, this.W * this.zoom, this.H * this.zoom);
-      ctx.imageSmoothingEnabled = false;
+      main.setTransform(1, 0, 0, 1, 0, 0);
+      main.imageSmoothingEnabled = true;
+      main.drawImage(this.lo, 0, 0, this.W * u, this.H * u, 0, 0, this.W * zoom, this.H * zoom);
+      main.imageSmoothingEnabled = false;
+      main.setTransform(zoom, 0, 0, zoom, -Math.round((camXa - camX) * zoom), -Math.round((camYa - camY) * zoom));
     }
+    R.drawParticles(main, camX, camY, W, H, 1 / 60);
+    R.drawForeground(main, camX, camY, W, H, t);
+    R.drawLighting(main, camX, camY, W, H, hour, me.x, me.y - 20);
+    main.setTransform(1, 0, 0, 1, 0, 0);
     this.renderOverlay(camX, camY);
   }
 
