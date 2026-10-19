@@ -1,7 +1,127 @@
 'use strict';
 
 // Di chuyển: server tự kiểm tra độ cao theo vật lý nhảy.
+const fs = require('fs');
+const path = require('path');
 const { sleep, ok } = require('../lib/harness');
+
+const ROOT = path.join(__dirname, '..', '..');
+const read = (f) => fs.readFileSync(path.join(ROOT, f), 'utf8');
+const constOf = (src, name) => {
+  const m = src.match(new RegExp(`^const ${name} = ([0-9.]+);`, 'm'));
+  return m ? +m[1] : null;
+};
+const clientFiles = (dir) => fs.readdirSync(dir, { withFileTypes: true })
+  .flatMap((e) => (e.isDirectory() ? clientFiles(path.join(dir, e.name)) : e.name.endsWith('.js') ? [path.join(dir, e.name)] : []));
+
+// Vật lý nhảy của máy khách và server phải trùng nhau (server tự tính độ cao nhảy được, xem modules/movement)
+function physicsUnitTests() {
+  const cli = read('src/client/js/game/game.js');
+  const srv = read('src/server/modules/movement/index.js');
+  const want = { JUMP: 378, JUMP2: 330, GRAV: 1000 };
+  const got = Object.keys(want).map((k) => `${k} ${constOf(cli, k)}/${constOf(srv, k)}`);
+  ok(Object.keys(want).every((k) => constOf(cli, k) === want[k] && constOf(srv, k) === want[k]),
+    `hằng JUMP 378, JUMP2 330, GRAV 1000 giống nhau ở game/game.js và modules/movement/index.js (${got.join(', ')})`);
+  const inClient = clientFiles(path.join(ROOT, 'src/client/js')).filter((f) => /\bAIR_(MAX|SLACK)\b/.test(fs.readFileSync(f, 'utf8')));
+  ok(constOf(srv, 'AIR_MAX') === 2.4 && constOf(srv, 'AIR_SLACK') === 0.3 && !inClient.length,
+    `AIR_MAX 2.4, AIR_SLACK 0.3 chỉ có ở server (modules/movement/index.js)${inClient.length ? ` (máy khách: ${inClient.join(', ')})` : ''}`);
+}
+
+// Ngân sách quãng đường của gói move, chạy trên đồng hồ giả (thay Date.now trong lúc chạy)
+function budgetUnitTests() {
+  const { Movement } = require('../../src/server/modules/movement');
+  const { MAPS, GROUND } = require('../../src/shared/data/maps');
+  const def = MAPS.dragon_palace;
+  const mv = new Movement({});
+  const realNow = Date.now;
+  let T = 1e6;
+  Date.now = () => T;
+  // người chơi giả đứng trên mặt đất, hết ân hạn sau khi vào bản đồ
+  const mk = (x, spd = 0) => {
+    const p = { dead: false, map: { def }, x, y: GROUND, dir: 1, st: 0, lastMoveAt: T, moveGrace: 0, airAt: 0, baseY: GROUND, pulls: 0, last: null };
+    p.moveSpd = () => spd;
+    p.send = (t, m) => { if (t === 'pos') { p.pulls++; p.last = m; } };
+    return p;
+  };
+  // gói tin theo thời điểm tới server (ms tính từ lúc bắt đầu)
+  const run = (p, packets) => {
+    const T0 = T;
+    for (const [at, x] of packets) {
+      T = T0 + at;
+      mv.move(p, { x, y: GROUND, dir: 1, st: 1 });
+    }
+  };
+  try {
+    // 1) dồn gói: mỗi gói đi đúng mức tối đa gói đơn lẻ cho phép (176 px/giây × dt + 30), bám theo vị trí server
+    const res = [10, 20, 40, 80].map((n) => {
+      const p = mk(200);
+      const T0 = T;
+      const iv = 1000 / n;
+      const marks = [p.x];
+      for (let i = 1; i <= 6 * n; i++) {
+        T = T0 + Math.round(i * iv);
+        const dt = Math.min(1.2, (T - p.lastMoveAt) / 1000);
+        mv.move(p, { x: p.x + (176 * dt + 30 - 0.5), y: GROUND, dir: 1, st: 1 });
+        if (i % n === 0) marks.push(p.x);
+      }
+      // giây đầu còn ngân sách dồn sẵn (đứng yên trước đó), các giây sau là tốc ổn định
+      const per = marks.slice(2).map((v, k) => v - marks[k + 1]);
+      return { n, max: Math.max(...per), first: marks[1] - marks[0] };
+    });
+    ok(res.every((r) => r.max <= 198), `dồn gói 10/20/40/80 gói/giây, mỗi gói đi tối đa, spd = 0: quãng đi trong 1 giây ≤ 198 px (${res.map((r) => Math.round(r.max)).join('/')} px; giây đầu có ngân sách dồn ${res.map((r) => Math.round(r.first)).join('/')} px)`);
+
+    // 2) máy khách hợp lệ: 15 gói/giây, chạy qua lại liên tục, trễ 60 ms ± 40 ms (gói không vượt nhau)
+    let seed = 12345;
+    const rnd = () => ((seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648);
+    const walk = (speed, secs, lagAt = -1) => {
+      const p = mk(300, speed === 110 ? 0 : Math.round((speed / 110 - 1) * 100));
+      const lo = 300;
+      const span = 1500;
+      const at = (ms) => {
+        const d = (speed * ms) / 1000;
+        const k = d % (2 * span);
+        return lo + (k < span ? k : 2 * span - k);
+      };
+      const packets = [];
+      let prev = 0;
+      for (let s = 1000 / 15; s <= secs * 1000; s += 1000 / 15) {
+        let arr = Math.max(prev, s + 60 + (rnd() * 80 - 40));
+        // mất sóng 1 giây: các gói gửi trong lúc đó tới dồn cùng một lúc
+        if (lagAt >= 0 && s >= lagAt && s < lagAt + 1000) arr = lagAt + 1000 + 60;
+        prev = arr;
+        packets.push([Math.round(arr), Math.round(at(s))]);
+      }
+      run(p, packets);
+      return { pulls: p.pulls, n: packets.length };
+    };
+    const w0 = walk(110, 60);
+    ok(w0.pulls === 0, `máy khách hợp lệ 15 gói/giây, nhiễu ±40 ms, 60 giây: 0 lần kéo lại (${w0.pulls} lần / ${w0.n} gói)`);
+    const w40 = walk(110 * 1.4, 60);
+    ok(w40.pulls === 0, `thú cưỡi spd = 40, 15 gói/giây, nhiễu ±40 ms, 60 giây: 0 lần kéo lại (${w40.pulls} lần / ${w40.n} gói)`);
+    const lag = walk(110, 8, 3000);
+    ok(lag.pulls <= 1, `mất sóng 1 giây rồi dồn 15 gói: ≤ 1 lần kéo lại (${lag.pulls} lần)`);
+
+    // 3) server đặt lại vị trí (vào bản đồ, chiêu lướt): ngân sách đầy lại, gói ngay sau đó không bị kéo
+    const p = mk(200);
+    for (let i = 0; i < 40; i++) {
+      T += 25;
+      mv.move(p, { x: p.x + 30, y: GROUND, dir: 1, st: 1 });
+    }
+    const drained = p.moveBudget < 1 && p.pulls > 0;
+    p.pulls = 0;
+    p.x = 1500;
+    p.moveGrace = T + 600;
+    run(p, [[100, 1500], [700, 1560], [800, 1580], [900, 1600]]);
+    ok(drained && p.pulls === 0, `cạn ngân sách rồi được server đặt lại vị trí (ân hạn): đi tiếp không bị kéo lại (${p.pulls} lần)`);
+  } finally {
+    Date.now = realNow;
+  }
+}
+
+function movementUnitTests() {
+  physicsUnitTests();
+  budgetUnitTests();
+}
 
 // Server tự kiểm độ cao theo vật lý nhảy: cú nhảy thật không bị sửa, lơ lửng trên không bị kéo xuống
 async function airTest(a) {
@@ -91,4 +211,4 @@ async function pickupTest({ a, c }) {
   ok(del.by === a.me.id && a.msgs.slice(from).some((m) => m.t === 'loot'), 'pickup thủ công: chủ món nhặt được (gDel + loot)');
 }
 
-module.exports = { airTest, pickupTest };
+module.exports = { airTest, pickupTest, movementUnitTests };
