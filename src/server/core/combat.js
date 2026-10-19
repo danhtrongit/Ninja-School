@@ -5,6 +5,7 @@ const { ELEMENTS, CLASSES } = require('../../shared/data/classes');
 const { MONSTERS } = require('../../shared/data/monsters');
 const { makeItem, GEAR_SLOTS, TIERS, GEM, randomGem } = require('../../shared/data/items');
 const { expNeed } = require('../../shared/formulas');
+const { reviveGuarded, reviveLuong } = require('../../shared/constants');
 const hooks = require('./modules');
 
 const rand = (a, b) => a + Math.random() * (b - a);
@@ -530,7 +531,7 @@ class Combat {
       // lôi đài: ngoài lúc đấu không mất máu; đánh trúng đánh dấu trận đã giao đấu (trận bỏ ngang khi chưa ai ra đòn thì không tính)
       if (m.state !== 'fight') return;
       if (src.player && src.player.match === m) m.hit = true;
-    }
+    } else if (reviveGuarded(p, Date.now())) return;
     p.c.hp -= dmg;
     p.lastCombat = Date.now();
     p.markMe();
@@ -554,6 +555,7 @@ class Combat {
     p.dead = true;
     p.st = 0;
     p.c.deaths = (p.c.deaths || 0) + 1;
+    p.guard = null;
     const c = p.c;
     let lost = 0;
     const killerP = src.player;
@@ -574,7 +576,9 @@ class Combat {
       if (map) map.broadcast('chat', { ch: 'sys', msg: `${killerP.name} đã hạ gục ${p.name}!` });
     }
     for (const m of map ? map.monsters.values() : []) if (m.target === p.id) m.target = 0;
-    p.send('dead', { lost, by: killerP ? killerP.name : src.monster ? src.monster.def.name : '' });
+    // giá hồi sinh tại chỗ để hộp tử trận ghi đúng số lượng sẽ trừ (giá leo thang theo p.reviveLog)
+    const cost = { card: p.countItem('revive_card') > 0 ? 1 : 0, luong: reviveLuong(p.reviveLog, Date.now()) };
+    p.send('dead', { lost, by: killerP ? killerP.name : src.monster ? src.monster.def.name : '', cost });
     p.markMe();
   }
 }

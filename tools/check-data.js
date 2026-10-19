@@ -502,6 +502,14 @@ const atlasOk = [];
   }
 }
 
+// Điểm hồi sinh "Về làng" (rv): phải là làng (town) có thật, không đặt trên làng hay phó bản
+for (const id in MAPS) {
+  const rv = MAPS[id].rv;
+  if (rv === undefined) continue;
+  if (!MAPS[rv] || !MAPS[rv].town) err(`Bản đồ ${id}: rv "${rv}" không phải làng có thật`);
+  if (MAPS[id].town || MAPS[id].instance) err(`Bản đồ ${id}: làng/phó bản không đặt rv`);
+}
+
 if (errors.length) {
   console.log(errors.map((e) => `✘ ${e}`).join('\n'));
   console.log(`\nDỮ LIỆU CÓ ${errors.length} LỖI`);

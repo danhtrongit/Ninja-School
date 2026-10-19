@@ -94,13 +94,17 @@ export default {
   showDeath(m) {
     this.hideDeath();
     this.deathShown = true;
+    // giá do server tính (leo thang 1/2/3 lượng trong 10 phút); máy chủ cũ chưa gửi cost thì đoán theo thẻ trong túi
     const cards = S.inv.reduce((n, x) => n + (x && x.id === 'revive_card' ? x.q : 0), 0);
+    const cost = m.cost || { card: cards ? 1 : 0, luong: 1 };
+    const price = cost.card ? '1 Thẻ Hồi Sinh' : `${fmt(cost.luong)} lượng`;
     const el = h('div', { class: 'death' }, h('div', { class: 'death-box' },
       h('div', { class: 'death-title' }, 'Trọng Thương'),
       h('div', { class: 'death-sub' }, m.by ? `Bạn đã bị ${m.by} hạ gục.` : 'Bạn đã bị trọng thương!'), m.lost ? h('div', { class: 'bad' }, `Mất ${fmt(m.lost)} kinh nghiệm.`) : null,
+      !cost.card && cost.luong > 1 ? h('div', { class: 'muted' }, 'Hồi sinh tại chỗ nhiều lần trong 10 phút nên giá tăng.') : null,
       h('div', { class: 'row death-btns' },
-        h('button', { class: 'btn primary', onclick: () => this.net.send('revive', { mode: 'town' }) }, 'Về làng'),
-        h('button', { class: 'btn', onclick: () => this.net.send('revive', { mode: 'here' }) }, cards ? `Hồi sinh tại chỗ (thẻ: ${cards})` : 'Hồi sinh tại chỗ (1 lượng)'))));
+        h('button', { class: 'btn', onclick: () => this.net.send('revive', { mode: 'town' }) }, 'Về làng'),
+        h('button', { class: 'btn primary', onclick: () => this.net.send('revive', { mode: 'here' }) }, `Hồi sinh tại chỗ (${price})`))));
     document.body.appendChild(el);
     this.deathEl = el;
   },
