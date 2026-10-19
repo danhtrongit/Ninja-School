@@ -146,13 +146,23 @@ async function accountSecurityTest() {
     const ch = await conn(P1, '10.5.5.5');
     await ask(ch, 'register', { u: 'charsacc', p: 'secret123' });
     const made = [];
-    for (const n of ['ChaMot', 'ChaHai', 'ChaBa', 'ChaBon']) made.push(await ask(ch, 'createChar', { name: n, cls: 'kiem', gender: 'm' }, ['chars', 'err']));
+    for (const [n, cls] of [['ChaMot', 'kiem'], ['ChaHai', 'tieu'], ['ChaBa', 'kunai'], ['ChaBon', 'cung']]) made.push(await ask(ch, 'createChar', { name: n, cls, gender: 'm' }, ['chars', 'err']));
     ok(made.slice(0, 3).every((m) => m && m.t === 'chars') && made[2].chars.length === 3 && made[3] && made[3].t === 'err' && /Tối đa 3 nhân vật/.test(made[3].msg),
       `nhân vật thứ 4 cùng tài khoản bị từ chối ("${made[3] && made[3].msg}")`);
     const bad = await ask(ch, 'deleteChar', { name: 'ChaMot', confirm: 'ChaHai' }, ['chars', 'err']);
     const oc = await conn(P1, '10.5.5.6');
     await ask(oc, 'register', { u: 'otheracc', p: 'secret123' });
+    // phái lạ (kể cả khóa của Object.prototype) bị từ chối trước khi tạo nhân vật
+    const badCls = [];
+    for (const cls of ['ninja', '__proto__', 'constructor', 'toString', 'hasOwnProperty', '', 7, null, ['kiem']]) badCls.push(await ask(oc, 'createChar', { name: 'PhaiLa', cls, gender: 'f' }, ['chars', 'err']));
+    ok(badCls.every((m) => m && m.t === 'err' && m.msg === 'Phái không hợp lệ.'),
+      `createChar: phái lạ ('ninja', '__proto__', 'constructor', 'toString', rỗng, số, null, mảng) bị từ chối ("${badCls[1] && badCls[1].msg}")`);
     await ask(oc, 'createChar', { name: 'NguoiKhac', cls: 'cung', gender: 'f' }, ['chars', 'err']);
+    await ask(oc, 'createChar', { name: 'ConDao', cls: 'dao', gender: 'm' }, ['chars', 'err']);
+    const six = await ask(oc, 'createChar', { name: 'ConQuat', cls: 'quat', gender: 'f' }, ['chars', 'err']);
+    const allCls = [...made[2].chars, ...(six && six.chars) || []].map((c) => c.cls).sort().join();
+    ok(six && six.t === 'chars' && allCls === ['cung', 'dao', 'kiem', 'kunai', 'quat', 'tieu'].join(),
+      `tạo được nhân vật cả 6 phái qua createChar (${allCls}, 2 tài khoản)`);
     ch.send('deleteChar', { name: 'NguoiKhac', confirm: 'NguoiKhac' });
     await sleep(300);
     const mine = await ask(ch, 'selectChar', { name: 'NguoiKhac' }, ['enterMap', 'err']);

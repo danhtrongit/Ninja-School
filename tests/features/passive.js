@@ -3,6 +3,7 @@
 // Kỹ năng nội tại: công thức (không cần server), học bằng sách, chặn đọc sách, hồi chakra, mua/bán sách.
 const { sleep, ok } = require('../lib/harness');
 const { Bot } = require('../lib/bot');
+const { fakeDb } = require('../lib/helpers');
 
 // Công thức nội tại kiểm thử trực tiếp (không cần server): cộng dồn chỉ số, kháng hệ khắc, sát thương chí mạng
 function passiveUnitTests() {
@@ -41,6 +42,71 @@ function passiveUnitTests() {
   } finally {
     Math.random = rnd;
   }
+  statCapUnitTests();
+  bookUnitTests();
+}
+
+// Trần chỉ số của Player.recalc: cộng mọi nguồn thật (dòng trang bị, ngọc, thú cưỡi, nội tại tối đa, buff kỹ năng, đồ ăn)
+// rồi thêm một móc stats thổi phồng eq/buf/pas/mountSpd: chí mạng 60, né 45, kháng 50, tốc 100, hút máu GEM.lifestealCap
+function statCapUnitTests() {
+  const { Player, newChar } = require('../../src/server/core/player');
+  const { makeItem } = require('../../src/shared/data/items');
+  const { GEM } = require('../../src/shared/data/items/gems');
+  const { SKILLS, SKILL_MAX_LV } = require('../../src/shared/data/skills');
+  const modules = require('../../src/server/core/modules');
+  const world = { nextPid: 1, db: fakeDb(), announce() {}, clanView() { return null; }, social: { handle() {} } };
+  const p = new Player(world, { send() {} }, newChar('capunit', 'kunai', 'm'));
+  const c = p.c;
+  c.level = 120;
+  for (const [id, sk] of Object.entries(SKILLS)) if (sk.cls === 'kunai' && sk.type === 'passive') c.skills[id] = SKILL_MAX_LV;
+  c.equip.weapon = { ...makeItem('w_kunai_11'), o: [['crit', 500], ['dodge', 500], ['spd', 500], ['lifesteal', 500]], gems: ['gem_huyet_10', null, null] };
+  c.equip.mount = makeItem('mount_qilin');
+  for (const stat of ['crit', 'dodge', 'spd']) p.buffs[`x_${stat}`] = { stat, v: 500, until: Date.now() + 60000, name: stat };
+  c.buffs.food_atk = Date.now() + 60000;
+  p.recalc();
+  const real = { ...p.s };
+  ok(real.crit === 60 && real.dodge === 45 && real.spd === 60 + real.mountSpd && real.mountSpd === 35 && real.lifesteal === GEM.lifestealCap && real.resist > 0 && real.resist <= 50,
+    `trần chỉ số với nguồn thật: chí mạng ${real.crit}, né ${real.dodge}, tốc ${real.spd} (60 + thú cưỡi ${real.mountSpd}), hút máu ${real.lifesteal}, kháng ${real.resist}`);
+  const list = modules.load().hooks.stats;
+  const extra = {
+    mod: { name: 'capunit' },
+    fn(t) {
+      for (const k of ['crit', 'dodge', 'spd', 'lifesteal']) t.eq[k] += 1000;
+      for (const k of ['crit', 'dodge', 'spd']) t.buf[k] += 1000;
+      for (const k of ['crit', 'dodge', 'spd', 'resist']) t.pas[k] = (t.pas[k] || 0) + 1000;
+      t.mountSpd += 1000;
+    },
+  };
+  list.push(extra);
+  try {
+    p.recalc();
+  } finally {
+    list.splice(list.indexOf(extra), 1);
+  }
+  const s = p.s;
+  ok(s.crit === 60 && s.dodge === 45 && s.resist === 50 && s.spd === 100 && s.lifesteal === GEM.lifestealCap,
+    `trần chỉ số không vượt khi cộng mọi nguồn: chí mạng 60, né 45, kháng 50, tốc chạy 100, hút máu ${GEM.lifestealCap} (GEM.lifestealCap)`);
+  p.recalc();
+  ok(p.s.crit === real.crit && p.s.resist === real.resist, 'gỡ móc thử: chỉ số về như trước');
+}
+
+// Sách nội tại: giá 30/60/100 lượng theo cấp 15/35/50, Tiệm Thuốc bán đủ, mỗi cuốn có boss rơi (books(req, ch))
+function bookUnitTests() {
+  const { SKILLS } = require('../../src/shared/data/skills');
+  const { ITEMS, SHOPS } = require('../../src/shared/data/items');
+  const { MONSTERS } = require('../../src/shared/data/monsters');
+  const PRICE = { 15: 30, 35: 60, 50: 100 };
+  const pas = Object.values(SKILLS).filter((sk) => sk.type === 'passive');
+  const bad = pas.filter((sk) => !PRICE[sk.req] || !ITEMS[sk.book] || ITEMS[sk.book].priceLuong !== PRICE[sk.req]);
+  const seen = new Set(pas.map((sk) => ITEMS[sk.book] && ITEMS[sk.book].priceLuong));
+  ok(pas.length >= 18 && !bad.length && [30, 60, 100].every((v) => seen.has(v)),
+    `sách nội tại giá 30/60/100 lượng theo cấp yêu cầu 15/35/50 (${pas.length} cuốn${bad.length ? `, sai: ${bad.map((sk) => sk.book).join(',')}` : ''})`);
+  const shop = SHOPS.potion.luong;
+  ok(SHOPS.potion.name === 'Tiệm Thuốc' && pas.every((sk) => shop.includes(sk.book)), 'Tiệm Thuốc bán mọi sách nội tại bằng lượng');
+  const dropped = new Set();
+  for (const m of Object.values(MONSTERS)) if (m.boss) for (const [id] of m.drops || []) dropped.add(id);
+  const noDrop = pas.filter((sk) => !dropped.has(sk.book)).map((sk) => sk.book);
+  ok(!noDrop.length, `mọi sách nội tại có boss rơi (books(req, ch) trong BOSS_DROPS)${noDrop.length ? `: thiếu ${noDrop.join(',')}` : ''}`);
 }
 
 // Đọc sách học nội tại, nâng cấp bằng điểm kỹ năng, mua sách bằng lượng, lập gia tộc (dùng nhân vật cấp 120)
