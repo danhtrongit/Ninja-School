@@ -163,6 +163,32 @@ const SCENES = {
     await page.evaluate(() => { window.ninja.ui.invPick = null; window.ninja.ui.closeAll(); });
   },
   // Cổng Địa Ngục vẽ bằng atlas ×3 (DESIGN_RULES mục 11): ban ngày và ban đêm, mọi quái/boss trong khung nhìn là atlas, xong về làng
+  // hộp tử trận (cmb-death-revive): ghi giá hồi sinh tại chỗ server gửi, nằm gọn khung nhìn; điện thoại 2 nút xếp dọc cao 44px
+  async death(page, vp, shot) {
+    const say = async (msg) => { await page.evaluate((m) => window.ninja.net.send('chat', { ch: 'map', msg: m }), msg); await page.waitForTimeout(250); };
+    await say('/luong 20');
+    await say('/chet');
+    await page.waitForSelector('.death .death-box', { timeout: 5000 });
+    await page.waitForTimeout(300);
+    const r = await page.evaluate(() => {
+      const b = document.querySelector('.death-box').getBoundingClientRect();
+      const btns = [...document.querySelectorAll('.death-btns .btn')].map((x) => ({ t: x.textContent, primary: x.classList.contains('primary'), r: x.getBoundingClientRect() }));
+      return { l: b.left, t: b.top, r: b.right, b: b.bottom, W: innerWidth, H: innerHeight, btns };
+    });
+    await shot('death');
+    const here = r.btns.find((x) => x.primary);
+    const town = r.btns.find((x) => !x.primary);
+    ok(r.l >= 0 && r.t >= 0 && r.r <= r.W && r.b <= r.H && here && /^Hồi sinh tại chỗ \((\d+ lượng|1 Thẻ Hồi Sinh)\)$/.test(here.t) && town && town.t === 'Về làng',
+      `death ${vp.name}: hộp tử trận nằm gọn trong khung nhìn, nút chính ghi giá hồi sinh tại chỗ (${here ? here.t : 'không có'})`);
+    if (vp.touch) {
+      ok(here && town && here.r.bottom <= town.r.top && r.btns.every((x) => x.r.height >= 44),
+        `death ${vp.name}: điện thoại hai nút xếp dọc cao ≥ 44px, hồi sinh tại chỗ ở trên (${r.btns.map((x) => Math.round(x.r.height)).join(', ')})`);
+    }
+    await page.evaluate(() => window.ninja.net.send('revive', { mode: 'town' }));
+    const gone = await page.waitForFunction(() => !window.ninja.S.me.dead && !document.querySelector('.death'), null, { timeout: 6000 }).then(() => true, () => false);
+    await page.waitForTimeout(800);
+    ok(gone, `death ${vp.name}: 'Về làng' hồi sinh, hộp tử trận đóng`);
+  },
   async hellgate(page, vp, shot) {
     if (vp.name !== '1280x720' && vp.name !== '844x390') return;
     const say = async (msg) => { await page.evaluate((m) => window.ninja.net.send('chat', { ch: 'map', msg: m }), msg); await page.waitForTimeout(250); };

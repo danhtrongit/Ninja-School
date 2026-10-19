@@ -4,6 +4,82 @@ Ghi sau mỗi tính năng / mỗi lần đổi mốc ảnh. Mới nhất ở tr�
 
 ## 2026-10-19
 
+### Đồ họa ×3: lớp thế giới và 4 loài Cổng Địa Ngục (`art-x3-world`, `art-x3-hellgate`) → done
+
+- Lớp thế giới ×3 (DESIGN_RULES mục 1, 11):
+  - 1 đơn vị thế giới = 3 pixel nghệ thuật, s = zoom / 3.
+  - s nguyên (1280×720 DPR 1, 844×390 DPR 2) thì vẽ thẳng. s lẻ (DPR 3: zoom 5, s 5/3) thì vẽ vào canvas phụ k = ceil(s) rồi dán thu nhỏ một lần có làm mượt.
+  - Camera bắt lưới 1/3.
+- Atlas ảnh: `src/client/art/<nhóm>/<id>.png + .json`.
+  - Danh mục `S.G.art = { v, h }` trong gói data. Ảnh phục vụ theo `?v=` (lưu đệm vĩnh viễn), sai `?v=` thì `no-cache`.
+  - Máy khách chỉ tải loài có trong danh mục; chưa tải xong thì vẽ thân chung.
+  - `monsterHeight = h / 3`.
+- Chó Ngục, Hắc Kỵ Sĩ, Hắc Long, Thiên Ma:
+  - Ảnh tạo bằng Cloudflare `flux-2-klein-4b`, câu phong cách chung nguyên văn (seed ghi trong `src/client/art/CREDITS.md`).
+  - Khung xương mảnh cứng, thu về ≤ 40 màu, viền `#1d1424`. Atlas 60-184 KB, boss 395 KB.
+  - Đã xóa hình code riêng của 4 loài (VARIANT, HUM, áo Thiên Ma).
+- Kiểm tra:
+  - `check-data` kiểm atlas (khóa, 5 hoạt ảnh, màu, viền, h/3, trần KB, CREDITS).
+  - `tests/features/art.js`: 13 atlas hỏng mẫu, danh mục, `?v=`.
+  - `gallery` có mục atlas.
+  - `perf` thêm Cổng Địa Ngục và bước mới 8e3 điện thoại DPR 3.
+  - `ui-audit` thêm cảnh `hellgate` (2 cỡ màn, 12 giờ và 22 giờ).
+- Mốc ảnh `tests/baseline/gallery.json` cập nhật (2274 ô, đã xem ảnh):
+  - gallery trước đây không gán `k` cho định nghĩa quái nên mọi loài vẽ bằng thân gốc. Nay gán nên biến thể loài hiện đúng;
+  - thêm mục atlas.
+  - Chạy lại: 0 ô đổi.
+- Ảnh: `docs/shots/art-x3-world/` (trước/sau, máy tính/điện thoại), `docs/shots/art-x3-hellgate/` (boss 12 giờ, rồng/kỵ sĩ 22 giờ).
+
+### GĐ1 chiến đấu: kiểm thử tiềm năng, kỹ năng, buff, phái, AI quái, trần chỉ số, sách nội tại → done (7 mục)
+
+- `tests/features/skills.js`: `addStat` vượt số điểm/khóa lạ; `useSkill` từ chối chiêu phái khác, chưa học, đang hồi chiêu (dung sai 60 ms), cách < 180 ms, thiếu chakra.
+- `endgame.js`: đồ ăn +10% đúng, hết hạn tự gỡ ở `playerSecond`.
+- `account.js`: tạo đủ 6 phái, phái lạ bị từ chối.
+- `combat.js`: bot nhận đòn quái.
+- `passive.js`: trần chí mạng 60, né 45, kháng 50, tốc 100, hút máu; giá sách 30/60/100 lượng.
+- Lỗi thật: `createChar` với `cls = '__proto__' / 'constructor' / 'toString'` lọt kiểm tra `CLASSES[m.cls]` rồi `newChar` ném lỗi. Nay kiểm `own(CLASSES, cls)` và kiểu chuỗi.
+
+### Di chuyển: ngân sách quãng đường chống tăng tốc (`ops-anticheat-move`), hằng nhảy (`world-movement`) → done
+
+- Trước: mỗi gói `move` được +30 px nên gửi dồn gói chạy nhanh 4-18 lần.
+- Nay server giữ ngân sách theo thời gian thật:
+  - tích `110 × (1 + spd/100) × 1,6` px/giây, dồn tối đa 1,5 giây;
+  - mỗi gói trừ quãng đã đi, vượt thì cắt và gửi `pos`;
+  - ân hạn sau khi server đặt vị trí thì đầy lại.
+- Kiểm thử đồng hồ giả:
+  - dồn 10/20/40/80 gói/giây chỉ đi 176 px/giây (≤ 198);
+  - máy khách hợp lệ 15 gói/giây nhiễu ±40 ms (đi bộ và thú cưỡi spd 40) 0 lần kéo lại;
+  - mất sóng 1 giây rồi dồn gói 0 lần kéo lại.
+- Giới hạn còn lại: giây đầu tiên máy khách gian có thể tiêu phần ngân sách đã dồn (≤ 1,5 giây quãng), sau đó bị giữ ở tốc hợp lệ. Muốn chịu được mất sóng 1 giây thì không bỏ được phần này.
+- Kiểm tĩnh `JUMP/JUMP2/GRAV` khớp giữa `game.js` và server, `AIR_*` chỉ có ở server.
+
+### Tử trận và hồi sinh (`cmb-death-revive`) → done
+
+- Hồi sinh tại chỗ:
+  - giá 1/2/3 lượng theo số lần trong 10 phút (`p.reviveLog` ở RAM);
+  - Thẻ Hồi Sinh luôn 1 thẻ;
+  - thiếu lượng thì từ chối, không trừ gì.
+- Bảo hộ 3 giây sau hồi sinh tại chỗ:
+  - đòn quái/PK không trừ máu, quái chủ động không nhắm;
+  - ra chiêu là hết;
+  - không áp trong lôi đài;
+  - `info.guard` cho máy khách vẽ nhấp nháy mờ 50%.
+- `rv` trên bản đồ: "Về làng" đưa tới làng gần nhất theo số cổng. `npm run check` kiểm `rv` là làng có thật, không đặt trên làng/phó bản.
+- Hộp tử trận:
+  - gói `dead` có `cost { card, luong }`, nút chính "Hồi sinh tại chỗ (n lượng)" / "(1 Thẻ Hồi Sinh)";
+  - giá tăng thì có dòng giải thích;
+  - điện thoại hai nút xếp dọc cao 44px.
+- Tự hồi sinh (auto) đọc giá trong `dead`, thiếu lượng thì về làng (trước đây gửi `here` bị từ chối rồi nằm chết).
+- `ui-audit` thêm cảnh `death` ở 4 cỡ màn. Ảnh: `docs/shots/cmb-death-revive/`.
+
+### Vận hành
+
+- `test:load`:
+  - lần verify 5c9c59e hỏng ở "bộ nhớ ổn định: heap 1/3 cuối / 1/3 đầu = 1,28 (≤ 1,15)" dù RSS đứng yên 222-225 MB;
+  - heap lấy mỗi phút một lần rơi vào điểm ngẫu nhiên của răng cưa GC (18-75 MB trong cùng bài đo).
+  - Nay `/api/metrics` lấy mẫu heap mỗi giây và trả thêm `heapLo` (đáy trong cửa sổ ≈ phần còn giữ sau GC); test so đáy heap với ngưỡng cũ 1,15. Ngưỡng RSS 1,2 giữ nguyên.
+- `npm test` trên bản gộp: 228,0 s. Phần lâu nhất: lôi đài 32 s, qua cổng & chiến đấu 25 s.
+
 ### Sửa kiểm thử chập chờn khi chạy verify trên bản sạch
 
 - `test:ui` chưa bao giờ in `OK no console errors` nên bước 8a của verify luôn hỏng dù mọi kiểm tra đạt. Nay in dòng này khi không có lỗi console.

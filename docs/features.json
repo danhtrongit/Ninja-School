@@ -1133,7 +1133,7 @@
     "phase": 1,
     "title": "Lớp thế giới pixel ×3 (vẽ tỉ lệ nguyên rồi thu mượt) và bộ nạp atlas ảnh AI (DESIGN_RULES mục 1, 11; D-07)",
     "priority": "Must",
-    "status": "todo",
+    "status": "done",
     "acceptance": [
       "lớp thế giới vẽ vào canvas phụ ở tỉ lệ nguyên k = ceil(s) với imageSmoothingEnabled = false rồi dán ra màn hình đúng một lần mỗi khung có làm mượt; s nguyên thì vẽ thẳng; ninja.game có art = 3, k, s đúng ở 1280×720 DPR 1, 844×390 DPR 2 và DPR 3",
       "hình code cũ phóng nguyên ×3 (khối 3×3, không làm mượt); tọa độ vẽ làm tròn Math.round(x * 3); NINJA_H, monsterHeight, petHeight vẫn trả đơn vị thế giới; nhãn tên và thanh máu đúng chỗ",
@@ -1146,7 +1146,9 @@
       "tests/e2e/e2e.js",
       "tests/e2e/perf.js",
       "tools/check-data.js",
-      "tests/e2e/gallery.js"
+      "tests/e2e/gallery.js",
+      "tests/features/art.js",
+      "tests/e2e/ui-audit.js"
     ],
     "files": [
       "src/client/js/game/game.js",
@@ -1162,14 +1164,49 @@
     "section": "DESIGN_RULES.md mục 11",
     "size": "L",
     "depends": [],
-    "notes": "Thêm theo D-07 (DESIGN_RULES mục 11, bước 1 của thứ tự chuyển đổi)."
+    "notes": "Thêm theo D-07 (DESIGN_RULES mục 11, bước 1 của thứ tự chuyển đổi).",
+    "proof": [
+      [
+        "tests/e2e/perf.js :: lớp thế giới",
+        "tests/e2e/perf.js :: art 3, s"
+      ],
+      [
+        "tests/e2e/perf.js :: camera trên lưới pixel nghệ thuật 1/3",
+        "tests/e2e/perf.js :: tính bằng đơn vị thế giới (atlas = h / 3)"
+      ],
+      [
+        "tests/e2e/perf.js :: hell_gate: tải đủ 4/4 atlas ×3",
+        "tests/features/art.js :: gói data có art[\"monster/hellhound\"] = { v, h }",
+        "tests/features/art.js :: atlas xin đúng ?v= → 200",
+        "tests/e2e/gallery.js :: mục atlas ×3: 4 loài"
+      ],
+      [
+        "tools/check-data.js :: Atlas ×3: 4 atlas hợp lệ (đủ khóa, đủ 5 hoạt ảnh idle/walk/atk/hit/die, ≤ 40 màu, viền ngoài #1d1424, cao h / 3 khớp monsterHeight",
+        "tests/features/art.js :: atlas hỏng (thiếu khóa foot) bị bắt",
+        "tests/features/art.js :: atlas hỏng (thiếu hoạt ảnh die) bị bắt",
+        "tests/features/art.js :: atlas hỏng (h lệch hình đứng) bị bắt",
+        "tests/features/art.js :: atlas hỏng (quá trần màu) bị bắt",
+        "tests/features/art.js :: atlas hỏng (viền ngoài sai màu) bị bắt"
+      ],
+      [
+        "tests/e2e/perf.js :: khung/giây (≥ 58)",
+        "tests/e2e/perf.js :: CPU mỗi khung trung bình",
+        "tests/e2e/perf.js :: CPU mỗi khung p95",
+        "tests/e2e/perf.js :: lớp thế giới"
+      ],
+      [
+        "tests/e2e/ui-audit.js :: hellgate 1280x720 12 giờ",
+        "tests/e2e/ui-audit.js :: hellgate 844x390 12 giờ",
+        "tests/e2e/ui-audit.js :: không có lỗi console/pageerror ở 4 cỡ màn"
+      ]
+    ]
   },
   {
     "id": "art-x3-hellgate",
     "phase": 1,
     "title": "Atlas ×3 từ ảnh AI cho trọn vùng Cổng Địa Ngục: Địa Ngục Khuyển, Tử Thần Kỵ Sĩ, Hắc Long và boss Ma Thần (DESIGN_RULES mục 11 bước 2)",
     "priority": "Must",
-    "status": "todo",
+    "status": "done",
     "acceptance": [
       "src/client/art/monster/{hellhound,deathknight,darkdragon}.png+json và src/client/art/boss/boss_god.png+json, mỗi atlas đủ idle 8, walk 8, atk 10-14 có hitF, hit 6, die 16-18; npm run check kiểm atlas không lỗi",
       "src/client/art/CREDITS.md ghi model, prompt (có câu phong cách chung), seed, ngày cho từng ảnh nguồn; không ảnh nào tải từ nơi khác",
@@ -1182,7 +1219,9 @@
       "tools/check-data.js",
       "tests/e2e/gallery.js",
       "tests/e2e/perf.js",
-      "tests/e2e/e2e.js"
+      "tests/e2e/e2e.js",
+      "tests/features/art.js",
+      "tests/e2e/ui-audit.js"
     ],
     "files": [
       "src/client/art/monster/",
@@ -1198,7 +1237,39 @@
     "depends": [
       "art-x3-world"
     ],
-    "notes": "Thêm theo D-07. Ảnh tạo bằng Cloudflare Workers AI, công cụ cắt/khung xương ở ~/.local/share/ninja-art/."
+    "notes": "Thêm theo D-07. Ảnh tạo bằng Cloudflare Workers AI, công cụ cắt/khung xương ở ~/.local/share/ninja-art/.",
+    "proof": [
+      [
+        "tools/check-data.js :: boss/boss_god, monster/darkdragon, monster/deathknight, monster/hellhound",
+        "tools/check-data.js :: đủ 5 hoạt ảnh idle/walk/atk/hit/die",
+        "tests/features/art.js :: danh mục atlas có đủ 4 loài Cổng Địa Ngục"
+      ],
+      [
+        "tools/check-data.js :: có nguồn trong CREDITS.md"
+      ],
+      [
+        "tests/e2e/ui-audit.js :: đều vẽ bằng atlas ×3",
+        "tests/e2e/perf.js :: hell_gate: tải đủ 4/4 atlas ×3",
+        "tests/features/art.js :: hình code riêng của 4 loài có atlas đã bị xóa khỏi VARIANT và HUM"
+      ],
+      [
+        "tests/e2e/gallery.js :: × 5 hoạt ảnh idle/walk/atk/hit/die",
+        "tests/e2e/gallery.js :: chạy 2 lần liên tiếp: 0 ô khác",
+        "tests/e2e/gallery.js :: 0 ô đổi, 0 ô mất"
+      ],
+      [
+        "tests/e2e/perf.js :: hell_gate: CPU mỗi khung trung bình",
+        "tests/e2e/perf.js :: hell_gate: CPU mỗi khung p95",
+        "tests/e2e/perf.js :: khung/giây (≥ 58)"
+      ],
+      [
+        "tests/e2e/ui-audit.js :: hellgate 1280x720 12 giờ",
+        "tests/e2e/ui-audit.js :: hellgate 1280x720 22 giờ",
+        "tests/e2e/ui-audit.js :: hellgate 844x390 12 giờ",
+        "tests/e2e/ui-audit.js :: hellgate 844x390 22 giờ",
+        "tests/e2e/ui-audit.js :: không có lỗi console/pageerror ở 4 cỡ màn"
+      ]
+    ]
   },
   {
     "id": "art-anim-standard",
@@ -1738,7 +1809,7 @@
     "phase": 1,
     "title": "Buff kỹ năng tạm thời và buff lưu khi thoát (Bí Kíp Nhân Đôi, món ăn)",
     "priority": "Must",
-    "status": "todo",
+    "status": "done",
     "acceptance": [
       "món ăn cộng đúng % chỉ số, hết hạn tự gỡ ở playerSecond",
       "buff PERSIST_BUFFS giữ qua đăng nhập lại (tests/features/persistence.js)",
@@ -1760,7 +1831,13 @@
     "size": "S",
     "depends": [],
     "proof": [
-      [],
+      [
+        "tests/features/endgame.js :: Bánh Bao Sức Mạnh: tấn công +10% đúng (",
+        "tests/features/endgame.js :: Trà Thiết Bích +10% phòng thủ (",
+        "tests/features/endgame.js :: playerSecond: buff đồ ăn còn hạn thì giữ nguyên",
+        "tests/features/endgame.js :: playerSecond: món ăn hết hạn tự gỡ, tấn công về như cũ, báo \"Hiệu lực món ăn đã hết\", buff khác còn hạn giữ nguyên",
+        "tests/features/endgame.js :: playerSecond: hết hạn cả hai buff còn lại, chỉ số về gốc"
+      ],
       [
         "tests/features/persistence.js :: buff đồ ăn được giữ qua đăng nhập lại"
       ],
@@ -1776,7 +1853,7 @@
     "phase": 1,
     "title": "6 phái, 3 hệ khắc vòng Hỏa-Thủy-Phong, 3 làng phái",
     "priority": "Must",
-    "status": "todo",
+    "status": "done",
     "acceptance": [
       "tạo được nhân vật cả 6 phái qua createChar; cls lạ bị từ chối",
       "kiểm thử đơn vị: 1000 sát thương gốc thành 1150 khi khắc hệ, kháng 20 kéo về 920",
@@ -1799,7 +1876,10 @@
     "size": "S",
     "depends": [],
     "proof": [
-      [],
+      [
+        "tests/features/account.js :: tạo được nhân vật cả 6 phái qua createChar (",
+        "tests/features/account.js :: createChar: phái lạ ('ninja', '__proto__', 'constructor', 'toString', rỗng, số, null, mảng) bị từ chối ("
+      ],
       [
         "tests/features/passive.js :: kháng hệ khắc giảm 20% đòn từ hệ Thủy lên hệ Hỏa"
       ],
@@ -1854,7 +1934,7 @@
     "phase": 1,
     "title": "Tử trận, mất EXP, hồi sinh tại chỗ (bảo hộ 3 giây, giá leo thang) hoặc về điểm hồi sinh",
     "priority": "Must",
-    "status": "todo",
+    "status": "done",
     "acceptance": [
       "hồi sinh tại chỗ lần 1/2/3 trong 10 phút trừ đúng 1/2/3 lượng, sau 10 phút trở lại 1; có Thẻ Hồi Sinh thì chỉ trừ 1 thẻ",
       "3 giây sau hồi sinh tại chỗ đòn quái và PK không trừ máu; dùng kỹ năng thì bảo hộ hết ngay",
@@ -1865,7 +1945,9 @@
     ],
     "tests": [
       "tests/features/death.js",
-      "tests/features/boss.js"
+      "tests/features/boss.js",
+      "tools/check-data.js",
+      "tests/e2e/ui-audit.js"
     ],
     "files": [
       "src/server/modules/pk/index.js",
@@ -1883,7 +1965,42 @@
     ],
     "section": "docs/gdd/05-he-thong-chien-dau.md",
     "size": "S",
-    "depends": []
+    "depends": [],
+    "proof": [
+      [
+        "tests/features/death.js :: hồi sinh tại chỗ lần 1/2/3 trong 10 phút trừ 1/2/3 lượng",
+        "tests/features/death.js :: hồi sinh tại chỗ: sau 10 phút giá trở lại 1 lượng",
+        "tests/features/death.js :: có Thẻ Hồi Sinh: chỉ trừ 1 thẻ, không trừ lượng",
+        "tests/features/death.js :: bot: dead.cost theo giá leo thang, hồi sinh tại chỗ trừ đúng lượng"
+      ],
+      [
+        "tests/features/death.js :: 3 giây sau hồi sinh tại chỗ: đòn quái và đòn PK không trừ máu",
+        "tests/features/death.js :: dùng kỹ năng thì bảo hộ hết ngay: đòn tiếp theo trúng",
+        "tests/features/death.js :: quái chủ động không nhắm người đang được bảo hộ"
+      ],
+      [
+        "tests/features/death.js :: 'Về làng' ở bản đồ có rv (Hoang Mạc Cát → v_wind): đưa tới đúng rv, đầy máu và chakra",
+        "tests/features/death.js :: npm run check: rv không phải bản đồ town có thật thì báo lỗi",
+        "tests/features/death.js :: bot: về làng ở Hoang Mạc Cát đưa tới điểm hồi sinh rv",
+        "tools/check-data.js :: Dữ liệu hợp lệ"
+      ],
+      [
+        "tests/features/death.js :: mất EXP đúng 2%/1%/5% EXP cấp",
+        "tests/features/death.js :: dưới cấp 5 và bản đồ PvP không mất EXP"
+      ],
+      [
+        "tests/features/death.js :: gói dead có trường cost { card, luong }",
+        "tests/features/death.js :: revive khi còn sống không làm gì",
+        "tests/features/death.js :: mode lạ (hay thiếu) coi như 'town'"
+      ],
+      [
+        "tests/features/death.js :: bot: dead.cost theo giá leo thang",
+        "tests/features/boss.js :: hạng 1 nhận 30 lượng và sách nội tại",
+        "tests/e2e/ui-audit.js :: death 1280x720: hộp tử trận nằm gọn trong khung nhìn, nút chính ghi giá hồi sinh tại chỗ",
+        "tests/e2e/ui-audit.js :: death 844x390: điện thoại hai nút xếp dọc cao ≥ 44px, hồi sinh tại chỗ ở trên",
+        "tests/e2e/ui-audit.js :: không có lỗi console/pageerror ở 4 cỡ màn"
+      ]
+    ]
   },
   {
     "id": "cmb-loot",
@@ -1931,7 +2048,7 @@
     "phase": 1,
     "title": "AI quái: đi tuần, chủ động, kéo về chỗ, đánh xa, bay, làm chậm",
     "priority": "Must",
-    "status": "todo",
+    "status": "done",
     "acceptance": [
       "bot hạ quái và nhận đòn quái (tests/features/combat.js)",
       "boss niệm chiêu (bossCast), trúng theo inBossZone, cuồng nộ dưới 30% máu (tests/features/boss.js)",
@@ -1954,7 +2071,10 @@
     "size": "M",
     "depends": [],
     "proof": [
-      [],
+      [
+        "tests/features/combat.js :: tiêu diệt ",
+        "tests/features/combat.js :: bot nhận đòn quái ("
+      ],
       [
         "tests/features/boss.js :: đến trước bossHit sau thời gian niệm",
         "tests/features/boss.js :: đứng trong vùng thì trúng chiêu boss",
@@ -1971,7 +2091,7 @@
     "phase": 1,
     "title": "Kỹ năng nội tại học bằng sách, 10 chỉ số nội tại",
     "priority": "Should",
-    "status": "todo",
+    "status": "done",
     "acceptance": [
       "sách nội tại rơi từ boss qua books(req, ch) và mua ở Tiệm Thuốc 30/60/100 lượng",
       "học nội tại ST chí mạng cho critDmg 170, nội tại chakra hồi mỗi giây (tests/features/passive.js)",
@@ -1995,7 +2115,13 @@
     "depends": [],
     "signature": true,
     "proof": [
-      [],
+      [
+        "tests/features/passive.js :: sách nội tại giá 30/60/100 lượng theo cấp yêu cầu 15/35/50 (",
+        "tests/features/passive.js :: Tiệm Thuốc bán mọi sách nội tại bằng lượng",
+        "tests/features/passive.js :: mọi sách nội tại có boss rơi (books(req, ch) trong BOSS_DROPS)",
+        "tests/features/passive.js :: boss rơi sách nội tại qua rollDrops",
+        "tests/features/passive.js :: mua sách trừ 100 lượng, sách phái khác không mua được"
+      ],
       [
         "tests/features/passive.js :: Bạo Viêm Kiếm Ý: sát thương chí mạng 160% → 170%",
         "tests/features/passive.js :: nội tại hồi chakra mỗi giây khi đang giao chiến"
@@ -2011,7 +2137,7 @@
     "phase": 1,
     "title": "Tiềm năng 4 chỉ số, tẩy điểm bằng lượng",
     "priority": "Must",
-    "status": "todo",
+    "status": "done",
     "acceptance": [
       "addStat cộng đúng điểm vào str/agi/int/vit, không vượt số điểm còn, khóa lạ bị bỏ qua (tests/features/skills.js đạt)",
       "mỗi cấp +5 tiềm năng (gainExp)",
@@ -2032,11 +2158,19 @@
     "depends": [],
     "notes": "resetStats chưa có kiểm thử (dev-test-coverage) Thiếu bằng chứng (2026-10-19): acceptance #1 \"addStat cộng đúng điểm vào str/agi/int/vit, không vượt số điểm còn, khóa lạ bị bỏ qua (tests/features/skills.js đạt)\"; acceptance #3 \"resetStats có trong mã (20 lượng); kiểm thử bot của resetStats thuộc dev-test-coverage\".",
     "proof": [
-      [],
+      [
+        "tests/features/skills.js :: addStat cộng 3 điểm vào agi, tiềm năng còn 7",
+        "tests/features/skills.js :: addStat khóa lạ (hp, atk, __proto__, constructor...) bị bỏ qua, không trừ điểm",
+        "tests/features/skills.js :: addStat n = 999 khi còn 7 điểm: chỉ cộng 7, không vượt số điểm còn",
+        "tests/features/skills.js :: addStat hết điểm tiềm năng (n dương, âm, 0, rác) không cộng thêm"
+      ],
       [
         "tests/features/skills.js :: lên cấp 25, có 120 điểm tiềm năng"
       ],
-      []
+      [
+        "tests/features/skills.js :: resetStats thiếu 20 lượng bị từ chối, điểm giữ nguyên",
+        "tests/features/skills.js :: resetStats: chỉ số về 5, hoàn "
+      ]
     ]
   },
   {
@@ -2044,7 +2178,7 @@
     "phase": 1,
     "title": "Kỹ năng chủ động cấp 1-60 (nâng tới cấp 15) và thanh kỹ năng 3 bộ × 6 ô",
     "priority": "Must",
-    "status": "todo",
+    "status": "done",
     "acceptance": [
       "useSkill kiểm phái, đã học, hồi chiêu (dung sai 60 ms), cách 180 ms, chakra ở máy chủ",
       "learnSkill cần nhân vật đạt req + 3·cấp hiện tại; hotbar/hotbarSet đạt trong tests/features/skills.js",
@@ -2069,7 +2203,16 @@
     "size": "M",
     "depends": [],
     "proof": [
-      [],
+      [
+        "tests/features/skills.js :: useSkill: chiêu của phái khác (c1, t1) hay sid rác bị từ chối",
+        "tests/features/skills.js :: useSkill: chiêu chưa học bị từ chối",
+        "tests/features/skills.js :: useSkill: đang hồi chiêu thì bị từ chối",
+        "tests/features/skills.js :: useSkill: còn 120 ms hồi chiêu (quá dung sai 60 ms) bị từ chối",
+        "tests/features/skills.js :: useSkill: còn 40 ms hồi chiêu (trong dung sai 60 ms) vẫn ra chiêu",
+        "tests/features/skills.js :: useSkill: hai lần ra chiêu cách nhau dưới 180 ms bị từ chối",
+        "tests/features/skills.js :: useSkill: cách lần trước 200 ms thì ra chiêu được",
+        "tests/features/skills.js :: useSkill: thiếu chakra bị từ chối ở máy chủ, báo \"Không đủ chakra!\", không trừ chakra"
+      ],
       [
         "tests/features/skills.js :: học Liệt Hỏa Hoàn và gán vào thanh kỹ năng",
         "tests/features/skills.js :: có 3 bộ kỹ năng, bộ 0 đang dùng",
@@ -2130,7 +2273,7 @@
     "phase": 1,
     "title": "Công thức chỉ số nhân vật (recalc qua móc stats, trần chí mạng/né/kháng/tốc)",
     "priority": "Must",
-    "status": "todo",
+    "status": "done",
     "acceptance": [
       "Player.recalc cộng trang bị, ngọc, thú, thời trang, nội tại, buff, gia tộc qua móc stats; kiểm thử nội tại, ngọc, thú cho đúng số",
       "trần chí mạng 60, né 45, kháng 50, tốc chạy 100, hút máu GEM.lifestealCap không vượt khi cộng mọi nguồn",
@@ -2162,7 +2305,10 @@
         "tests/features/fashion.js :: thú cưỡi cộng tốc chạy vào s.spd",
         "tests/features/passive.js :: góp quỹ: gia tộc lên cấp 2, tăng chỗ và % EXP"
       ],
-      [],
+      [
+        "tests/features/passive.js :: trần chỉ số không vượt khi cộng mọi nguồn: chí mạng 60, né 45, kháng 50, tốc chạy 100, hút máu ",
+        "tests/features/passive.js :: trần chỉ số với nguồn thật: chí mạng "
+      ],
       [
         "tests/features/gems.js :: trần hút máu chung là 10%",
         "tests/features/passive.js :: nội tại +4% sinh lực tối đa"
@@ -2356,7 +2502,7 @@
     "phase": 1,
     "title": "Ngân sách quãng đường cho gói move (đóng lỗ tăng tốc 4-18 lần bằng dồn gói)",
     "priority": "Must",
-    "status": "todo",
+    "status": "done",
     "acceptance": [
       "đơn vị đồng hồ giả 10/20/40/80 gói/giây, mỗi gói đi tối đa, spd = 0 → quãng đi trong 1 giây ≤ 198 px (hiện đo 471-1.965 px/s)",
       "máy khách hợp lệ 15 gói/giây, nhiễu ±40 ms, 60 giây → 0 lần kéo lại; thú cưỡi spd = 40 → 0 lần",
@@ -2381,7 +2527,25 @@
       "ops-commit-restructure"
     ],
     "parent": "ops-anticheat",
-    "notes": "id mới, con của ops-anticheat; kéo về GĐ 1 vì lỗ đã đo được (gddwork/lab/ops10/speed-probe.json)"
+    "notes": "id mới, con của ops-anticheat; kéo về GĐ 1 vì lỗ đã đo được (gddwork/lab/ops10/speed-probe.json)",
+    "proof": [
+      [
+        "tests/features/movement.js :: dồn gói 10/20/40/80 gói/giây, mỗi gói đi tối đa, spd = 0: quãng đi trong 1 giây ≤ 198 px"
+      ],
+      [
+        "tests/features/movement.js :: máy khách hợp lệ 15 gói/giây, nhiễu ±40 ms, 60 giây: 0 lần kéo lại",
+        "tests/features/movement.js :: thú cưỡi spd = 40, 15 gói/giây, nhiễu ±40 ms, 60 giây: 0 lần kéo lại"
+      ],
+      [
+        "tests/features/movement.js :: mất sóng 1 giây rồi dồn 15 gói: ≤ 1 lần kéo lại"
+      ],
+      [
+        "tests/features/movement.js :: cạn ngân sách rồi được server đặt lại vị trí (ân hạn): đi tiếp không bị kéo lại",
+        "tests/e2e/e2e.js :: tới bản đồ xa Làng Thủy Nguyệt sau",
+        "tests/e2e/e2e.js :: tự đi sang bản đồ kề có Slime gần nhất",
+        "tests/e2e/e2e.js :: về làng xong tự tìm đường quay lại bãi cũ"
+      ]
+    ]
   },
   {
     "id": "pve-boss-field",
@@ -2544,7 +2708,7 @@
     "phase": 1,
     "title": "Di chuyển, nhảy đôi, xuống bục, máy chủ kiểm tốc và độ cao nhảy",
     "priority": "Must",
-    "status": "todo",
+    "status": "done",
     "acceptance": [
       "Hằng JUMP 378, JUMP2 330, GRAV 1000 giống nhau ở game/game.js và modules/movement/index.js; AIR_MAX 2.4, AIR_SLACK 0.3 chỉ có ở server (modules/movement/index.js)",
       "tests/features/movement.js: 'nhảy đôi liên tục đúng vật lý: server không sửa vị trí' đạt",
@@ -2571,7 +2735,10 @@
     "depends": [],
     "notes": "Ghép GDD (soát): viết lại tiêu chí theo đúng mã và ca kiểm có thật; ca nhảy đôi lên bục chênh 124px để dev-test-coverage bổ sung nếu cần. Thiếu bằng chứng (2026-10-19): acceptance #1 \"Hằng JUMP 378, JUMP2 330, GRAV 1000 giống nhau ở game/game.js và modules/movement/index.js; AIR_MAX 2.4, AIR_SLACK 0.3 chỉ có ở server (modules/movement/index.js)\".",
     "proof": [
-      [],
+      [
+        "tests/features/movement.js :: hằng JUMP 378, JUMP2 330, GRAV 1000 giống nhau ở game/game.js và modules/movement/index.js",
+        "tests/features/movement.js :: AIR_MAX 2.4, AIR_SLACK 0.3 chỉ có ở server (modules/movement/index.js)"
+      ],
       [
         "tests/features/movement.js :: nhảy đôi liên tục đúng vật lý: server không sửa vị trí"
       ],
