@@ -25,6 +25,7 @@ const { dailyTest, dailyTaskTest, dailyTaskUnitTests } = require('./features/dai
 const { endgameTest } = require('./features/endgame');
 const { bagUnitTests, bagTest, useManyTest } = require('./features/inventory');
 const { audioUnitTests, audioHttpTest } = require('./features/audio');
+const { artUnitTests, artHttpTest } = require('./features/art');
 const { airTest, pickupTest } = require('./features/movement');
 const { fashionTest } = require('./features/fashion');
 const { saveTest, reloadTest } = require('./features/persistence');
@@ -44,6 +45,7 @@ function unitTests() {
   arenaUnitTests();
   bagUnitTests();
   audioUnitTests();
+  artUnitTests();
   boundUnit(ok);
   balanceUnitTests();
   pkUnitTests();
@@ -95,6 +97,7 @@ async function main() {
     await bagTest(ctx.a);
     await useManyTest(ctx.a);
     await audioHttpTest();
+    await artHttpTest(ctx.a);
     await devtoolsTest();
     await adminTest();
 

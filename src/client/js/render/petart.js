@@ -432,8 +432,10 @@ export function drawPet(ctx, x, y, kind, o = {}) {
   else if (A.fly) lift = A.fly + Math.round(Math.sin(t * (A.bob > 4 ? 4 : 2.4)) * Math.min(2, A.bob));
   else if (mv && A.hop) lift = -A.hop[f];
   else if (mv && kind === 'slime') lift = [0, 1, 2, 1][f];
-  const X = Math.round(x);
-  const Y = Math.round(y);
+  // lớp thế giới ×3 (ctx.art = 3): làm tròn theo pixel nghệ thuật
+  const q = ctx.art || 1;
+  const X = Math.round(x * q) / q;
+  const Y = Math.round(y * q) / q;
   const tier = tierOf(o.lv || 1);
   if (!o.noShadow) {
     const sw = A.fly ? 8 : kind === 'slime' ? 12 : 10;

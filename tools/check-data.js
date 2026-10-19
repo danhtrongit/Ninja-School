@@ -452,9 +452,60 @@ if (RARITY.length !== 5) err('RARITY phải có 5 bậc');
   }
 }
 
+// Atlas ảnh ×3 (DESIGN_RULES mục 11): src/client/art/<nhóm>/<id>.png + .json
+const ART_DIR = require('path').join(__dirname, '..', 'src', 'client', 'art');
+const ART_MAX_KB = { monster: 200, boss: 400 };
+const atlasOk = [];
+{
+  const fs = require('fs');
+  const path = require('path');
+  const { checkAtlas } = require('./lib/atlas');
+  const credits = fs.existsSync(path.join(ART_DIR, 'CREDITS.md')) ? fs.readFileSync(path.join(ART_DIR, 'CREDITS.md'), 'utf8') : '';
+  const atlasIds = new Set();
+  for (const grp of fs.existsSync(ART_DIR) ? fs.readdirSync(ART_DIR) : []) {
+    const dir = path.join(ART_DIR, grp);
+    if (!fs.statSync(dir).isDirectory()) continue;
+    if (!ART_MAX_KB[grp]) { err(`Atlas: nhóm "${grp}" chưa có luật kiểm (monster, boss)`); continue; }
+    const files = fs.readdirSync(dir);
+    for (const f of files) {
+      const m = f.match(/^([a-z0-9_]+)\.(png|json)$/);
+      if (!m) { err(`Atlas ${grp}/${f}: tên file phải là <id>.png hoặc <id>.json`); continue; }
+      if (!files.includes(`${m[1]}.${m[2] === 'png' ? 'json' : 'png'}`)) err(`Atlas ${grp}/${f}: thiếu file ${m[2] === 'png' ? '.json' : '.png'} đi kèm`);
+      if (m[2] !== 'json' || !files.includes(`${m[1]}.png`)) continue;
+      const id = m[1];
+      const key = `${grp}/${id}`;
+      const def = MONSTERS[id];
+      if (!def) { err(`Atlas ${key}: không có quái "${id}"`); continue; }
+      if (!!def.boss !== (grp === 'boss')) err(`Atlas ${key}: ${def.boss ? 'boss phải nằm ở art/boss/' : 'quái thường phải nằm ở art/monster/'}`);
+      let meta;
+      try {
+        meta = JSON.parse(fs.readFileSync(path.join(dir, f), 'utf8'));
+      } catch (e) {
+        err(`Atlas ${key}: JSON lỗi (${e.message})`);
+        continue;
+      }
+      const es = checkAtlas(fs.readFileSync(path.join(dir, `${id}.png`)), meta, { maxColors: 40, maxBytes: ART_MAX_KB[grp] * 1024 });
+      for (const e of es) err(`Atlas ${key}: ${e}`);
+      // monsterHeight = h / 3 (danh mục gửi máy khách); giữ trong khoảng hợp lý so với hitbox để nhãn tên và thanh máu không lệch
+      const wh = meta.h / 3;
+      if (!(wh >= def.h * 0.9 && wh <= def.h * 2.2)) err(`Atlas ${key}: cao ${wh} đơn vị thế giới (h ${meta.h} / 3), cần 0.9-2.2 lần hitbox ${def.h}`);
+      if (!new RegExp(`^\\| ${key} \\| @cf/[^|]+ \\| \\d+ \\| \\d{4}-\\d{2}-\\d{2} \\|`, 'm').test(credits)) err(`Atlas ${key}: thiếu dòng nguồn (model, seed, ngày) trong src/client/art/CREDITS.md`);
+      atlasIds.add(id);
+      if (!es.length) atlasOk.push(key);
+    }
+  }
+  // cùng một bản đồ không được nửa hình code nửa atlas ×3 (mục 0.4, 11)
+  for (const [mid, map] of Object.entries(MAPS)) {
+    const ids = [...new Set([...(map.spawns || []).map((s) => s.m), ...(map.boss || []).map((b) => b.m)])];
+    const have = ids.filter((id) => atlasIds.has(id));
+    if (have.length && have.length < ids.length) err(`Atlas: bản đồ ${mid} có ${have.join(', ')} vẽ ×3 nhưng ${ids.filter((id) => !atlasIds.has(id)).join(', ')} chưa có atlas`);
+  }
+}
+
 if (errors.length) {
   console.log(errors.map((e) => `✘ ${e}`).join('\n'));
   console.log(`\nDỮ LIỆU CÓ ${errors.length} LỖI`);
   process.exit(1);
 }
 console.log(`✔ Dữ liệu hợp lệ: ${Object.keys(ITEMS).length} vật phẩm, ${Object.keys(MONSTERS).length} quái, ${Object.keys(MAPS).length} bản đồ, ${MAIN_QUESTS.length} nhiệm vụ, ${Object.keys(SKILLS).length} kỹ năng`);
+console.log(`✔ Atlas ×3: ${atlasOk.length} atlas hợp lệ (đủ khóa, đủ 5 hoạt ảnh idle/walk/atk/hit/die, ≤ 40 màu, viền ngoài #1d1424, cao h / 3 khớp monsterHeight, có nguồn trong CREDITS.md)${atlasOk.length ? ': ' + atlasOk.join(', ') : ''}`);

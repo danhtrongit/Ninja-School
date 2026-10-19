@@ -1,7 +1,7 @@
 // Vòng lặp game phía client: vật lý, đồng bộ mạng, chiến đấu, vẽ
 import { S, skillVal, activeSeason, countInv } from '../core/store.js';
 import { drawNinja, ELEMENT_COLORS, NINJA_H, mountOffset } from '../render/sprites.js';
-import { drawMonster, monsterHeight, prewarmMonsters } from '../render/monsterart.js';
+import { drawMonster, monsterHeight, prewarmMonsters, monsterDieTime } from '../render/monsterart.js';
 import { drawPet, PET_ART, petHeight, petFlies } from '../render/petart.js';
 import { iconCanvas } from '../render/icons.js';
 import { MapRenderer, setLighting } from '../render/maprender.js';
@@ -16,6 +16,8 @@ const SPEED = 110;
 const PH = NINJA_H;
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
 // Cộng độ rung s vào v; vượt khỏi [lo, hi] thì rung về phía ngược lại
+// 1 đơn vị thế giới = ART pixel nghệ thuật (DESIGN_RULES mục 1, 11)
+const ART = 3;
 const shakeIn = (v, s, lo, hi) => {
   if (!s) return v;
   const a = v + s;
@@ -86,8 +88,10 @@ export class Game {
     if (!this.fx.shakeScale) this.fx.shake = 0;
   }
 
+  // Lớp thế giới ×3: zoom = pixel thiết bị mỗi đơn vị thế giới, s = zoom / ART = pixel thiết bị mỗi pixel nghệ thuật.
+  // s nguyên: vẽ thẳng lên canvas màn hình; s lẻ: vẽ vào canvas phụ ở k = ceil(s) (không làm mượt) rồi thu mượt một lần
   resize() {
-    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    const dpr = Math.min(3, window.devicePixelRatio || 1);
     const w = window.innerWidth;
     const h = window.innerHeight;
     this.dpr = dpr;
@@ -99,8 +103,13 @@ export class Game {
     while (this.canvas.width / this.zoom > 760) this.zoom++;
     this.W = Math.ceil(this.canvas.width / this.zoom);
     this.H = Math.ceil(this.canvas.height / this.zoom);
-    this.lo.width = this.W;
-    this.lo.height = this.H;
+    this.art = ART;
+    this.s = this.zoom / ART;
+    this.k = Math.ceil(this.s);
+    this.direct = Number.isInteger(this.s);
+    // canvas phụ dư 1 đơn vị mỗi chiều cho phần lẻ của camera (dời cả lớp theo pixel nghệ thuật)
+    this.lo.width = this.direct ? 1 : (this.W + 1) * ART * this.k;
+    this.lo.height = this.direct ? 1 : (this.H + 1) * ART * this.k;
     this.lctx.imageSmoothingEnabled = false;
     this.ctx.imageSmoothingEnabled = false;
   }
@@ -330,7 +339,7 @@ export class Game {
     for (const k of this.map.mobs || []) add(k);
     for (const b of this.map.bosses || []) add(b.m);
     for (const m of this.monsters.values()) add(m.k);
-    prewarmMonsters(defs);
+    prewarmMonsters(defs, S.G.art);
   }
 
   // Rời màn hình game (đăng xuất, đổi nhân vật, mất phiên): bỏ mọi việc tự động đang làm dở
@@ -1234,7 +1243,7 @@ export class Game {
       m.y += (m.ty - m.y) * k;
     }
     for (const d of this.dying) d.dieT += dt;
-    this.dying = this.dying.filter((d) => d.dieT < 0.5);
+    this.dying = this.dying.filter((d) => d.dieT < monsterDieTime(d.def));
     if (this.timers.length) {
       const due = this.timers.filter((tm) => tm.at <= this.t);
       if (due.length) {
@@ -1457,21 +1466,34 @@ export class Game {
   // ---------------- Vẽ
   render() {
     if (!this.active || !this.map) return;
-    const c = this.lctx;
-    const W = this.W;
-    const H = this.H;
+    const c = this.direct ? this.ctx : this.lctx;
+    // vùng vẽ rộng hơn khung nhìn 1 đơn vị: cả lớp bị dời lùi phần lẻ của camera
+    const W = this.W + 1;
+    const H = this.H + 1;
     const R = this.renderer;
     const G = this.map.ground;
     const t = this.t;
     const me = this.me;
     // rung màn hình: lệch camera nguyên pixel; chạm mép bản đồ thì rung ngược lại để không lộ khoảng trống
+    // camera làm tròn theo pixel nghệ thuật; các hàm vẽ nhận phần nguyên, phần lẻ (0, 1/3, 2/3) dời cả lớp bằng phép biến đổi
+    // để địa hình (tọa độ nguyên) và nhân vật (làm tròn theo pixel nghệ thuật) luôn khớp nhau
     const sh = this.fx.shakeXY();
-    const bx = Math.round(this.camX);
-    const by = Math.round(this.camY);
-    const camX = this.map.w > W ? shakeIn(bx, sh.x, 0, this.map.w - W) : bx + sh.x;
-    const camY = shakeIn(by, sh.y, -1e9, this.map.h - H);
-    this.shakeDX = camX - bx;
-    this.shakeDY = camY - by;
+    const bx = Math.round(this.camX * ART) / ART;
+    const by = Math.round(this.camY * ART) / ART;
+    const camXa = this.map.w > this.W ? shakeIn(bx, sh.x, 0, this.map.w - this.W) : bx + sh.x;
+    const camYa = shakeIn(by, sh.y, -1e9, this.map.h - this.H);
+    this.shakeDX = camXa - bx;
+    this.shakeDY = camYa - by;
+    // camera đã làm tròn theo pixel nghệ thuật của khung vừa vẽ (công cụ kiểm thử đọc qua window.ninja.game)
+    this.view = { x: camXa, y: camYa };
+    const camX = Math.floor(camXa);
+    const camY = Math.floor(camYa);
+    const unit = this.direct ? this.zoom : ART * this.k;
+    c.setTransform(unit, 0, 0, unit, -Math.round((camXa - camX) * unit), -Math.round((camYa - camY) * unit));
+    c.imageSmoothingEnabled = false;
+    c.art = ART;
+    c.viewW = W;
+    c.viewH = H;
     const hour = this.forceHour == null ? undefined : this.forceHour;
     R.drawBackground(c, camX, camY, W, H, t);
     R.drawTerrain(c, camX, camY, W, H);
@@ -1496,7 +1518,7 @@ export class Game {
       const img = iconCanvas(icon, it.r);
       const age = t - it.born;
       const bounce = age < 0.4 ? -Math.sin((age / 0.4) * Math.PI) * 10 : Math.sin(t * 3 + it.id) > 0.9 ? -1 : 0;
-      c.drawImage(img.width === 12 ? img : iconCanvas(icon, it.r, 12), Math.round(it.x - 6 - camX), Math.round(it.y - 12 - camY + bounce));
+      c.drawImage(img.width === 12 ? img : iconCanvas(icon, it.r, 12), Math.round(it.x - 6 - camX), Math.round((it.y - 12 - camY + bounce) * ART) / ART);
       if (it.r >= 2 && Math.floor(t * 4 + it.id) % 4 === 0) {
         c.fillStyle = S.G.rarity[it.r].color;
         c.fillRect(Math.round(it.x - camX), Math.round(it.y - 16 - camY), 1, 1);
@@ -1511,19 +1533,15 @@ export class Game {
       const showBar = m.hp < m.mhp || (target && target.kind === 'm' && target.id === m.id);
       if (showBar && !m.def.boss) {
         const bw = Math.max(14, Math.min(30, m.def.w));
-        const bx = Math.round(m.x - bw / 2 - camX);
-        const by = Math.round(m.y - m.h - 5 - camY);
+        const bx = Math.round((m.x - bw / 2 - camX) * ART) / ART;
+        const by = Math.round((m.y - m.h - 5 - camY) * ART) / ART;
         c.fillStyle = '#1a1020';
         c.fillRect(bx - 1, by - 1, bw + 2, 4);
         c.fillStyle = '#e53935';
         c.fillRect(bx, by, Math.max(0, Math.round((bw * m.hp) / m.mhp)), 2);
       }
     }
-    for (const d of this.dying) {
-      c.globalAlpha = 1 - d.dieT / 0.5;
-      drawMonster(c, d.x - camX, d.y - camY + d.dieT * 10, d.def, { t, dir: d.dir, st: 0, id: d.id, flash: true });
-      c.globalAlpha = 1;
-    }
+    for (const d of this.dying) drawMonster(c, d.x - camX, d.y - camY, d.def, { t, dir: d.dir, st: 0, id: d.id, die: d.dieT });
     // Thú cưng đi theo chủ
     for (const p of this.players.values()) this.drawPet(c, p, p.info.look, camX, camY, t);
     this.drawPet(c, this.me, S.me.look, camX, camY, t);
@@ -1548,7 +1566,7 @@ export class Game {
       const lh = Math.ceil(this.labelSize() / this.zoom);
       const top = target.kind === 'm' ? e.y - e.h - (e.def.boss ? 3 : 7) - lh : e.y - this.nameLift(e) - 3 - lh * (e.info && e.info.clan ? 1.85 : 1);
       const ay = Math.round(top - 6 - camY + Math.sin(t * 6) * 1.5);
-      const ax = Math.round(e.x - camX);
+      const ax = Math.round((e.x - camX) * ART) / ART;
       c.fillStyle = target.kind === 'p' ? '#ff5252' : '#ffeb3b';
       c.fillRect(ax - 3, ay, 7, 1);
       c.fillRect(ax - 2, ay + 1, 5, 1);
@@ -1560,10 +1578,15 @@ export class Game {
     R.drawForeground(c, camX, camY, W, H, t);
     R.drawLighting(c, camX, camY, W, H, hour, me.x, me.y - 20);
 
-    // Phóng to lên màn hình
+    // s lẻ: thu mượt cả lớp từ k về s đúng một lần
     const ctx = this.ctx;
-    ctx.imageSmoothingEnabled = false;
-    ctx.drawImage(this.lo, 0, 0, W, H, 0, 0, W * this.zoom, H * this.zoom);
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    if (!this.direct) {
+      const u = ART * this.k;
+      ctx.imageSmoothingEnabled = true;
+      ctx.drawImage(this.lo, 0, 0, this.W * u, this.H * u, 0, 0, this.W * this.zoom, this.H * this.zoom);
+      ctx.imageSmoothingEnabled = false;
+    }
     this.renderOverlay(camX, camY);
   }
 

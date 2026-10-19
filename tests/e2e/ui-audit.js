@@ -162,6 +162,50 @@ const SCENES = {
     ok(left === 0, `bag-pick ${vp.name}: hỏi bằng ask() rồi hủy đúng 2 món đã chọn`);
     await page.evaluate(() => { window.ninja.ui.invPick = null; window.ninja.ui.closeAll(); });
   },
+  // Cổng Địa Ngục vẽ bằng atlas ×3 (DESIGN_RULES mục 11): ban ngày và ban đêm, mọi quái/boss trong khung nhìn là atlas, xong về làng
+  async hellgate(page, vp, shot) {
+    if (vp.name !== '1280x720' && vp.name !== '844x390') return;
+    const say = async (msg) => { await page.evaluate((m) => window.ninja.net.send('chat', { ch: 'map', msg: m }), msg); await page.waitForTimeout(250); };
+    await say('/lv 100');
+    // nhân vật thử đủ trâu để đứng giữa bãi quái cấp 83-95 và boss Ma Thần lúc chụp
+    const cls = await page.evaluate(() => window.ninja.S.me.cls);
+    for (const id of [`w_${cls}_10`, 'hat_10', 'armor_10', 'gloves_10', 'pants_10', 'shoes_10', 'necklace_10', 'ring_10', 'amulet_10']) {
+      if (await page.evaluate((i) => Object.values(window.ninja.S.equip).some((e) => e && e.id === i), id)) continue;
+      await say(`/item ${id}`);
+      await page.waitForFunction((i) => window.ninja.S.inv.some((it) => it && it.id === i), id, { timeout: 3000 }).catch(() => {});
+      await page.evaluate((i) => window.ninja.net.send('equip', { slot: window.ninja.S.inv.findIndex((it) => it && it.id === i) }), id);
+      await page.waitForTimeout(150);
+    }
+    await page.evaluate(() => window.ninja.net.send('addStat', { k: 'vit', n: 9999 }));
+    await say('/plus 16');
+    await say('/luong 50');
+    await say('/tp hell_gate');
+    await page.waitForFunction(() => window.ninja.game.map && window.ninja.game.map.id === 'hell_gate', null, { timeout: 8000 });
+    const revive = () => page.evaluate(() => { if (window.ninja.S.me.dead) window.ninja.net.send('revive', { mode: 'here' }); });
+    for (const [x, hour] of [[1750, 22], [1000, 12]]) {
+      await revive();
+      await page.evaluate((tx) => window.ninja.game.travelTo({ map: 'hell_gate', x: tx }), x);
+      await page.waitForFunction((tx) => Math.abs(window.ninja.game.me.x - tx) < 40 || window.ninja.S.me.dead, x, { timeout: 15000 }).catch(() => {});
+      await revive();
+      await page.evaluate((h) => { window.ninja.game.forceHour = h; window.ninja.ui.closeAll(); }, hour);
+      await page.waitForTimeout(800);
+      const r = await page.evaluate(() => {
+        const g = window.ninja.game;
+        const G = window.ninja.S.G;
+        const got = performance.getEntriesByType('resource').map((e) => e.name);
+        const key = (m) => `${m.def.boss ? 'boss' : 'monster'}/${m.k}`;
+        const inView = [...g.monsters.values()].filter((m) => m.x > g.view.x - 20 && m.x < g.view.x + g.W + 20);
+        const code = inView.filter((m) => !(G.art && G.art[key(m)] && got.some((u) => u.includes(`/art/${key(m)}.png`))));
+        return { n: inView.length, kinds: [...new Set(inView.map((m) => m.k))], code: code.map((m) => m.k) };
+      });
+      await shot(`hellgate-h${hour}`);
+      ok(r.n > 0 && !r.code.length, `hellgate ${vp.name} ${hour} giờ: ${r.n} quái trong khung nhìn (${r.kinds.join(', ')}) đều vẽ bằng atlas ×3${r.code.length ? '; hình code: ' + r.code.join(', ') : ''}`);
+    }
+    await revive();
+    await page.evaluate(() => { window.ninja.game.forceHour = null; });
+    await say('/tp v_fire');
+    await page.waitForFunction(() => window.ninja.game.map && window.ninja.game.map.id === 'v_fire', null, { timeout: 8000 }).catch(() => {});
+  },
 };
 
 (async () => {

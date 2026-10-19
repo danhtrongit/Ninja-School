@@ -7,7 +7,7 @@ const { execFileSync } = require('child_process');
 const { monitorEventLoopDelay } = require('perf_hooks');
 const { DB } = require('./services/db');
 const { Backup } = require('./services/backup');
-const { createHttpServer } = require('./services/http');
+const { createHttpServer, artIndex } = require('./services/http');
 const { World } = require('./core/world');
 const { buildGameData } = require('./core/gamedata');
 const { attachGateway } = require('./core/gateway');
@@ -136,7 +136,7 @@ const server = createHttpServer(path.join(__dirname, '..', 'client'), status, {
   extra: (req, res, url) => metrics.handle(req, res, url, process.env.METRICS_TOKEN || ''),
   devTools: config.devTools,
 });
-attachGateway(server, { db, world, config, gameData: buildGameData(VERSION) });
+attachGateway(server, { db, world, config, gameData: buildGameData(VERSION, { art: artIndex(path.join(__dirname, '..', 'client')) }) });
 
 server.listen(config.port, () => {
   console.log(`Ninja School server đang chạy tại http://localhost:${config.port}`);

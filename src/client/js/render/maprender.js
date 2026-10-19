@@ -517,7 +517,7 @@ export class MapRenderer {
     for (const p of this.map.portals) {
       const x = Math.round(p.x - camX);
       const y = Math.round(G - camY);
-      if (x < -80 || x > ctx.canvas.width + 80) continue;
+      if (x < -80 || x > (ctx.viewW || ctx.canvas.width) + 80) continue;
       if (p.door) {
         const cy = this.map.town ? y - 30 : y - 34;
         ctx.globalCompositeOperation = 'lighter';

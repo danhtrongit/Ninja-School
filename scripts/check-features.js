@@ -25,7 +25,7 @@ const LOG_OF = {
   'tools/check-data.js': ['check.log'],
   'tests/e2e/e2e.js': ['e2e-d.log', 'e2e-m.log'],
   'tests/e2e/ui-multiplayer.js': ['ui.log'],
-  'tests/e2e/perf.js': ['perf-d.log', 'perf-m.log'],
+  'tests/e2e/perf.js': ['perf-d.log', 'perf-m.log', 'perf-m3.log'],
   'tests/e2e/gallery.js': ['visual.log'],
   'tests/e2e/sfx.js': ['sfx.log'],
   'tests/e2e/ui-audit.js': ['ui-audit.log'],
@@ -37,7 +37,7 @@ const LOG_OF = {
   'scripts/verify.js': ['verify.log'],
 };
 const logsFor = (file) => LOG_OF[file] || (file.startsWith('tests/features/') ? ['smoke.log'] : null);
-const BROWSER_LOGS = new Set(['verify.log', 'e2e-d.log', 'e2e-m.log', 'ui.log', 'perf-d.log', 'perf-m.log', 'visual.log', 'sfx.log', 'ui-audit.log', 'load.log', 'persist.log', 'prod.log']);
+const BROWSER_LOGS = new Set(['verify.log', 'e2e-d.log', 'e2e-m.log', 'ui.log', 'perf-d.log', 'perf-m.log', 'perf-m3.log', 'visual.log', 'sfx.log', 'ui-audit.log', 'load.log', 'persist.log', 'prod.log']);
 
 let fj;
 try { fj = JSON.parse(fs.readFileSync(path.join(ROOT, 'docs', 'features.json'), 'utf8')); } catch (e) {

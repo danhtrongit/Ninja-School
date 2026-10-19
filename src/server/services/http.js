@@ -97,9 +97,38 @@ function buildIndex(root, file, abs = false) {
     .replace('</head>', `  ${map}${preload}\n</head>`);
 }
 
-// File js/css xin đúng phiên bản hiện tại thì được lưu đệm vĩnh viễn
+// Danh mục atlas ảnh ×3 (DESIGN_RULES mục 11): { '<nhóm>/<id>': { v: băm png+json, h: chiều cao hình đứng } } cho mọi cặp
+// art/<nhóm>/<id>.png + .json. Gửi trong gói data để máy khách chỉ tải atlas có thật (tải file thiếu sẽ in lỗi 404 ra console),
+// lưu đệm theo ?v= và biết chiều cao quái (nhãn tên, thanh máu) trước khi ảnh tải xong
+function artIndex(root) {
+  const dir = path.join(root, 'art');
+  const out = {};
+  if (!fs.existsSync(dir)) return out;
+  for (const r of listFiles(dir, '.json')) {
+    const id = r.slice(0, -5);
+    if (!id.includes('/') || !fs.existsSync(path.join(dir, `${id}.png`))) continue;
+    let h = 0;
+    try {
+      h = Number(JSON.parse(fs.readFileSync(path.join(dir, r), 'utf8')).h) || 0;
+    } catch (e) {
+      continue;
+    }
+    out[id] = { v: fileVer(path.join(dir, `${id}.png`)) + fileVer(path.join(dir, r)).slice(0, 4), h };
+  }
+  return out;
+}
+
+// File js/css/art xin đúng phiên bản hiện tại thì được lưu đệm vĩnh viễn
 function versioned(root, file, url) {
   const v = url.searchParams.get('v');
+  if (v && /^art\//.test(path.relative(root, file).split(path.sep).join('/'))) {
+    const base = file.replace(/\.(png|json)$/, '');
+    try {
+      return fileVer(`${base}.png`) + fileVer(`${base}.json`).slice(0, 4) === v;
+    } catch (e) {
+      return false;
+    }
+  }
   if (!v || !/^(js|css)\//.test(path.relative(root, file).split(path.sep).join('/'))) return false;
   try {
     return fileVer(file) === v;
@@ -186,4 +215,4 @@ function createHttpServer(root, status, opts = {}) {
   });
 }
 
-module.exports = { createHttpServer };
+module.exports = { createHttpServer, artIndex };

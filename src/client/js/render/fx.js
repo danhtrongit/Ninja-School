@@ -369,8 +369,8 @@ export class FX {
 
   // ================= VẼ (canvas phân giải thấp) =================
   draw(ctx, camX, camY) {
-    this.cw = ctx.canvas.width;
-    this.ch = ctx.canvas.height;
+    this.cw = ctx.viewW || ctx.canvas.width;
+    this.ch = ctx.viewH || ctx.canvas.height;
     this.viewX = camX;
     this.viewY = camY;
     this.viewW = this.cw;
@@ -409,8 +409,8 @@ export class FX {
   // Tùy chọn: vẽ hiệu ứng nằm trên mặt đất (cảnh báo boss, vết nứt, vòng triệu hồi) TRƯỚC khi vẽ quái/người.
   // Gọi cùng tham số với draw(); nếu không gọi thì draw() tự vẽ chúng.
   drawGround(ctx, camX, camY) {
-    this.cw = ctx.canvas.width;
-    this.ch = ctx.canvas.height;
+    this.cw = ctx.viewW || ctx.canvas.width;
+    this.ch = ctx.viewH || ctx.canvas.height;
     this.groundFrame = this.frame;
     ctx.save();
     for (const e of this.list) {

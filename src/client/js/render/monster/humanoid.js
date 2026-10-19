@@ -1,6 +1,6 @@
 // Quái hình người: tư thế, vũ khí, trang phục riêng từng loài (HUM).
 import { pack, adj, T, EYE, WHITE } from './palette.js';
-import { R, IRON, WOOD, crystal, SKIN, STEEL, GOLD, BANDAGE, DARKWOOD, CLOAK, HEAVEN_ROBE, GOD_ROBE, darker, patFill, wrapPat, featherWing } from './parts.js';
+import { R, IRON, WOOD, crystal, SKIN, STEEL, GOLD, BANDAGE, DARKWOOD, CLOAK, HEAVEN_ROBE, darker, patFill, wrapPat, featherWing } from './parts.js';
 
 // ================= NGƯỜI (HUMANOID) =================
 // Khung 40x38, thân giữa khung (X=20), đế chân ở hàng 36. Dáng chibi đầu to như ninja nhưng mỗi loài
@@ -62,16 +62,6 @@ function humWeapon(S, P, C, x, y, a, g) {
       S.fill(line(0.9, 0.9, 1.2, -1.4, 1.4), guard, { sh: 'flat' });
       blade(S.M().path([...at(1.4, 0), ...at(4, -0.2), ...at(6, 1)], 2), steel, 1.6, 4.6, -0.5);
     }
-  } else if (k === 'scythe') {
-    // lưỡi hái quay về phía trước để không bị khe mũ che khi đứng
-    // lúc đứng cán dài, lưỡi nằm trên mũ; lúc đánh cán ngắn lại để không tràn khung
-    const L = g.p.atk ? 0 : (C.len || 13) - 13;
-    const q = (f, o) => at(f + L, -o);
-    S.fill(line(-6, 13 + L, 1.5), T(C.pole || DARKWOOD), { sh: 'flat' });
-    const m = poly([q(11.2, 1.2), q(14.4, -1.2), q(14, -4.2), q(12, -6.6), q(12, -3.8), q(10.4, -1)]);
-    S.fill(m, steel, { sh: 'flat' });
-    if (C.edge) S.fill(S.M().path([...q(10.8, -0.8), ...q(12.2, -3.8), ...q(12, -6.4)], 1.4).and(m), { ...T(C.edge), md: T(C.edge).hi }, { il: 0, sh: 'flat' });
-    S.fill(S.M().line(...q(12.4, 0.6), ...q(12.4, -1.2), 1.6), guard, { sh: 'flat' });
   } else if (k === 'spear' || k === 'trident') {
     const pole = T(C.pole || WOOD);
     S.fill(line(-7, 12, 1.5), pole, { sh: 'flat' });
@@ -95,12 +85,6 @@ function humWeapon(S, P, C, x, y, a, g) {
     if (C.edge1) S.fill(line(2, 13.6, 1, 1.2).and(m), { ...steel, md: steel.dk }, { il: 0, sh: 'flat' });
     else S.fill(line(2, 13.6, 1, 1.2).and(m), { ...e, md: e.md }, { il: 0, sh: 'flat' });
     if (C.edge) S.glow.push([...at(8), 6, C.edge]);
-  } else if (k === 'orb') {
-    S.fill(line(-7, 10.4, 1.5), T(C.pole || '#2a2133'), { sh: 'flat' });
-    S.fill(S.M().path([...at(9.6, -2.4), ...at(11, -2.6), ...at(13, -1.4)], 1.2).path([...at(9.6, 2.4), ...at(11, 2.6), ...at(13, 1.4)], 1.2).line(...at(9.6, -2.4), ...at(9.6, 2.4), 1.4), T(C.whead || GOLD), { sh: 'flat' });
-    const orb = T(C.orb || '#ff1744');
-    S.fill(S.M().ell(...at(11.8), 2, 2), orb, { lt: 0.4, il: 1 });
-    S.glow.push([...at(11.8), 7, orb.col]);
   } else if (k === 'crook') {
     const gold = T(C.whead || GOLD);
     const band = T(C.band || '#1565c0');
@@ -208,7 +192,7 @@ export function drawHumanoid(S, P, an, i, v, bl) {
     S.fill(S.M().ell(hf[0], hf[1] + 0.2, C.thin ? 1.2 : 1.6, C.thin ? 1.2 : 1.6), hand, { lt: 0.5 });
     if (C.hands) C.hands(S, P, g);
   };
-  const early = (p.atk === 1 && style !== 'thrust') || (C.wpnBehind && !p.atk);
+  const early = p.atk === 1 && style !== 'thrust';
   if (early) frontArm();
   // đầu
   C.head(S, P, g);
@@ -583,43 +567,6 @@ export const HUM = {
       S.head = [hx, hy - 9];
     },
   },
-  // Tử Thần Kỵ Sĩ: giáp thép đen, mũ kín khe chữ T lửa xanh, áo choàng rách xanh, lưỡi hái
-  deathknight: {
-    top: '#3a3f47', pants: '#3a3f47', boots: 'a', arm: '#3a3f47', hand: 'a', wpn: 'scythe', blade: '#dfe5ee', edge: '#76ff03', pole: '#5a4650', guard: '#8a93a3', trail: '#ccff90', rest: 0.04, len: 20.2, wpnBehind: true,
-    back(S, P, g) { capeBack(S, g, P.b, { pat: (x, y, t) => ((x * 3 + y) % 9 === 0 ? t.dk : null) }); },
-    body(S, P, g) {
-      const { X, Y } = g;
-      const c = P.c;
-      for (let y = 22; y <= 26; y++) S.px(X + 0.5, y + Y, y === 24 ? WHITE : c.hi, 0.95);
-      S.px(X - 0.5, 24 + Y, c.md); S.px(X + 1.5, 24 + Y, c.md);
-      S.glow.push([X + 0.5, 24 + Y, 4, c.col]);
-      const [sx, sy] = g.sf;
-      crystal(S, sx + 0.2, sy - 1.6, 0.3, 1.8, 3.4, T('#cfd6e0'));
-      S.fill(S.M().ell(sx + 0.6, sy - 0.2, 3, 2.4), T('#3a3f47'), { lt: 0.45 });
-    },
-    head(S, P, g) {
-      const { hx, hy } = g;
-      const steel = T('#5a626e');
-      // mào thép thấp vắt ra sau (thay cho sừng nhỏ dễ nhìn thành tai)
-      S.fill(S.M().poly([hx - 1, hy - 5.4, hx - 7.6, hy - 4.4, hx - 4, hy - 2.6]), T('#3a3f47'), { sh: 'edge' });
-      const hm = S.M().ell(hx, hy - 0.6, 6.3, 5.8).rect(hx - 5.6, hy, 11.6, 4.8);
-      S.fill(hm, steel, { lt: 0.5, c: [hx, hy, 6.4, 6] });
-      S.fill(S.M().rect(R(hx - 6), R(hy - 4), 12, 1).and(hm), { ...steel, md: steel.lt }, { il: 0, sh: 'flat' });
-      // khe mũ chữ T sắc nét: ngang 7px, dọc 3px, lửa xanh lõi trắng
-      const tx = R(hx - 0.6);
-      const ty = R(hy - 1.4);
-      S.rc(tx - 1, ty - 1, 9, 3, pack(18, 12, 20));
-      S.rc(R(hx + 2), ty + 1, 3, 4, pack(18, 12, 20));
-      if (!g.bl) {
-        S.rc(tx, ty, 7, 1, P.c.hi);
-        S.rc(R(hx + 3), ty + 1, 1, 3, P.c.md);
-        S.px(tx + 1, ty, WHITE); S.px(tx + 5, ty, WHITE);
-      } else S.rc(tx, ty, 7, 1, P.c.dk);
-      S.eyes.push([tx + 1.5, ty + 0.5], [tx + 5.5, ty + 0.5]);
-      S.glow.push([hx + 2.5, hy - 1, 5, P.c.col]);
-      S.head = [hx, hy - 7];
-    },
-  },
   // Thiên Binh: giáp vàng áo trắng, mũ có cánh và chùm lông, cánh nhỏ sau lưng, giáo tua đỏ
   celestial: {
     skin: '#f6d2b4', top: 'a', pants: '#283593', boots: 'b', belt: 'c', wpn: 'spear', pole: '#ffd600', tassel: '#e53935', rest: 0.1,
@@ -719,44 +666,6 @@ export const HUM = {
     },
   },
   // ===== BOSS =====
-  // Ma Thần: sừng cừu xoắn, mắt thứ ba, áo bào dài cổ cao gai, gậy ngọc máu
-  boss_god: {
-    skin: '#9f86c0', top: GOD_ROBE, arm: GOD_ROBE, robe: true, wpn: 'orb', pole: '#2a2133', whead: '#6200ea', orb: '#ff1744',
-    back(S, P, g) {
-      const { X, Y, hx, hy } = g;
-      const w = [0, 1, 2, 1][g.fl % 4];
-      const cape = S.M().poly([X - 4.4, 20 + Y, X + 2, 20 + Y, X + 1, 36.6, X - 3, 35.4, X - 6.4 - w * 0.4, 36.8, X - 9, 35, X - 11.6 - w, 36.4, X - 9.6 - w * 0.5, 26 + Y]);
-      S.fill(cape, P.b, { sh: 'v', vt: 0.2, vb: 0.7 });
-      S.fill(S.M().poly([hx - 4, hy + 5.4, hx - 9.4, hy - 4, hx - 6.4, hy + 0.4, hx - 5.8, hy - 6.4, hx - 3.8, hy + 0.6, hx - 1.4, hy - 5, hx - 0.8, hy + 4.4]), P.b, { sh: 'facet', fx: hx - 5 });
-          },
-    torso(S, P, g, m) {
-      const { X, Y } = g;
-      patFill(S, m, GOD_ROBE, (x, y) => (y >= 34 || Math.abs(x - X - 0.6) < 0.6 && y > 24 + Y ? P.b.md : y === 33 ? P.c.dk : null));
-      S.fill(S.M().rect(X - 5, R(26 + Y), 11, 2).and(m), T(GOLD), { il: 2, sh: 'edge' });
-      S.fill(S.M().ell(X + 0.4, 27 + Y, 1.2, 1.2), P.c, { il: 1, lt: 0.4 });
-    },
-    head(S, P, g) {
-      const { hx, hy } = g;
-      const horn = T('#3a2d44');
-      const hm = headM(S, g);
-      S.fill(hm, g.skin, { lt: 0.5, dk: -1 });
-      S.fill(S.M().ell(hx - 0.6, hy - 2.8, 6.6, 3.8).rows(0, R(hy - 3.4)).ell(hx - 4.8, hy - 0.4, 1.8, 3), T('#4a2a6a'), { lt: 0.45 });
-      S.fill(S.M().path([hx - 3, hy - 3.6, hx - 4.6, hy - 8, hx - 8, hy - 9.6, hx - 10.6, hy - 8], 2.6).path([hx - 10.6, hy - 8, hx - 10.4, hy - 5.4, hx - 8.6, hy - 4.8], 1.6), horn, { sh: 'edge' });
-      S.fill(S.M().path([hx + 2.6, hy - 4.4, hx + 3.6, hy - 9, hx + 6.6, hy - 11, hx + 9.4, hy - 9.6], 2.6).path([hx + 9.4, hy - 9.6, hx + 10, hy - 7], 1.6), horn, { sh: 'edge' });
-      S.fill(S.M().ell(hx - 10.4, hy - 7.6, 1, 1).ell(hx + 9.8, hy - 8.6, 1, 1), P.c, { il: 0, lt: 0.4 });
-      const [ex, ey] = gEyes(S, g, P.c, { dy: 0, h: 2, glow: 4 });
-      // mắt thứ ba hình thoi 3px có viền tối và điểm sáng
-      const tx = ex + 3;
-      const ty = ey - 3;
-      for (const [dx, dy] of [[0, -2], [-1, -1], [1, -1], [-2, 0], [2, 0], [-1, 1], [1, 1], [0, 2]]) S.px(tx + dx, ty + dy, EYE);
-      S.px(tx, ty - 1, P.c.hi); S.px(tx - 1, ty, P.c.md); S.px(tx + 1, ty, P.c.md); S.px(tx, ty + 1, P.c.dk);
-      S.px(tx, ty, WHITE);
-      S.eyes.push([tx + 0.5, ty + 0.5]);
-      S.px(ex - 1, ey - 1, EYE); S.px(ex + 6, ey - 1, EYE);
-      S.rc(ex + 1, ey + 3, 4, 1, EYE); S.px(ex + 1, ey + 4, WHITE); S.px(ex + 4, ey + 4, WHITE);
-      S.head = [hx, hy - 11];
-    },
-  },
   // Pharaoh Phục Sinh: khăn nemes sọc vàng lam, rắn hổ mang trên trán, vòng cổ usekh, thân băng quấn, gậy móc
   boss_pharaoh: {
     skin: '#8d6e63', top: BANDAGE, pants: BANDAGE, boots: BANDAGE, arm: BANDAGE, hand: '#8d6e63', wrap: '#bfae82', wpn: 'crook', whead: '#ffd54f', band: '#1565c0',

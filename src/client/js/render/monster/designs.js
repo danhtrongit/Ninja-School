@@ -697,15 +697,15 @@ export const DESIGNS = {
     },
   },
 
-  // ---------------- BEAST: sói / chó địa ngục / rồng — chạy 4 chân
+  // ---------------- BEAST: sói / cáo / Cốt Long — chạy 4 chân
   beast: {
     W: 36, H: 24, idle: [0, 1, 2, 1], walk: 4, fps: [3, 11],
     draw(S, P, an, i, v, bl) {
       if (v === 'worm') return drawWorm(S, P, an, i, bl);
       if (v === 'serpent' || v === 'dragonK') return drawSerpent(S, P, an, i, bl, v === 'dragonK');
-      const hound = v === 'hound';
       const bone = v === 'bone';
-      const dragon = v === 'dragon' || bone;
+      // thân rồng (sọ dẹt, mõm dài, sừng xương): chỉ còn Cốt Long, Hắc Long đã vẽ bằng atlas ×3
+      const dragon = bone;
       const fox9 = v === 'fox9';
       const fox = v === 'fox' || fox9;
       const icy = v === 'ice';
@@ -740,13 +740,6 @@ export const DESIGNS = {
         S.fill(S.M().path([X - 7, 12.4 + Y, X - 11, 11.4 + Y - wag * 2, X - 14, 8.6 + Y - wag * 3], 2.6).path([X - 14, 8.6 + Y - wag * 3, X - 15, 5.6 + Y - wag * 3], 1.6), P.a, { sh: 'edge' });
         const tx = X - 15.2; const ty = 5 + Y - wag * 3;
         S.fill(S.M().poly([tx - 2, ty + 0.8, tx, ty - 2.8, tx + 2, ty + 0.8, tx, ty - 0.2]), P.b, { sh: 'facet', fx: tx + 0.5 });
-      } else if (hound) {
-        const f = an === 'walk' ? i % 2 : i % 2;
-        const tm = S.M().poly([X - 7, 10.5 + Y, X - 11.5, 8 + Y - wag * 3, X - 15, 2.6 + Y - wag * 4 + f, X - 11.6, 6 + Y - wag * 3, X - 12.6, 1.6 + Y - wag * 2 - f, X - 9, 6 + Y - wag, X - 6, 13 + Y]);
-        S.fill(tm, P.b, { sh: 'v', il: 1, vt: 0.2, vb: 0.8 });
-        S.dm(S.M().poly([X - 8, 10.5 + Y, X - 11.2, 7.6 + Y - wag * 3, X - 12.4, 4 + Y - wag * 3, X - 9.4, 7.6 + Y - wag, X - 7, 12 + Y]).and(tm), P.c.md, 1);
-        S.dm(S.M().poly([X - 8.4, 10.6 + Y, X - 10.2, 8.4 + Y - wag * 2, X - 8.6, 8.6 + Y - wag]).and(tm), P.c.hi, 1);
-        S.glow.push([X - 11, 7 + Y, 6, P.c.col]);
       } else if (fox9) {
         // đuôi xòe quạt rộng, mỗi đuôi tách rời có viền tối và chóp trắng; đếm được ở zoom nhỏ
         const order = [0, 4, 1, 3, 2];
@@ -786,12 +779,6 @@ export const DESIGNS = {
         for (const [tx, ty] of tips) fb.line(sx, sy, tx, ty, 2);
         S.fill(fb, P.bone, { sh: 'flat' });
         for (const [tx, ty] of tips) S.px(tx, ty, WHITE);
-      } else if (dragon) {
-        const wf = an === 'walk' ? [0, 1, 2, 1][i] : pose ? 2 : i === 1 ? 1 : 0;
-        const wy = [-1, 1.5, 4][wf];
-        const wm = S.M().poly([X - 3, 9 + Y, X - 6, 1 + Y + wy, X - 11, -0.4 + Y + wy * 1.4, X - 9.6, 3.4 + Y + wy, X - 7.4, 3.6 + Y + wy * 0.8, X - 6.6, 6 + Y + wy * 0.5, X - 4.6, 6.4 + Y + wy * 0.3, X + 1, 10 + Y]);
-        S.fill(wm, P.b, { sh: 'edge', il: 1 });
-        S.dm(S.M().path([X - 3, 9 + Y, X - 6, 1.4 + Y + wy, X - 10.4, 0.2 + Y + wy * 1.4], 1), P.b.dk, 1);
       }
       // thân
       const body = S.M().ell(X - 1.4, 12.8 + Y, 9, 5).ell(X + 4, 12.4 + Y, 5.2, 4.8);
@@ -804,25 +791,11 @@ export const DESIGNS = {
         for (const [dx, a, l] of [[-6, -0.5, 3.6], [-3, -0.2, 5], [0.4, 0.15, 4.2], [3.4, 0.4, 3]]) crystal(S, X + dx, 9 + Y, a, 2.2, l, P.ice);
         S.glow.push([X - 1, 5 + Y, 6, P.b.col]);
       }
-      if (dragon && !bone) {
-        for (let k = 0; k < 4; k++) {
-          const sx = X - 7 + k * 3.4;
-          S.fill(S.M().poly([sx - 1.4, 8.4 + Y, sx + 0.2, 5 + Y + (k === 0 ? 1 : 0), sx + 1.4, 8.4 + Y]), P.b, { sh: 'facet', fx: sx + 0.5 });
-        }
-        for (const sx of [-4, -1, 2, 5]) S.px(X + sx, 17 + Y, P.b.lt);
-      }
       // chân phía gần
       leg(X - 5.4, 15.4 + Y, ph + Math.PI, P.a, false, true);
       leg(X + 6.6, 15.4 + Y, ph, P.a, true, true);
       // bờm / ngực
-      if (hound) {
-        const mf = i % 2;
-        const mane = S.M().poly([X + 1.6, 15 + Y, X + 0.6, 8.6 + Y, X + 1.4, 3.6 + Y + mf, X + 4, 7 + Y, X + 5.4, 2 + Y + (1 - mf), X + 7, 6.4 + Y, X + 9.4, 3.8 + Y + mf, X + 9.6, 14.6 + Y]);
-        S.fill(mane, P.b, { sh: 'v', il: 1, vt: 0.2, vb: 0.8 });
-        S.dm(S.M().poly([X + 2.6, 14 + Y, X + 2.4, 8 + Y, X + 4, 9.4 + Y, X + 5.6, 5.6 + Y + (1 - mf), X + 7, 9.4 + Y, X + 8.4, 7.4 + Y, X + 8.4, 14 + Y]).and(mane), P.c.md, 1);
-        S.dm(S.M().poly([X + 4, 13 + Y, X + 4.6, 10 + Y, X + 5.6, 8.6 + Y, X + 6.6, 11 + Y, X + 7, 13 + Y]).and(mane), P.c.hi, 1);
-        S.glow.push([X + 5, 8 + Y, 7, P.c.col]);
-      } else if (!dragon) {
+      if (!dragon) {
         const ruff = king
           ? S.M().ell(X + 6.6, 12.4 + Y, 5, 5.6).poly([X + 2.4, 14 + Y, X + 3.4, 19.4 + Y, X + 5.4, 16.6 + Y, X + 7, 20 + Y, X + 8.6, 16.6 + Y, X + 10.4, 19 + Y, X + 11, 14 + Y])
           : S.M().ell(X + 7.4, 13.6 + Y, 3.8, 4.2).poly([X + 4.6, 16 + Y, X + 5.6, 19 + Y, X + 7, 16.6 + Y, X + 8.4, 18.6 + Y, X + 9.6, 16 + Y]);
@@ -862,16 +835,16 @@ export const DESIGNS = {
       S.px(R(hx + 7), R(sny - 1.2), pack(120, 110, 140));
       if (!dragon) {
         S.fill(S.M().poly([hx - 1.2, hy - 3.2, hx + 0.8, hy - 8.8, hx + 3, hy - 2.6]), P.a, { sh: 'facet', fx: hx + 0.8 });
-        S.fill(S.M().poly([hx - 0.2, hy - 3.4, hx + 0.9, hy - 6.8, hx + 1.9, hy - 3.2]), hound ? P.c : fox ? P.b : P.ear, { il: 0, sh: 'flat' });
+        S.fill(S.M().poly([hx - 0.2, hy - 3.4, hx + 0.9, hy - 6.8, hx + 1.9, hy - 3.2]), fox ? P.b : P.ear, { il: 0, sh: 'flat' });
         if (fox) S.fill(S.M().poly([hx + 0.2, hy - 7, hx + 0.8, hy - 8.8, hx + 1.6, hy - 6.8]), T('#3a2418'), { il: 0, sh: 'flat' });
       }
       // mắt
       const ex = R(hx + 0.4);
       const ey = R(hy - 2);
-      const ec = hound || dragon ? P.c.dk : EYE;
+      const ec = dragon ? P.c.dk : EYE;
       if (bl) { S.rc(ex, ey + 2, 2, 1, EYE); S.eyes.push([ex + 1, ey + 1.5]); }
       else {
-        S.eye(ex, ey, 2, 3, { col: ec, iris: hound || dragon ? P.c.hi : EYE2 });
+        S.eye(ex, ey, 2, 3, { col: ec, iris: dragon ? P.c.hi : EYE2 });
         S.px(ex - 1, ey - 1, P.a.ol); S.px(ex, ey - 1, P.a.ol, 0.5);
       }
       if (fox) {

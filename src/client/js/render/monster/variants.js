@@ -12,7 +12,6 @@ const VARIANT = {
   treant: 'tree', stoneguard: 'statue', coralgolem: 'coral', crystalgolem: 'crystal', boss_crystal: 'crystalK',
   fireghost: 'fire', frostghost: 'frost', cloudspirit: 'cloud',
   crab2: 'emperor', gemcrab: 'gem', abyssdemon: 'abyss', boss_slime: 'king',
-  hellhound: 'hound', darkdragon: 'dragon',
   foxspirit: 'fox', boss_fox: 'fox9', icewolf: 'ice', boss_wolf: 'wolfK', bonedragon: 'bone',
   sandworm: 'worm', seaserpent: 'serpent', boss_dragon: 'dragonK',
   // Tà Thú (boss sự kiện): dùng lại thân boss có sẵn, bảng màu riêng

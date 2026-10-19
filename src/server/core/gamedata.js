@@ -12,7 +12,8 @@ const { expNeed } = require('../../shared/formulas');
 const hooks = require('./modules');
 
 // Chuỗi JSON dựng sẵn một lần; các module thêm phần riêng qua móc 'clientData' (cường hóa, ngọc, thú cưng, lễ hội...)
-function buildGameData(version) {
+// extra: phần do máy chủ HTTP dựng (art: danh mục atlas ảnh ×3)
+function buildGameData(version, extra = {}) {
   const out = {
     t: 'data', version,
     classes: CLASSES, elements: ELEMENTS, statNames: STAT_NAMES, skills: SKILLS, skillMax: SKILL_MAX_LV, passiveStats: PASSIVE_STATS,
@@ -22,6 +23,8 @@ function buildGameData(version) {
     quests: MAIN_QUESTS.map((q) => ({ name: q.name, req: q.req })),
     expTable: Array.from({ length: MAX_LEVEL + 1 }, (_, i) => (i ? expNeed(i) : 0)),
     maxLevel: MAX_LEVEL, hotbar: HOTBAR, hotbarSets: HOTBAR_SETS,
+    art: {},
+    ...extra,
   };
   hooks.call('clientData', out);
   return JSON.stringify(out);

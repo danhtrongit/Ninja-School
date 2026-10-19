@@ -53,12 +53,17 @@ async function run(browser, errors) {
   ok(a.sec <= 20, `dựng xong gallery trong ${a.sec.toFixed(1)} giây (≤ 20)`);
   ok(a.n >= MIN_CELLS, `có ${a.n} ô (≥ ${MIN_CELLS})`);
   ok(a.empty.length === 0, `mọi ô có điểm ảnh khác nền${a.empty.length ? ': trống ' + a.empty.slice(0, 10).join(', ') : ''}`);
-  for (const s of ['char', 'tier', 'aura', 'fashion', 'mount', 'pet', 'npc', 'monster', 'fx', 'theme', 'icon', 'skill', 'ui']) {
+  for (const s of ['char', 'tier', 'aura', 'fashion', 'mount', 'pet', 'npc', 'monster', 'atlas', 'fx', 'theme', 'icon', 'skill', 'ui']) {
     const n = Object.keys(a.hashes).filter((k) => k.startsWith(s + '/')).length;
     ok(n > 0, `mục ${s}: ${n} ô`);
     const el = await a.page.$(`#sec-${s}`);
     if (el) await el.screenshot({ path: path.join(OUT, `gallery-${s}.png`) }).catch(() => {});
   }
+  // atlas ×3: mỗi loài đủ 5 hoạt ảnh, mỗi khung là một ô (ô trống đã bị bắt ở trên)
+  const atl = Object.keys(a.hashes).filter((k) => k.startsWith('atlas/'));
+  const species = [...new Set(atl.map((k) => k.replace(/^atlas\/(.*)-[a-z]+\d+$/, '$1')))];
+  const animsOk = species.every((sp) => ['idle', 'walk', 'atk', 'hit', 'die'].every((an) => atl.some((k) => k.startsWith(`atlas/${sp}-${an}`))));
+  ok(species.length >= 4 && animsOk && !a.empty.some((k) => k.startsWith('atlas/')), `mục atlas ×3: ${species.length} loài (${species.join(', ')}) × 5 hoạt ảnh idle/walk/atk/hit/die, ${atl.length} khung đều có hình`);
   const b = await run(browser, errors);
   const diff2 = Object.keys(a.hashes).filter((k) => a.hashes[k] !== b.hashes[k]);
   ok(diff2.length === 0, `chạy 2 lần liên tiếp: 0 ô khác (${diff2.length}${diff2.length ? ': ' + diff2.slice(0, 8).join(', ') : ''})`);

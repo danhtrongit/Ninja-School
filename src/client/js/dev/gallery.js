@@ -3,7 +3,7 @@
 // đặt window.galleryHashes = { "<mục>/<khóa>": băm FNV-1a 32 bit của ImageData } và window.galleryReady = true.
 // ?section=<mục>: chỉ dựng một mục (dùng cho tools/shot.js).
 import { drawNinja, drawPortrait } from '../render/sprites.js';
-import { drawMonster, prewarmMonsters } from '../render/monsterart.js';
+import { drawMonster, prewarmMonsters, loadMonsterAtlas } from '../render/monsterart.js';
 import { MapRenderer, THEMES, setLighting } from '../render/maprender.js';
 import { FX } from '../render/fx.js';
 import { iconCanvas, skillIconURL, uiIconURL } from '../render/icons.js';
@@ -36,7 +36,11 @@ const ws = new WebSocket(`${location.protocol === 'https:' ? 'wss' : 'ws'}://${l
 const wait = new Map();
 ws.onmessage = (ev) => {
   const m = JSON.parse(ev.data);
-  if (m.t === 'data') G = m;
+  if (m.t === 'data') {
+    // như main.js: quái mang id của mình (biến thể hình, bộ HUM, atlas ×3 tra theo id)
+    for (const k in m.monsters) m.monsters[k].k = k;
+    G = m;
+  }
   const f = wait.get(m.t);
   if (f) { wait.delete(m.t); f(m); }
   if (m.t === 'err') $('#gal-err').textContent = m.msg;
@@ -67,7 +71,7 @@ function ninjaOpts(cls, gender, extra = {}) {
   return { cls, gender, dir: 1, name: `gal_${cls}_${gender}`, el: c.element, weaponType: c.weapon, look: { w: 3, a: 3, p: 3, h: 3, wp: 0 }, ...extra };
 }
 
-// Mỗi mục: [id, tên, () => [{ key, w, h, draw(ctx, t) | img: Promise<url> }]]
+// Mỗi mục: [id, tên, () => [{ key, w, h, zoom?, draw(ctx, t) | img: Promise<url> }] (hoặc Promise của danh sách)]
 function sections() {
   const out = [];
   out.push(['char', 'Nhân vật', () => {
@@ -136,6 +140,22 @@ function sections() {
       const states = [['st0', { st: 0 }], ['st1', { st: 1 }], ['st2', { st: 2 }], ['hurt', { st: 0, flash: true }], ['left', { st: 1, dir: -1 }]];
       if (def.boss) states.push(['rage', { st: 2, rage: true }]);
       for (const [k, o] of states) cells.push({ key: `${id}-${k}`, w, h: hh, draw: (c, t) => drawMonster(c, w / 2, hh - 4, def, { t: t + 0.15, dir: 1, id: 7, ...o }) });
+    }
+    return cells;
+  }]);
+  // atlas ảnh ×3 (DESIGN_RULES mục 11): mọi khung của mọi hoạt ảnh, đúng pixel nghệ thuật (zoom 1)
+  out.push(['atlas', 'Atlas ×3', async () => {
+    const cells = [];
+    for (const key of Object.keys(G.art || {}).sort()) {
+      const def = G.monsters[key.split('/')[1]];
+      const a = def ? await loadMonsterAtlas(G.art, def) : null;
+      if (!a) { cells.push({ key, w: 16, h: 16, draw: () => {} }); continue; }
+      const { fw, fh, anims } = a.meta;
+      for (const [an, A] of Object.entries(anims)) {
+        for (let f = 0; f < A.n; f++) {
+          cells.push({ key: `${key}-${an}${f}`, w: fw, h: fh, zoom: 1, draw: (c) => c.drawImage(a.img, f * fw, A.row * fh, fw, fh, 0, 0, fw, fh) });
+        }
+      }
     }
     return cells;
   }]);
@@ -247,7 +267,7 @@ async function renderAll() {
 }
 
 function applyScale() {
-  for (const b of built) { b.cv.style.width = `${b.cell.w * SCALE}px`; b.cv.style.height = `${b.cell.h * SCALE}px`; }
+  for (const b of built) { const z = b.cell.zoom || SCALE; b.cv.style.width = `${b.cell.w * z}px`; b.cv.style.height = `${b.cell.h * z}px`; }
 }
 
 function buildNav(secs) {
@@ -286,7 +306,7 @@ async function start() {
   const grid = $('#gal-grid');
   built = [];
   for (const [id, name, make] of secs) {
-    const cells = make();
+    const cells = await make();
     const box = h('div', { class: 'gal-cells' });
     for (const cell of cells) {
       const cv = h('canvas', { width: cell.w, height: cell.h });

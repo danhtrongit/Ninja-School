@@ -266,7 +266,7 @@ function playwrightPath() {
   return cands.find((d) => d && fs.existsSync(path.join(d, 'playwright', 'package.json'))) || null;
 }
 const PERF_BOTS = Array.from({ length: 30 }, (_, i) => `vfbot${String(i + 1).padStart(2, '0')}`);
-const ADMINS = ['duoalpha', 'duobravo', 'vfe2ed', 'vfe2em', 'vfperfd', 'vfperfm', 'vfvisual', 'vfaudit', ...PERF_BOTS];
+const ADMINS = ['duoalpha', 'duobravo', 'vfe2ed', 'vfe2em', 'vfperfd', 'vfperfm', 'vfperfm3', 'vfvisual', 'vfaudit', ...PERF_BOTS];
 async function startServer(port, dataDir, logFile) {
   const ch = spawn(process.execPath, [path.join(ROOT, 'src', 'server', 'index.js')], {
     cwd: ROOT, env: { ...process.env, PORT: String(port), DATA_DIR: dataDir, ADMINS: ADMINS.join(','), REG_LIMIT: '0', DEV_TOOLS: '1', NS_TEST: '1' }, stdio: ['ignore', 'pipe', 'pipe'],
@@ -321,6 +321,8 @@ async function stepCmd(name, cmd, args, o, pass) {
         await stepCmd('8c test:e2e điện thoại', process.execPath, ['tests/e2e/e2e.js'], { env: { ...env, ACC: 'vfe2em', MOBILE: '1', OUT: path.join(OUT, 'e2e') }, log: path.join(OUT, 'e2e-m.log'), timeout: 1200000 }, okE2E);
         await stepCmd('8d test:perf máy tính 1280×720', process.execPath, ['tests/e2e/perf.js'], { env: { ...env, ACC: 'vfperfd', MOBILE: '0', BOTS: PERF_BOTS.join(','), OUT: path.join(OUT, 'perf') }, log: path.join(OUT, 'perf-d.log'), timeout: 900000 }, okNoErr);
         await stepCmd('8e test:perf điện thoại 844×390', process.execPath, ['tests/e2e/perf.js'], { env: { ...env, ACC: 'vfperfm', MOBILE: '1', BOTS: PERF_BOTS.join(','), OUT: path.join(OUT, 'perf') }, log: path.join(OUT, 'perf-m.log'), timeout: 900000 }, okNoErr);
+        // điện thoại @3x: lớp thế giới ×3 lớn nhất (DESIGN_RULES mục 11), đo trên bản đồ có atlas và bản đồ đông hiệu ứng
+        await stepCmd('8e3 test:perf điện thoại 844×390 @3x', process.execPath, ['tests/e2e/perf.js'], { env: { ...env, ACC: 'vfperfm3', MOBILE: '1', DPR: '3', MAPS: 'hell_gate,heaven', BOTS: PERF_BOTS.join(','), OUT: path.join(OUT, 'perf') }, log: path.join(OUT, 'perf-m3.log'), timeout: 900000 }, okNoErr);
         await stepCmd('8f test:visual (gallery + mốc băm)', process.execPath, ['tests/e2e/gallery.js'], { env: { ...env, ACC: 'vfvisual', OUT: path.join(OUT, 'visual') }, log: path.join(OUT, 'visual.log'), timeout: 600000 }, okNoErr);
         await stepCmd('8g test:sfx (chất lượng tiếng hiệu ứng)', process.execPath, ['tests/e2e/sfx.js'], { env, log: path.join(OUT, 'sfx.log'), timeout: 300000 }, okNoErr);
         await stepCmd('8h test:audit (giao diện theo cảnh, 4 cỡ màn)', process.execPath, ['tests/e2e/ui-audit.js'], { env: { ...env, ACC: 'vfaudit', OUT: path.join(OUT, 'audit') }, log: path.join(OUT, 'ui-audit.log'), timeout: 600000 }, (r) => r.code === 0 && r.out.includes('UI-AUDIT ĐẠT') && r.out.includes('OK no console errors'));
@@ -341,7 +343,7 @@ async function stepCmd(name, cmd, args, o, pass) {
     // bảng bước tới đây làm log cho check:features (bằng chứng "scripts/verify.js :: <nhãn>")
     fs.writeFileSync(path.join(OUT, 'verify.log'), steps.map((s) => `${s.ok === null ? '–' : s.ok ? '✔' : '✘'} ${s.name}${s.lines.length ? `: ${s.lines.join(' | ')}` : ''}`).join('\n') + '\n');
     // bước bị tắt bằng cờ (CI: --no-browser --no-load) thì check:features bỏ qua bằng chứng nằm trong log của bước đó
-    const skip = [...(BROWSER ? [] : ['e2e-d.log', 'e2e-m.log', 'ui.log', 'perf-d.log', 'perf-m.log', 'visual.log', 'sfx.log', 'ui-audit.log']), ...(LOAD ? [] : ['load.log', 'persist.log']), ...(PROD ? [] : ['prod.log'])];
+    const skip = [...(BROWSER ? [] : ['e2e-d.log', 'e2e-m.log', 'ui.log', 'perf-d.log', 'perf-m.log', 'perf-m3.log', 'visual.log', 'sfx.log', 'ui-audit.log']), ...(LOAD ? [] : ['load.log', 'persist.log']), ...(PROD ? [] : ['prod.log'])];
     await stepCmd('10 Sổ tính năng (check:features)', process.execPath, ['scripts/check-features.js'], { env: { VERIFY_LOGS: OUT, VERIFY_SKIP: skip.join(',') }, log: path.join(OUT, 'features.log'), timeout: 600000 }, (r) => r.code === 0);
   }
 

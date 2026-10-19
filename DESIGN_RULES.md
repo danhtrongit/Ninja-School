@@ -123,11 +123,11 @@ Các con số dưới đây lấy từ code hiện tại. Nếu cần đổi m�
 
 - Mỗi kiểu có 3-4 khung đứng/đi và 1-2 khung tấn công (`st = 2`). `flyer` và `ghost` lơ lửng.
 - **Bản ×3** (mục 11): kích thước tính bằng đơn vị thế giới như bảng trên, ảnh lớn gấp 3 (Địa Ngục Khuyển cao 24 → 72 pixel nghệ thuật). Giới hạn 1.5 lần hitbox và các ngoại lệ bên dưới vẫn tính theo đơn vị thế giới. Mỗi loài là một ảnh riêng nên không còn bị buộc vào 11 kiểu sprite; `type` chỉ còn quyết định hitbox và kiểu di chuyển (bay/lơ lửng). Boss có atlas riêng vẽ đúng cỡ thật, **không** phóng to atlas quái thường bằng `scale`.
-- **Ngoại hình riêng theo id**: cùng một kiểu sprite, mỗi loài có thể có biến thể riêng qua bảng `VARIANT` (id → biến thể: `monkey`, `bee`, `scorp`, `tree`, `statue`, `coral`, `crystal`, `fox`, `serpent`, `worm`, `bone`...). Quái **người** (`humanoid`) có bộ trang phục và vũ khí riêng theo id trong bảng `HUM` (`bandit, pirate, skeleton, sandbandit, mummy, cursedmummy, rogue, iceninja, shadow, samurai, deathknight, celestial, voidknight, dragonguard`); id chưa có trong `HUM` dùng `bandit`. Thêm quái người mới thì **nên** thêm bộ riêng vào `HUM`.
-- **Boss**: pixel size `Math.round(scale)`, có hào quang động, mắt phát sáng, vương miện hoặc sừng. Mỗi boss có thiết kế riêng, không chỉ phóng to quái thường: biến thể `king` (boss_slime), `batK`, `wolfK`, `yetiK`, `oniK`, `fox9` (cáo chín đuôi), `crystalK`, `dragonK`; boss người `boss_god`, `boss_pharaoh`, `boss_heaven` nằm trong `HUM`. Chỉ `boss_slime, boss_wolf, boss_fox` đội vương miện vẽ thêm (`BOSS_CROWN`), các boss khác đã có sừng/mũ trong hình.
+- **Ngoại hình riêng theo id**: cùng một kiểu sprite, mỗi loài có thể có biến thể riêng qua bảng `VARIANT` (id → biến thể: `monkey`, `bee`, `scorp`, `tree`, `statue`, `coral`, `crystal`, `fox`, `serpent`, `worm`, `bone`...). Quái **người** (`humanoid`) có bộ trang phục và vũ khí riêng theo id trong bảng `HUM` (`bandit, pirate, skeleton, sandbandit, mummy, cursedmummy, rogue, iceninja, shadow, samurai, celestial, voidknight, dragonguard`); id chưa có trong `HUM` dùng `bandit`. Thêm quái người mới thì **nên** thêm bộ riêng vào `HUM`. Loài đã có atlas ×3 (mục 11) không còn hình code riêng: lúc atlas chưa tải xong chỉ vẽ thân chung của kiểu sprite.
+- **Boss**: pixel size `Math.round(scale)`, có hào quang động, mắt phát sáng, vương miện hoặc sừng. Mỗi boss có thiết kế riêng, không chỉ phóng to quái thường: biến thể `king` (boss_slime), `batK`, `wolfK`, `yetiK`, `oniK`, `fox9` (cáo chín đuôi), `crystalK`, `dragonK`; boss người `boss_pharaoh`, `boss_heaven` nằm trong `HUM`; `boss_god` (Ma Thần) vẽ bằng atlas ×3 (`art/boss/boss_god`), hào quang và cuồng nộ vẫn vẽ lúc chạy quanh hình atlas. Chỉ `boss_slime, boss_wolf, boss_fox` đội vương miện vẽ thêm (`BOSS_CROWN`), các boss khác đã có sừng/mũ trong hình.
 - **Boss sự kiện Tà Thú** (`ev_*`, `event: true`) dùng lại biến thể boss (`ev_hacviem` → `wolfK`, `ev_bangphach` → `crystalK`, `ev_huyetnguyet` → `oniK`) nhưng bảng màu riêng tối và rực hơn, hào quang `AURA2` riêng. Thêm Tà Thú mới thì **phải** thêm vào `VARIANT` và `AURA2`.
 - **Cuồng nộ** (`o.rage`, máu boss dưới 30%): `rageAura` vẽ quầng đỏ `#ff1744` sau lưng và đốm lửa đỏ/cam bốc lên phía trước, chỉ vẽ cho boss. Không đổi bảng màu thân boss khi cuồng nộ.
-- **Ngoại lệ kích thước** (so với hitbox ở trên): vũ khí cầm tay của quái người, cánh, đuôi và tai được vượt bề ngang tới khoảng 1.8 lần; rồng (`darkdragon`) và `boss_heaven` (vòng hào quang sau lưng) tới khoảng 2 lần. Chiều cao của `flyer`/`ghost` tính cả 10px lơ lửng. Thân chính vẫn phải nằm trong khoảng 1.5 lần hitbox.
+- **Ngoại lệ kích thước** (so với hitbox ở trên): vũ khí cầm tay của quái người, cánh, đuôi và tai được vượt bề ngang tới khoảng 1.8 lần; rồng (`darkdragon`, kể cả bản atlas ×3) và `boss_heaven` (vòng hào quang sau lưng) tới khoảng 2 lần. Chiều cao của `flyer`/`ghost` tính cả 10px lơ lửng. Thân chính vẫn phải nằm trong khoảng 1.5 lần hitbox.
 - `monsterHeight(def)` phải khớp với hình vẽ, vì nhãn tên và thanh máu đặt theo giá trị này.
 - Khung hình dựng một lần rồi cache; game gọi `prewarmMonsters(defs)` lúc vào bản đồ (quái + boss của bản đồ) để lần đầu xuất hiện không bị giật. Quái sinh giữa chừng (phó bản) được dựng dần theo ngân sách thời gian mỗi khung.
 - Mặt quái dễ thương (mắt to có điểm sáng, má hồng ở quái cấp thấp). Quái cấp cao hung dữ hơn nhưng vẫn cùng phong cách.
@@ -376,21 +376,21 @@ Chốt 2026-10-19 sau khi thử với Địa Ngục Khuyển: pixel art chi ti�
 
 ### Atlas
 
-- File `src/client/art/<nhóm>/<id>.png` + `<id>.json`, với nhóm là `monster, boss, ninja, npc, pet, mount, map`.
-- PNG là lưới đều: mỗi hàng một hoạt ảnh, ô `fw × fh`. JSON có dạng `{ fw, fh, foot, anims: { idle: { row, n, dur, loop, pts }, ... } }`, trong đó `foot` là y đáy chân trong ô (gốc giữa chân như mục 1).
-- PNG nén không mất màu bảng. Một atlas quái không quá khoảng 200KB.
-- Tải theo bản đồ trong `prewarmMonsters` (và hàm tương ứng cho NPC/nền). Thiếu file hoặc chưa tải xong thì vẽ hình code cũ trong giai đoạn chuyển, không chặn việc vào bản đồ.
-- Khi đưa atlas đầu tiên vào repo, phải thêm kiểm tra vào `tools/check-data.js`:
-  - JSON đủ khóa.
-  - Chiều cao khớp `monsterHeight × 3`.
-  - Số màu không vượt trần.
-  - Viền ngoài là `#1d1424`.
-  - Mỗi loài có đủ 5 hoạt ảnh.
+- File `src/client/art/<nhóm>/<id>.png` + `<id>.json`, với nhóm là `monster, boss, ninja, npc, pet, mount, map`. Quái thường ở `monster/`, boss ở `boss/` (theo `def.boss`), `<id>` trùng id quái.
+- PNG là lưới đều: mỗi hàng một hoạt ảnh, ô `fw × fh` (`fw` chẵn để gốc giữa chân rơi đúng pixel). JSON có dạng `{ fw, fh, foot, h, anims: { idle: { row, n, dur, loop, pts? }, ..., atk: { ..., hitF } } }`:
+  - `foot`: y đáy chân trong ô (gốc giữa chân như mục 1). Không hoạt ảnh nào (trừ `die`) có pixel từ hàng `foot` trở xuống.
+  - `h`: chiều cao hình đứng (khung `idle` 0) tính bằng pixel nghệ thuật, chia hết cho 3. `monsterHeight` của loài có atlas = `h / 3` (cộng 10 nếu bay), nên phải gần chiều cao hình code cũ để nhãn tên và thanh máu không nhảy; `npm run check` giữ `h / 3` trong 0.9-2.2 lần hitbox.
+  - `dur`: thời lượng **cả** hoạt ảnh (giây), không phải mỗi khung. `hitF`: khung ra đòn của `atk` (1..n-2).
+- PNG bảng màu (chế độ P), nén lại không mất dữ liệu bằng zopfli. Tối đa 40 màu kể cả viền `#1d1424`; vài màu nhấn rực (mắt, rune, lửa) được giữ chỗ riêng trong bảng màu để lượng tử không nuốt mất. Trần dung lượng: atlas quái thường khoảng 200KB, atlas boss khoảng 400KB (hình lớn, vũ khí dài làm ô rộng).
+- Máy chủ quét `src/client/art/` lúc khởi động và gửi danh mục trong gói `data`: `S.G.art = { '<nhóm>/<id>': { v, h } }` (`v` = băm png + json). Máy khách chỉ tải atlas có trong danh mục (không có yêu cầu 404), xin bằng `?v=` nên được lưu đệm vĩnh viễn.
+- Tải theo bản đồ trong `prewarmMonsters(defs, S.G.art)` (và hàm tương ứng cho NPC/nền). Thiếu file hoặc chưa tải xong thì vẽ hình code theo kiểu sprite, không chặn việc vào bản đồ. Ảnh nguồn quay mặt sang trái, `drawAtlas` lật khi quái quay phải. Quái chết chạy hết `die` rồi mờ dần 0.4 giây.
+- `tools/check-data.js` (`tools/lib/atlas.js`) kiểm mọi atlas: JSON đủ khóa, đủ 5 hoạt ảnh với số khung đúng bảng trên, không khung trống, không pixel dưới chân, `h` khớp hình đứng, alpha nhị phân, số màu ≤ 40, viền ngoài `#1d1424`, dung lượng ≤ trần, id quái tồn tại, đúng nhóm `monster`/`boss`, có dòng nguồn trong `CREDITS.md`, và trong cùng một bản đồ không có loài nửa atlas nửa hình code. Trang `/dev/gallery` có mục "Atlas ×3" hiện mọi khung của mọi loài.
+- Công cụ dựng atlas (ngoài repo, `~/.local/share/ninja-art/tools/`): `gen.mjs` (gọi model, ghi `gen.jsonl`), `cutout.py` (tách nền), `rig.py` (khung xương mảnh cứng, `rig.json` theo loài), `atlas.py` (thu về ×3, bảng màu, viền).
 
 ### Thứ tự chuyển đổi
 
 1. Lớp thế giới ×3 và bộ nạp atlas. Hình code cũ phóng nguyên ×3, đo lại hiệu năng.
-2. Quái và boss theo từng vùng bản đồ, bắt đầu từ Địa Ngục Khuyển.
+2. Quái và boss theo từng vùng bản đồ, bắt đầu từ Địa Ngục Khuyển. Đã xong: Cổng Địa Ngục (`hellhound`, `deathknight`, `darkdragon`, boss `boss_god`).
 3. Ninja và NPC.
 4. Thú cưng, thú cưỡi, thời trang.
 5. Nền và địa hình bản đồ.

@@ -180,8 +180,10 @@ export function drawNinja(ctx, x, y, o) {
   const mk = !sp.npc && !o.pal && anim !== 'dead' && own(MOUNTS, look.mount) ? look.mount : null;
   const e0 = getEntry(sp, anim, f, flash, !!mk);
   const e = dir < 0 ? flipped(e0) : e0;
-  let X = Math.round(x);
-  let Y = Math.round(y);
+  // lớp thế giới ×3 (ctx.art = 3): làm tròn theo pixel nghệ thuật
+  const q = ctx.art || 1;
+  let X = Math.round(x * q) / q;
+  let Y = Math.round(y * q) / q;
   // Canvas xem trước nhỏ (chọn nhân vật): đẩy xuống để không cụt đầu
   const cvs = ctx.canvas;
   if (ps > 1 && cvs && cvs.width <= 160 && cvs.height <= 200) Y = Math.max(Y, ((mk ? ninjaHeight(look) : NINJA_H) + 2) * ps);

@@ -40,9 +40,8 @@ export const BANDAGE = '#e8dcb5';
 export const DARKWOOD = '#4a3328';
 // áo choàng tím than cho Xác Ướp Nguyền (tách khỏi băng quấn sáng và lửa xanh)
 export const CLOAK = T('#4a3552');
-// áo Thiên Ma / Ma Thần: sáng hơn màu pal gần đen để vẫn thấy khối
+// áo Thiên Ma: sáng hơn màu pal gần đen để vẫn thấy khối
 export const HEAVEN_ROBE = '#3a2e44';
-export const GOD_ROBE = T('#34205a');
 
 // Tông tối hơn của một bộ tông (cho chân/tay phía sau)
 export const darker = (t, d = 0.09) => T(adj(t.col, -d));
