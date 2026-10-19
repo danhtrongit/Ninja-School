@@ -6,7 +6,7 @@ const { ITEMS, GEM, makeItem, cleanGems, cleanPet, SLOTS } = require('../../shar
 const { PET, PET_SKILLS } = require('../../shared/data/pets');
 const { MAPS, GROUND } = require('../../shared/data/maps');
 const { MAIN_QUESTS } = require('../../shared/data/quests');
-const { INV_SIZE, invSize, STORAGE_SIZE, MAX_LEVEL, HOTBAR, HOTBAR_SETS, PERSIST_BUFFS } = require('../../shared/constants');
+const { INV_SIZE, invSize, STORAGE_SIZE, MAX_LEVEL, HOTBAR, HOTBAR_SETS, PERSIST_BUFFS, reviveGuarded } = require('../../shared/constants');
 const { expNeed } = require('../../shared/formulas');
 const { sameStack, bind, XUK_MAX } = require('../../shared/bound');
 const hooks = require('./modules');
@@ -276,11 +276,14 @@ class Player {
   }
 
   info() {
+    const now = Date.now();
     return {
       id: this.id, name: this.c.name, cls: this.c.cls, g: this.c.gender, lv: this.c.level,
       x: Math.round(this.x), y: Math.round(this.y), dir: this.dir, hp: this.c.hp, mhp: this.s.maxHp,
       look: this.look(), clan: this.clanTag(), pk: this.c.pk, pkMode: this.pkMode, dead: this.dead,
       party: this.party ? this.party.id : 0,
+      // ms bảo hộ còn lại sau hồi sinh tại chỗ: máy khách vẽ nhân vật nhấp nháy
+      guard: reviveGuarded(this, now) ? this.guard.until - now : 0,
     };
   }
 

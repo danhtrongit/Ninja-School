@@ -15,6 +15,8 @@ const JUMP2 = 330;
 const SPEED = 110;
 const PH = NINJA_H;
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
+// bảo hộ sau hồi sinh tại chỗ: nhấp nháy mờ 50% (8 nhịp/giây) tới hết hạn
+const guardAlpha = (e, t) => (e.guardUntil > t && Math.floor(t * 8) % 2 ? 0.5 : 1);
 // Cộng độ rung s vào v; vượt khỏi [lo, hi] thì rung về phía ngược lại
 // 1 đơn vị thế giới = ART pixel nghệ thuật (DESIGN_RULES mục 1, 11)
 const ART = 3;
@@ -133,6 +135,8 @@ export class Game {
         p.dead = m.dead;
         this.checkCostume(p, m.look);
       }
+      const e = p || (S.me && m.id === S.me.id ? this.me : null);
+      if (e) e.guardUntil = m.guard ? this.t + m.guard / 1000 : 0;
     });
     n.on('mSpawn', (m) => this.addMonster(m));
     n.on('mDie', (m) => {
@@ -227,7 +231,8 @@ export class Game {
         this.me.vy = 0;
       }
     });
-    n.on('dead', () => {
+    n.on('dead', (m) => {
+      this.deadCost = m.cost || null;
       sfx('die');
       this.chase = null;
       this.walkTo = null;
@@ -933,7 +938,9 @@ export class Game {
     this.reviveAt = 0;
     const mode = S.settings.autoRevive;
     const cards = countInv('revive_card');
-    const here = (mode === 'card' && cards > 0) || (mode === 'luong' && (cards > 0 || S.me.luong >= 1));
+    // giá tại chỗ leo thang 1/2/3 lượng trong 10 phút: lấy giá server gửi trong gói dead, thiếu thì về làng
+    const luong = this.deadCost ? this.deadCost.luong : 1;
+    const here = (mode === 'card' && cards > 0) || (mode === 'luong' && (cards > 0 || S.me.luong >= luong));
     if (here) this.autoBack = null;
     this.net.send('revive', { mode: here ? 'here' : 'town' });
   }
@@ -1549,17 +1556,21 @@ export class Game {
     for (const p of this.players.values()) {
       if (p.x < camX - 40 || p.x > camX + W + 40) continue;
       const anim = p.dead ? 'dead' : p.attackUntil > t || p.st === 3 ? 'attack' : p.st === 2 ? 'jump' : p.st === 1 ? 'walk' : 'idle';
+      c.globalAlpha = guardAlpha(p, t);
       drawNinja(c, p.x - camX, p.y - camY, {
         dir: p.dir, cls: p.info.cls, gender: p.info.g, look: p.info.look, anim, t: t + p.id, name: p.info.name,
         el: S.G.classes[p.info.cls].element, weaponType: S.G.classes[p.info.cls].weapon, flash: p.flash > t,
       });
+      c.globalAlpha = 1;
     }
     // Bản thân
     const meAnim = S.me.dead ? 'dead' : me.st === 3 ? 'attack' : me.st === 2 ? 'jump' : me.st === 1 ? 'walk' : 'idle';
+    c.globalAlpha = guardAlpha(me, t);
     drawNinja(c, me.x - camX, me.y - camY, {
       dir: me.dir, cls: S.me.cls, gender: S.me.gender, look: S.me.look, anim: meAnim, t, name: S.me.name,
       el: S.G.classes[S.me.cls].element, weaponType: S.G.classes[S.me.cls].weapon, flash: me.flash > t,
     });
+    c.globalAlpha = 1;
     // Mũi tên mục tiêu: đặt trên nhãn tên (nhãn vẽ ở lớp phân giải cao) để không đè chữ và thanh máu
     if (target) {
       const e = target.e;

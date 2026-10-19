@@ -245,6 +245,11 @@ class Combat {
     p.c.mp -= mpCost;
     p.cool[sid] = now + sk.cd;
     p.lastSkillAt = now;
+    // ra chiêu là hết bảo hộ hồi sinh: báo để mọi người thôi vẽ nhấp nháy
+    if (p.guard) {
+      p.guard = null;
+      map.broadcast('pInfo', p.info());
+    }
     p.st = 3;
     p.markMe();
     map.broadcast('fx', {

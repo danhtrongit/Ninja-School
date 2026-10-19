@@ -55,6 +55,9 @@ body.touch #hud-arena {
 body.touch.ev-on #hud-arena { bottom: 56px; }
 body.touch .ar-btn, body.touch .ar-join, body.touch .arr-foot .btn { min-height: 44px; }
 body.touch .ar-oinfo { display: none; }
+/* hộp tử trận: hai nút xếp dọc cao 44px, nút hồi sinh tại chỗ (.primary) ở trên */
+body.touch .death-btns { flex-direction: column-reverse; align-items: stretch; }
+body.touch .death-btns .btn { min-height: 44px; }
 body.touch #arena-cd { font-size: 80px; top: 32%; }
 /* "ĐẤU!" (1 giây) hiện cùng lúc khung mục tiêu tự chọn đối thủ: điện thoại tạm ẩn khung mục tiêu cho khỏi bị chữ đè */
 body.touch.ar-go #hud-target { visibility: hidden; }
